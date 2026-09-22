@@ -8,7 +8,7 @@ function seeded(seed: number) {
   return x - Math.floor(x);
 }
 
-export function GeoScanScene() {
+export function GeoScanScene({ variant = "terrain" }: { variant?: "terrain" | "index" }) {
   const hostRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -23,7 +23,7 @@ export function GeoScanScene() {
     scene.fog = new THREE.FogExp2(0x0a0e0b, 0.035);
 
     const camera = new THREE.PerspectiveCamera(38, 1, 0.1, 100);
-    camera.position.set(7.2, 5.2, 10.5);
+    camera.position.set(variant === "index" ? 0.1 : 7.2, variant === "index" ? 9.8 : 5.2, variant === "index" ? 0.1 : 10.5);
 
     const renderer = new THREE.WebGLRenderer({
       canvas,
@@ -113,7 +113,7 @@ export function GeoScanScene() {
       );
     }
 
-    const contourGroup = new THREE.Group();
+    const contourGroup = new THREE.Group();\n    if (variant === "index") contourGroup.visible = false;
     contourGroup.rotation.x = -0.32;
     contourGroup.rotation.y = 0.08;
     terrainGroup.add(contourGroup);
@@ -144,7 +144,7 @@ export function GeoScanScene() {
       contourGroup.add(new THREE.LineLoop(geometry, material));
     }
 
-    const grid = new THREE.GridHelper(13, 26, 0x66786a, 0x223128);
+    const grid = new THREE.GridHelper(13, 26, 0x66786a, 0x223128);\n    if (variant === "index") grid.visible = false;
     grid.position.y = -1.38;
     grid.material.transparent = true;
     grid.material.opacity = 0.28;
@@ -161,7 +161,7 @@ export function GeoScanScene() {
         depthWrite: false,
       })
     );
-    scanPlane.rotation.x = Math.PI / 2 - 0.32;
+    scanPlane.rotation.x = variant === "index" ? 0 : Math.PI / 2 - 0.32;
     scanPlane.position.y = 1.05;
     scene.add(scanPlane);
 
@@ -193,6 +193,7 @@ export function GeoScanScene() {
     );
     beacon.add(beaconHalo);
     beacon.rotation.x = -Math.PI / 2;
+    if (variant === "index") beacon.visible = false;
     scene.add(beacon);
 
     const drone = new THREE.Group();
@@ -212,27 +213,8 @@ export function GeoScanScene() {
     );
     droneRing.rotation.x = Math.PI / 2;
     drone.add(droneRing);
+    if (variant === "index") drone.visible = false;
     scene.add(drone);
-
-    const starCount = 500;
-    const starPositions = new Float32Array(starCount * 3);
-    for (let i = 0; i < starCount; i += 1) {
-      starPositions[i * 3] = (seeded(i + 7) - 0.5) * 25;
-      starPositions[i * 3 + 1] = seeded(i + 1700) * 10 - 2;
-      starPositions[i * 3 + 2] = (seeded(i + 3300) - 0.5) * 18;
-    }
-
-    const starGeometry = new THREE.BufferGeometry();
-    starGeometry.setAttribute("position", new THREE.BufferAttribute(starPositions, 3));
-    const starMaterial = new THREE.PointsMaterial({
-      size: 0.018,
-      color: 0x9fb1a4,
-      transparent: true,
-      opacity: 0.33,
-      depthWrite: false,
-    });
-    const stars = new THREE.Points(starGeometry, starMaterial);
-    scene.add(stars);
 
     const pointer = { x: 0, y: 0 };
     let targetX = 0;
@@ -280,7 +262,7 @@ export function GeoScanScene() {
       camera.position.y += (5.2 - pointer.y * 1.5 - camera.position.y) * 0.02;
       camera.lookAt(0, 0.2, 0);
 
-      points.rotation.z = elapsed * 0.018;
+      points.rotation.z = variant === "index" ? 0 : elapsed * 0.018;
       pointMaterial.opacity = 0.78 + Math.sin(elapsed * 1.4) * 0.08;
       photogrammetryGrid.rotation.z = elapsed * 0.012;
       contourGroup.rotation.z = elapsed * 0.018;
@@ -288,7 +270,7 @@ export function GeoScanScene() {
       const scanY = -2.35 + ((elapsed * 0.7) % 4.8);
       scanLine.position.y = scanY;
       scanPlane.position.y = scanY + 0.2;
-      scanLine.material.opacity = 0.35 + Math.sin(elapsed * 5) * 0.2;
+      scanLine.material.opacity = variant === "index" ? 0.72 : 0.35 + Math.sin(elapsed * 5) * 0.2;
 
       beacon.position.set(
         Math.sin(elapsed * 0.65) * 2.9,
