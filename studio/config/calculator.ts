@@ -310,9 +310,12 @@ function ensureFormulaKey(
   definitions: CalculatorFormula[],
   fallback: string,
 ): string {
-  return typeof requested === "string" && definitions.some((item) => item.key === requested && item.enabled !== false)
-    ? requested
-    : fallback;
+  if (typeof requested === "string" && definitions.some((item) => item.key === requested && item.enabled !== false)) {
+    return requested;
+  }
+  return definitions.find((item) => item.key === fallback && item.enabled !== false)?.key
+    ?? definitions.find((item) => item.enabled !== false)?.key
+    ?? fallback;
 }
 
 export function normalizeCalculatorConfig(input: unknown): CalculatorStudioConfig {
