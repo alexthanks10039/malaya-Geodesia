@@ -1,0 +1,111 @@
+name: Live Preview
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  statuses: write
+
+concurrency:
+  group: live-preview-main
+  cancel-in-progress: true
+
+jobs:
+  live-preview:
+    runs-on: ubuntu-latest
+    timeout-minutes: 360
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v5
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: package.json
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: TypeScript check
+        run: npm run lint
+
+      - name: Start Next.js dev server
+        shell: bash
+        run: |
+          nohup npm run dev -- --hostname 0.0.0.0 > /tmp/geodesia-next.log 2>&1 &
+          echo $! > /tmp/geodesia-next.pid
+
+          for i in {1..60}; do
+            if curl -fsS http://127.0.0.1:3000/ >/dev/null; then
+              echo "Next.js dev server is ready on :3000"
+              exit 0
+            fi
+            sleep 2
+          done
+
+          echo "Next.js dev server did not start"
+          cat /tmp/geodesia-next.log
+          exit 1
+
+      - name: Start public live tunnel
+        shell: bash
+        env:
+          GH_TOKEN: \${{ github.token }}
+        run: |
+          nohup npx --yes wrangler tunnel quick-start http://127.0.0.1:3000 > /tmp/geodesia-tunnel.log 2>&1 &
+          echo $! > /tmp/geodesia-tunnel.pid
+
+          URL=""
+          for i in {1..90}; do
+            URL="$(grep -Eo 'https://[a-z0-9-]+\.trycloudflare\.com' /tmp/geodesia-tunnel.log | tail -1 || true)"
+            if [ -n "$URL" ]; then
+              break
+            fi
+            sleep 2
+          done
+
+          if [ -z "$URL" ]; then
+            echo "Cloudflare Quick Tunnel did not return a URL"
+            cat /tmp/geodesia-tunnel.log
+            exit 1
+          fi
+
+          echo "LIVE_PREVIEW_URL=$URL" >> "$GITHUB_ENV"
+          {
+            echo "## Live Preview"
+            echo
+            echo "**$URL**"
+            echo
+            echo "Commit: $GITHUB_SHA"
+            echo
+            echo "This preview is temporary and intended for development."
+          } >> "$GITHUB_STEP_SUMMARY"
+
+          gh api --method POST \
+            "/repos/$GITHUB_REPOSITORY/statuses/$GITHUB_SHA" \
+            -f state=success \
+            -f context="Live Preview" \
+            -f description="Temporary live preview is running" \
+            -f target_url="$URL"
+
+      - name: Keep preview alive
+        shell: bash
+        run: |
+          echo "Live preview: $LIVE_PREVIEW_URL"
+          wait "$(cat /tmp/geodesia-tunnel.pid)"
+
+      - name: Failure diagnostics
+        if: failure()
+        shell: bash
+        run: |
+          echo "### Next.js log"
+          cat /tmp/geodesia-next.log || true
+          echo
+          echo "### Cloudflare Tunnel log"
+          cat /tmp/geodesia-tunnel.log || true
