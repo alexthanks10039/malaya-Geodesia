@@ -1,0 +1,1 @@
+import {Calculator} from "@/components/calculator"; export default function CalculatorPage(){return <section className="section page-content"><div className="page-title"><p className="eyebrow">Конфигуратор</p><h1>Рассчитать геодезические работы</h1><p>Соберите предварительный состав работ за несколько шагов.</p></div><Calculator/></section>}
