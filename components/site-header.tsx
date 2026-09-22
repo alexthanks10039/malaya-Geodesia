@@ -1,6 +1,7 @@
 "use client";
 import Link from "next/link";
-import { usePathname, useState } from "react";
+import { useState } from "react";
+import { usePathname } from "next/navigation";
 import { Menu, X } from "lucide-react";
 import { ThemeToggle } from "@/components/theme-toggle";
 
