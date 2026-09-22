@@ -75,4 +75,4 @@ html[data-theme="light"] .theme-toggle:hover { background:var(--paper); }
   html[data-theme="dark"] .nav { background:rgba(11,15,12,.98); border-bottom-color:var(--line); }
 }
 
-.header-tools{display:flex;align-items:center;gap:8px;flex:0 0 auto}.header-tools + .nav{margin-left:auto}@media(max-width:650px){.header-tools{order:2}.header-tools + .nav{margin-left:0}.mobile-menu{order:3}}\n
+.header-tools{display:flex;align-items:center;gap:8px;flex:0 0 auto}.header-tools + .nav{margin-left:auto}@media(max-width:650px){.header-tools{order:2}.header-tools + .nav{margin-left:0}.mobile-menu{order:3}}
