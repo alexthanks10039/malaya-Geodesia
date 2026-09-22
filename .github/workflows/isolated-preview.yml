@@ -1,0 +1,148 @@
+name: Isolated Preview
+
+on:
+  push:
+    branches:
+      - preview/isolated
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  statuses: write
+
+concurrency:
+  group: isolated-preview
+  cancel-in-progress: true
+
+env:
+  MALAYA_ISOLATED_PREVIEW: "1"
+  NEXT_PUBLIC_MALAYA_ISOLATED_PREVIEW: "1"
+  NEXT_TELEMETRY_DISABLED: "1"
+
+jobs:
+  preview:
+    runs-on: ubuntu-latest
+    timeout-minutes: 360
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v5
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: package.json
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: TypeScript check
+        run: npm run lint
+
+      - name: Build isolated preview
+        run: npm run build
+
+      - name: Start production server
+        shell: bash
+        run: |
+          nohup npm start -- --hostname 0.0.0.0 > /tmp/malaya-preview.log 2>&1 &
+          echo $! > /tmp/malaya-preview.pid
+
+          for i in {1..60}; do
+            if curl -fsS http://127.0.0.1:3000/ >/dev/null; then
+              echo "Isolated preview server is ready"
+              exit 0
+            fi
+            sleep 2
+          done
+
+          cat /tmp/malaya-preview.log
+          exit 1
+
+      - name: Install cloudflared
+        shell: bash
+        run: |
+          curl -fsSL https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-amd64 -o /tmp/cloudflared
+          chmod +x /tmp/cloudflared
+          /tmp/cloudflared --version
+
+      - name: Start isolated public tunnel
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          nohup /tmp/cloudflared tunnel --no-autoupdate --url http://127.0.0.1:3000 > /tmp/malaya-tunnel.log 2>&1 &
+          echo $! > /tmp/malaya-tunnel.pid
+
+          URL=""
+          for i in {1..90}; do
+            URL="$(grep -Eo 'https://[a-z0-9-]+\.trycloudflare\.com' /tmp/malaya-tunnel.log | tail -1 || true)"
+            if [ -n "$URL" ]; then break; fi
+            sleep 2
+          done
+
+          if [ -z "$URL" ]; then
+            cat /tmp/malaya-tunnel.log
+            exit 1
+          fi
+
+          echo "LIVE_PREVIEW_URL=$URL" >> "$GITHUB_ENV"
+
+          {
+            echo "## Isolated Preview"
+            echo
+            echo "**$URL**"
+            echo
+            echo "Branch: preview/isolated"
+            echo "Commit: $GITHUB_SHA"
+            echo
+            echo "Production Next.js server with preview-only performance safeguards."
+          } >> "$GITHUB_STEP_SUMMARY"
+
+          gh api --method POST "/repos/$GITHUB_REPOSITORY/statuses/$GITHUB_SHA" \
+            -f state=success \
+            -f context="Isolated Preview" \
+            -f description="Isolated preview is running" \
+            -f target_url="$URL"
+
+      - name: Verify isolated preview
+        shell: bash
+        run: |
+          for i in {1..20}; do
+            if curl -fsSL --max-time 20 "$LIVE_PREVIEW_URL/" >/dev/null; then
+              echo "Isolated public preview responds successfully"
+              exit 0
+            fi
+            sleep 3
+          done
+          cat /tmp/malaya-preview.log || true
+          cat /tmp/malaya-tunnel.log || true
+          exit 1
+
+      - name: Keep isolated preview alive
+        shell: bash
+        run: |
+          PID="$(cat /tmp/malaya-tunnel.pid)"
+          for i in {1..680}; do
+            if ! kill -0 "$PID" 2>/dev/null; then
+              cat /tmp/malaya-tunnel.log || true
+              exit 1
+            fi
+            if ! curl -fsSL --max-time 10 "$LIVE_PREVIEW_URL/" >/dev/null; then
+              cat /tmp/malaya-tunnel.log || true
+              exit 1
+            fi
+            sleep 30
+          done
+
+      - name: Diagnostics
+        if: failure()
+        shell: bash
+        run: |
+          echo "### Next.js server"
+          cat /tmp/malaya-preview.log || true
+          echo
+          echo "### Cloudflare tunnel"
+          cat /tmp/malaya-tunnel.log || true
