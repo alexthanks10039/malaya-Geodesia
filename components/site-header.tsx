@@ -3,6 +3,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState } from "react";
 import { Menu, X } from "lucide-react";
+import { ThemeToggle } from "@/components/theme-toggle";
 
 export function SiteHeader() {
   const pathname = usePathname();
@@ -17,7 +18,7 @@ export function SiteHeader() {
           <span>МАЛАЯ<br />ГЕОДЕЗИЯ</span>
         </Link>
 
-        <nav className={open ? "nav open" : "nav"} aria-label="Основная навигация">
+        <div className="header-tools">\n          <ThemeToggle />\n        </div>\n\n        <nav className={open ? "nav open" : "nav"} aria-label="Основная навигация">
           {nav.map(([title, href]) => {
             const active = pathname === href || pathname.startsWith(`${href}/`);
             return (
