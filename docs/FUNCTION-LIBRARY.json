@@ -1,0 +1,529 @@
+{
+  "meta": {
+    "product": "Малая геодезия",
+    "version": "2026-09-23",
+    "purpose": "единая библиотека функций/блоков для разработки, Studio и QA"
+  },
+  "questions": [
+    "что это",
+    "зачем",
+    "для кого",
+    "где",
+    "что запускает",
+    "вход",
+    "как работает",
+    "выход",
+    "влияние на пользователя",
+    "влияние на следующий шаг",
+    "данные",
+    "зависимости",
+    "как менять в Studio",
+    "как менять в коде",
+    "как проверить",
+    "ошибки",
+    "статус",
+    "приоритет",
+    "что не входит"
+  ],
+  "modules": [
+    [
+      "site.home",
+      "Главная",
+      "/",
+      "P0",
+      "задача→метод→результат→калькулятор",
+      "implemented"
+    ],
+    [
+      "site.services",
+      "Каталог услуг",
+      "/services",
+      "P0/P1",
+      "выбор услуги и переход на detail",
+      "implemented/CMS integration partial"
+    ],
+    [
+      "site.service",
+      "Индивидуальная услуга",
+      "/services/[slug]",
+      "P0",
+      "when/result/technology/formats/process→calculator",
+      "implemented"
+    ],
+    [
+      "site.calculator",
+      "Калькулятор",
+      "/calculator",
+      "P0",
+      "параметры→цена/срок→lead",
+      "implemented; lead persistence gap"
+    ],
+    [
+      "site.cases",
+      "Кейсы",
+      "/cases",
+      "P0",
+      "доказательство: задача→метод→данные→результат",
+      "implemented"
+    ],
+    [
+      "site.case",
+      "Индивидуальный кейс",
+      "/cases/[slug]",
+      "P1",
+      "детализация кейса и media",
+      "implemented/Studio editor"
+    ],
+    [
+      "site.knowledge",
+      "Справочник",
+      "/knowledge",
+      "P1",
+      "термины/методы/форматы",
+      "implemented"
+    ],
+    [
+      "site.technologies",
+      "Технологии",
+      "/technologies",
+      "P1",
+      "объяснение toolkit",
+      "implemented"
+    ],
+    [
+      "site.partners",
+      "Партнёры",
+      "/partners",
+      "P1",
+      "партнёрский контур",
+      "implemented"
+    ],
+    [
+      "site.contacts",
+      "Контакты",
+      "/contacts",
+      "P0",
+      "контактный сценарий",
+      "implemented"
+    ],
+    [
+      "studio.full",
+      "Full Studio",
+      "/studio",
+      "P1",
+      "единое визуальное редактирование",
+      "MLP implemented"
+    ],
+    [
+      "studio.dev",
+      "Dev Mode",
+      "any page",
+      "P1",
+      "live DOM edit + TEST",
+      "MLP implemented"
+    ],
+    [
+      "studio.page",
+      "Page Editor",
+      "",
+      "P1",
+      "tree/inspector/responsive/tokens/draft/export",
+      "MLP implemented"
+    ],
+    [
+      "studio.calculator",
+      "Calculator Editor",
+      "",
+      "P1",
+      "типы/площади/коэффициенты/формулы/сроки",
+      "MLP implemented"
+    ],
+    [
+      "studio.case",
+      "Case Editor",
+      "",
+      "P1",
+      "поля кейса и media",
+      "MLP implemented"
+    ],
+    [
+      "cms.content",
+      "CMS Content",
+      "",
+      "P1",
+      "CRUD + draft/publish + slug/path + version",
+      "backend implemented; UI/integration partial"
+    ],
+    [
+      "cms.files",
+      "File Space",
+      "",
+      "P1",
+      "upload/list/delete metadata",
+      "backend implemented"
+    ],
+    [
+      "cms.audit",
+      "Audit Log",
+      "",
+      "P1",
+      "история create/update/publish/unpublish/delete/upload",
+      "backend implemented"
+    ],
+    [
+      "lead.api",
+      "Lead API",
+      "/api/leads",
+      "P0",
+      "validation + synthetic leadId",
+      "implemented; not durable"
+    ],
+    [
+      "calculator.engine",
+      "Pricing Engine",
+      "",
+      "P0",
+      "числовой context цены/срока",
+      "implemented"
+    ],
+    [
+      "calculator.formula",
+      "Formula Engine",
+      "",
+      "P1",
+      "named formulas + validation + test context",
+      "implemented"
+    ],
+    [
+      "infra.preview",
+      "Unified Preview",
+      "",
+      "P0",
+      "одна среда для site+calculator+Studio",
+      "implemented"
+    ],
+    [
+      "infra.future.geo",
+      "PostGIS/geodata",
+      "",
+      "P3/P4",
+      "spatial workflows",
+      "frozen"
+    ],
+    [
+      "infra.future.ai",
+      "pgvector/RAG/AI",
+      "",
+      "P3/P4",
+      "AI search",
+      "frozen"
+    ],
+    [
+      "infra.future.3d",
+      "3D expansion",
+      "",
+      "P3/P4",
+      "Three.js/R3F expansion",
+      "frozen"
+    ]
+  ],
+  "blocks": [
+    [
+      "home.hero",
+      "объясняет продукт за первый экран",
+      "text/CSS via Dev Mode"
+    ],
+    [
+      "home.scenarios",
+      "помогает начать с задачи",
+      "4 сценария→calculator"
+    ],
+    [
+      "home.pipeline",
+      "объясняет процесс",
+      "Задача→Съёмка→Обработка→Результат"
+    ],
+    [
+      "home.services",
+      "быстрый вход в услуги",
+      "Service[]"
+    ],
+    [
+      "home.geo-index",
+      "технический visual anchor",
+      "GeospatialIndex"
+    ],
+    [
+      "home.technologies",
+      "объясняет методы",
+      "Technology[]"
+    ],
+    [
+      "home.cases",
+      "добавляет доказательство",
+      "Case[]"
+    ],
+    [
+      "home.final-cta",
+      "возвращает в конверсию",
+      "/calculator"
+    ],
+    [
+      "service.detail-hero",
+      "что это + результат",
+      "category/name/description/deliverable"
+    ],
+    [
+      "service.when",
+      "помогает понять релевантность",
+      "when/features"
+    ],
+    [
+      "service.tech-formats",
+      "объясняет метод и выдачу",
+      "technologies/formats"
+    ],
+    [
+      "service.process",
+      "показывает путь работ",
+      "process[]"
+    ],
+    [
+      "calculator.steps",
+      "собирает входные данные",
+      "type/area/complexity/output/urgency/phone"
+    ],
+    [
+      "calculator.estimate",
+      "показывает предварительную цену/срок",
+      "calculator engine"
+    ],
+    [
+      "calculator.success",
+      "подтверждает заявку",
+      "ГОТОВО / ЗАЯВКА ПРИНЯТА"
+    ],
+    [
+      "studio.tree",
+      "находит DOM",
+      "иерархия+поиск"
+    ],
+    [
+      "studio.inspector",
+      "меняет элемент",
+      "text + 13 CSS properties"
+    ],
+    [
+      "studio.modes",
+      "разделяет edit/test",
+      "EDIT/TEST"
+    ],
+    [
+      "studio.responsive",
+      "проверяет breakpoints",
+      "desktop/tablet/mobile"
+    ],
+    [
+      "studio.tokens",
+      "меняет глобальный UI",
+      "7 CSS tokens"
+    ],
+    [
+      "studio.draft",
+      "безопасно тестирует",
+      "localStorage/browser draft"
+    ],
+    [
+      "studio.export",
+      "выгружает состояние",
+      "JSON"
+    ],
+    [
+      "studio.calculator.pricing",
+      "управляет экономикой",
+      "base/area/format/urgency/days/rounding"
+    ],
+    [
+      "studio.calculator.coefficients",
+      "добавляет переменные",
+      "key/label/value/unit/description"
+    ],
+    [
+      "studio.calculator.formulas",
+      "меняет правила",
+      "expression/enabled/price/days"
+    ],
+    [
+      "cms.lifecycle",
+      "draft→changes→published",
+      "CMS"
+    ],
+    [
+      "cms.url",
+      "создаёт уникальный URL",
+      "slugify + DB uniqueness"
+    ],
+    [
+      "cms.files",
+      "централизует media",
+      "upload/list/delete"
+    ],
+    [
+      "cms.audit",
+      "фиксирует историю",
+      "before/after/metadata"
+    ],
+    [
+      "lead.validation",
+      "защищает API от плохого ввода",
+      "phone/type/area/output/urgency/complexity"
+    ],
+    [
+      "lead.persistence",
+      "сохраняет операционный lead",
+      "GAP; target DB+notifications"
+    ],
+    [
+      "calc.variables",
+      "преобразует форму в numbers",
+      "area/base/factors/days/custom coefficients"
+    ],
+    [
+      "calc.formulas",
+      "вычисляет правила",
+      "named variables/formulas/validation"
+    ]
+  ],
+  "entities": {
+    "Service": [
+      "slug",
+      "name",
+      "category",
+      "short",
+      "description",
+      "when",
+      "deliverable",
+      "technologies[]",
+      "formats[]",
+      "features[]",
+      "process[]"
+    ],
+    "Case": [
+      "slug",
+      "category",
+      "title",
+      "location",
+      "area",
+      "technology",
+      "task",
+      "result",
+      "deliverables",
+      "duration",
+      "media[]"
+    ],
+    "KnowledgeItem": [
+      "slug",
+      "type",
+      "title",
+      "summary",
+      "body",
+      "related[]"
+    ],
+    "Lead": [
+      "id",
+      "phone",
+      "email",
+      "type",
+      "area",
+      "complexity",
+      "output",
+      "estimate",
+      "status",
+      "createdAt"
+    ],
+    "CmsContent": [
+      "id",
+      "type",
+      "slug",
+      "path",
+      "publishedSlug",
+      "publishedPath",
+      "status",
+      "data",
+      "publishedData",
+      "version",
+      "createdAt",
+      "updatedAt",
+      "publishedAt"
+    ],
+    "FileAsset": [
+      "id",
+      "pathname",
+      "url",
+      "filename",
+      "contentType",
+      "size",
+      "folder",
+      "createdAt"
+    ],
+    "AuditRecord": [
+      "id",
+      "entityType",
+      "entityId",
+      "action",
+      "actor",
+      "beforeData",
+      "afterData",
+      "metadata",
+      "createdAt"
+    ]
+  },
+  "journeys": {
+    "discovery": [
+      "/",
+      "scenario",
+      "/calculator",
+      "estimate",
+      "phone",
+      "success"
+    ],
+    "service": [
+      "/services",
+      "service/[slug]",
+      "technology/formats/process",
+      "calculator"
+    ],
+    "content": [
+      "Studio",
+      "entity",
+      "edit",
+      "draft",
+      "preview",
+      "publish",
+      "URL",
+      "audit"
+    ],
+    "dev": [
+      "page",
+      "DEV ON",
+      "DOM select",
+      "edit",
+      "TEST",
+      "reset/export"
+    ]
+  },
+  "gaps": [
+    "Lead не сохраняется в БД текущим /api/leads",
+    "Telegram/Google Forms не подтверждены как реализованные",
+    "CMS backend есть, но полная сквозная UI-связка с реальными service/case/knowledge pages ещё не завершена",
+    "Studio browser draft и CMS published content пока являются разными слоями; нужна единая цепочка page→DOM→Studio→CMS→publish",
+    "Studio пока редактирует часть свойств сырым CSS, а не семантическими блоками"
+  ],
+  "roadmap": [
+    "P0: calculator→lead durable flow",
+    "P1: CRUD/file space/domain URLs/audit/draft-publish UI",
+    "P1: Studio↔CMS сквозная связь",
+    "P1: индивидуальные услуги",
+    "P3/P4: PostGIS/maps/3D/pgvector/RAG/AI"
+  ]
+}
