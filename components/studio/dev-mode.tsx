@@ -18,7 +18,9 @@ const STYLE_MAP: Record<keyof StudioCssOverrides, string> = {
 
 type PreviewMode = "select" | "interact";
 type NodeSummary = { id: string; tag: string; label: string; className: string };
-type Selected = NodeSummary & { textEditable: boolean; css: StudioCssOverrides };\n\nconst STYLE_LABELS: Record<keyof StudioCssOverrides, string> = { fontSize: "Размер", lineHeight: "Интерлиньяж", color: "Цвет", background: "Фон", padding: "Внутренний отступ", margin: "Внешний отступ", borderRadius: "Скругление", width: "Ширина", maxWidth: "Макс. ширина", gap: "Gap", letterSpacing: "Трекинг", opacity: "Прозрачность", display: "Display" };
+type Selected = NodeSummary & { textEditable: boolean; css: StudioCssOverrides };
+
+const STYLE_LABELS: Record<keyof StudioCssOverrides, string> = { fontSize: "Размер", lineHeight: "Интерлиньяж", color: "Цвет", background: "Фон", padding: "Внутренний отступ", margin: "Внешний отступ", borderRadius: "Скругление", width: "Ширина", maxWidth: "Макс. ширина", gap: "Gap", letterSpacing: "Трекинг", opacity: "Прозрачность", display: "Display" };
 
 function getNodeId(element: Element) { return element.getAttribute("data-studio-node-id") ?? ""; }
 
