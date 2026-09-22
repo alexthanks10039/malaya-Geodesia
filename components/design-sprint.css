@@ -289,3 +289,19 @@
     margin: 16px 18px 28px;
   }
 }
+
+
+.service-icon-row{display:flex;align-items:center;justify-content:space-between;gap:12px}
+.service-icon{display:grid;place-items:center;width:32px;height:32px;border:1px solid var(--line);border-radius:10px;color:var(--muted);background:color-mix(in srgb,var(--bg) 55%,transparent);transition:.22s ease}
+.service-card:hover .service-icon{background:var(--ink);border-color:var(--ink);color:var(--acid);transform:rotate(-5deg)}
+.service-card h3{margin-top:34px}
+.case-topoplan .case-art:before{border-radius:47% 53% 45% 55%;transform:rotate(-18deg);box-shadow:0 0 0 28px rgba(220,255,170,.05),0 0 0 56px rgba(220,255,170,.03)}
+.case-karer .case-art:before{inset:12% -8% 18%;border-radius:18px;transform:rotate(11deg);box-shadow:0 0 0 25px rgba(220,255,170,.035)}
+.case-fasad .case-art:before{inset:10% 16% 9%;border-radius:12px;transform:perspective(240px) rotateY(-20deg) rotateZ(-3deg);box-shadow:26px 0 0 -12px rgba(220,255,170,.10),52px 0 0 -24px rgba(220,255,170,.06)}
+.case-karer .case-art{background:radial-gradient(circle at 36% 62%,#8a9b6a,transparent 23%),radial-gradient(circle at 72% 30%,#405841,transparent 25%),linear-gradient(145deg,#0d120f,#53634f)}
+.case-fasad .case-art{background:radial-gradient(circle at 65% 38%,#71836b,transparent 22%),radial-gradient(circle at 28% 70%,#38483b,transparent 30%),linear-gradient(140deg,#0e130f,#59665b)}
+
+@media(max-width:650px){
+  .service-icon{width:30px;height:30px}
+  .service-card h3{margin-top:28px}
+}
