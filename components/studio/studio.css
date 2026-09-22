@@ -120,3 +120,7 @@ body:has(.studio-app) main{margin:0!important;max-width:none!important;padding:0
   .studio-formula-controls{align-items:flex-start;flex-direction:column}
   .studio-formula-controls>code{width:100%}
 }
+
+.studio-grid-fields select{width:100%;box-sizing:border-box;border:1px solid #343a31;background:#10120f;color:#eef1e9;border-radius:7px;padding:8px 9px;outline:none;font:10px ui-monospace,SFMono-Regular,monospace}
+.studio-grid-fields select:focus{border-color:#d9ff52}
+.studio-test-conditions{display:grid;gap:6px;margin-top:10px}.studio-test-conditions>span{font:800 8px ui-monospace,SFMono-Regular,monospace;color:#7f8979;text-transform:uppercase;letter-spacing:.06em}.studio-test-conditions>div{display:flex;flex-wrap:wrap;gap:5px}.studio-test-conditions button{border:1px solid #343a31;background:#141713;color:#7f8979;border-radius:999px;padding:6px 8px;font:800 8px ui-monospace,SFMono-Regular,monospace;cursor:pointer}.studio-test-conditions button:hover{border-color:#65735b;color:#dfe5d9}.studio-test-conditions button.active{border-color:#7a9258;background:#2b3623;color:#d9ff52}
