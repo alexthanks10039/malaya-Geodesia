@@ -69,7 +69,10 @@ function tokenize(expression: string): Token[] {
     }
 
     if ('+-*/^'.includes(char)) {
-      tokens.push({ type: 'operator', value: char as Token['value'] });
+      tokens.push({
+        type: 'operator',
+        value: char as '+' | '-' | '*' | '/' | '^',
+      });
       index += 1;
       continue;
     }
