@@ -53,12 +53,19 @@ jobs:
           cat /tmp/geodesia-next.log
           exit 1
 
+      - name: Install cloudflared
+        shell: bash
+        run: |
+          curl -fsSL https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-amd64 -o /tmp/cloudflared
+          chmod +x /tmp/cloudflared
+          /tmp/cloudflared --version
+
       - name: Start public live tunnel
         shell: bash
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          nohup npx --yes wrangler tunnel quick-start http://127.0.0.1:3000 > /tmp/geodesia-tunnel.log 2>&1 &
+          nohup /tmp/cloudflared tunnel --no-autoupdate --url http://127.0.0.1:3000 > /tmp/geodesia-tunnel.log 2>&1 &
           echo $! > /tmp/geodesia-tunnel.pid
 
           URL=""
@@ -77,6 +84,8 @@ jobs:
           fi
 
           echo "LIVE_PREVIEW_URL=$URL" >> "$GITHUB_ENV"
+          echo "$URL" > /tmp/geodesia-preview-url
+
           {
             echo "## Live Preview"
             echo
@@ -84,25 +93,43 @@ jobs:
             echo
             echo "Commit: $GITHUB_SHA"
             echo
-            echo "This preview is temporary and intended for development."
+            echo "Temporary development preview."
           } >> "$GITHUB_STEP_SUMMARY"
 
-          gh api --method POST             "/repos/$GITHUB_REPOSITORY/statuses/$GITHUB_SHA"             -f state=success             -f context="Live Preview"             -f description="Temporary live preview is running"             -f target_url="$URL"
+          gh api --method POST "/repos/$GITHUB_REPOSITORY/statuses/$GITHUB_SHA" \
+            -f state=success \
+            -f context="Live Preview" \
+            -f description="Temporary live preview is running" \
+            -f target_url="$URL"
+
+      - name: Verify public preview
+        shell: bash
+        run: |
+          echo "Preview URL: $LIVE_PREVIEW_URL"
+          for i in {1..20}; do
+            if curl -fsSL --max-time 20 "$LIVE_PREVIEW_URL/" >/dev/null; then
+              echo "Public preview responds successfully"
+              exit 0
+            fi
+            sleep 3
+          done
+
+          echo "Public preview is not responding"
+          cat /tmp/geodesia-tunnel.log || true
+          exit 1
 
       - name: Keep preview alive
         shell: bash
         run: |
-          echo "Live preview: $LIVE_PREVIEW_URL"
-          echo "Keeping the GitHub runner alive while the preview endpoint responds..."
-
+          TUNNEL_PID="$(cat /tmp/geodesia-tunnel.pid)"
           for i in {1..680}; do
-            if ! kill -0 "$(cat /tmp/geodesia-tunnel.pid)" 2>/dev/null; then
-              echo "Cloudflare tunnel process exited"
+            if ! kill -0 "$TUNNEL_PID" 2>/dev/null; then
+              echo "cloudflared process exited"
               cat /tmp/geodesia-tunnel.log || true
               exit 1
             fi
 
-            if ! curl -fsS --max-time 10 "$LIVE_PREVIEW_URL/" >/dev/null; then
+            if ! curl -fsSL --max-time 10 "$LIVE_PREVIEW_URL/" >/dev/null; then
               echo "Live preview endpoint stopped responding"
               cat /tmp/geodesia-tunnel.log || true
               exit 1
@@ -120,7 +147,11 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           if [ -n "${LIVE_PREVIEW_URL:-}" ]; then
-            gh api --method POST               "/repos/$GITHUB_REPOSITORY/statuses/$GITHUB_SHA"               -f state=failure               -f context="Live Preview"               -f description="Live preview stopped"               -f target_url="$LIVE_PREVIEW_URL" || true
+            gh api --method POST "/repos/$GITHUB_REPOSITORY/statuses/$GITHUB_SHA" \
+              -f state=failure \
+              -f context="Live Preview" \
+              -f description="Live preview stopped" \
+              -f target_url="$LIVE_PREVIEW_URL" || true
           fi
           echo "### Next.js log"
           cat /tmp/geodesia-next.log || true
