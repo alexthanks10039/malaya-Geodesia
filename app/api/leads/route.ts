@@ -40,19 +40,9 @@ export async function POST(request: Request) {
       return NextResponse.json({ ok: false, message: "Выберите тип работы" }, { status: 400 });
     }
 
-    if (!Number.isFinite(area) ||
-      area < defaultCalculatorStudioConfig.pricing.minArea ||
-      area > defaultCalculatorStudioConfig.pricing.maxArea) {
+    if (!Number.isFinite(area) || area <= 0 || area > 10_000_000) {
       return NextResponse.json(
-        {
-          ok: false,
-          message:
-            "Площадь должна быть от " +
-            defaultCalculatorStudioConfig.pricing.minArea.toLocaleString("ru-RU") +
-            " до " +
-            defaultCalculatorStudioConfig.pricing.maxArea.toLocaleString("ru-RU") +
-            " м²",
-        },
+        { ok: false, message: "Площадь должна быть больше 0 и не превышать 10 000 000 м²" },
         { status: 400 },
       );
     }
