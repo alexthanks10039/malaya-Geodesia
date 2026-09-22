@@ -158,7 +158,7 @@ export function StudioDevMode() {
     writeStudioState(next);
     setState(next);
     setSelected(null);
-    refresh();
+    window.location.reload();
   }
 
   function resetPage() {
@@ -167,7 +167,7 @@ export function StudioDevMode() {
     writeStudioState(next);
     setState(next);
     setSelected(null);
-    refresh();
+    window.location.reload();
   }
 
   function exportDraft() {
