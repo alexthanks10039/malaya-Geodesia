@@ -1,0 +1,4 @@
+import {NextResponse} from"next/server";import {createContent,isContentType,listAdminContent} from"@/lib/cms";
+export const dynamic="force-dynamic";
+export async function GET(_request:Request,{params}:{params:Promise<{type:string}>}){const{type}=await params;if(!isContentType(type))return NextResponse.json({ok:false,message:"Unknown content type"},{status:404});return NextResponse.json({ok:true,items:await listAdminContent(type)});}
+export async function POST(request:Request,{params}:{params:Promise<{type:string}>}){try{const{type}=await params;if(!isContentType(type))return NextResponse.json({ok:false,message:"Unknown content type"},{status:404});const body=await request.json();const item=await createContent(type,body?.slug,body?.data);return NextResponse.json({ok:true,item},{status:201});}catch(error){return NextResponse.json({ok:false,message:error instanceof Error?error.message:"Create failed"},{status:400});}}

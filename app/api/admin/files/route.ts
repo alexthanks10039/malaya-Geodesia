@@ -1,0 +1,3 @@
+import {NextResponse}from"next/server";import{del}from"@vercel/blob";import{deleteFileAsset,listFiles}from"@/lib/cms";export const dynamic="force-dynamic";
+export async function GET(request:Request){const url=new URL(request.url);return NextResponse.json({ok:true,items:await listFiles(url.searchParams.get("folder")||undefined)});}
+export async function DELETE(request:Request){try{const body=await request.json();const file=await deleteFileAsset(String(body?.id??""));await del(file.url);return NextResponse.json({ok:true,file});}catch(error){return NextResponse.json({ok:false,message:error instanceof Error?error.message:"Delete failed"},{status:400});}}
