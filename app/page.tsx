@@ -100,7 +100,7 @@ export default function Home() {
           <div><p className="eyebrow">Кейсы / 03</p><h2>Задача → метод → данные → результат</h2></div>
           <Link className="text-link" href="/cases">Все кейсы <ArrowRight size={16} /></Link>
         </div>
-        <Stagger className="case-grid">{cases.map(c => <StaggerItem key={c.slug}><Link className="case-card" href={`/cases/${c.slug}`}><div className="case-art"><span>{c.category}</span><strong>{c.title}</strong></div><div className="case-meta"><span>{c.location}</span><span>{c.area}</span><span>{c.technology}</span></div></Link></StaggerItem>)}</Stagger>
+        <Stagger className="case-grid">{cases.map(c => <StaggerItem key={c.slug}><Link className="case-card" href={`/cases/${c.slug}`}><div className={`case-art case-${c.slug}`}><span>{c.category}</span><strong>{c.title}</strong></div><div className="case-meta"><span>{c.location}</span><span>{c.area}</span><span>{c.technology}</span></div></Link></StaggerItem>)}</Stagger>
       </Reveal>
 
       <Reveal className="section section-accent">
