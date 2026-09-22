@@ -140,7 +140,7 @@ export function CalculatorStudioEditor({ onChanged }: Props) {
   );
 
   function update(next: CalculatorStudioConfig) {
-    setConfig(normalizeCalculatorConfig(next));
+    setConfig(next);
     setDirty(true);
   }
 
