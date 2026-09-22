@@ -1,40 +1,50 @@
 "use client";
 import Link from "next/link";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { usePathname } from "next/navigation";
-import { Menu, X } from "lucide-react";
+import { ArrowUpRight, Menu, X } from "lucide-react";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { StudioDevModeButton } from "@/components/studio/dev-mode";
+
+const nav = [["Услуги", "/services"], ["Калькулятор", "/calculator"], ["Кейсы", "/cases"], ["Справочник", "/knowledge"]] as const;
 
 export function SiteHeader() {
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
-  const nav = [["Услуги", "/services"], ["Калькулятор", "/calculator"], ["Кейсы", "/cases"], ["Справочник", "/knowledge"]];
+
+  useEffect(() => {
+    if (!open) return;
+    const closeOnEscape = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setOpen(false);
+    };
+    document.addEventListener("keydown", closeOnEscape);
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.removeEventListener("keydown", closeOnEscape);
+      document.body.style.overflow = "";
+    };
+  }, [open]);
+
+  const close = () => setOpen(false);
 
   return (
-    <header className="site-header">
+    <header className={"site-header" + (open ? " menu-open" : "")}>
       <div className="header-inner">
-        <Link className="brand" href="/" onClick={() => setOpen(false)} aria-label="Малая геодезия">
+        <Link className="brand" href="/" onClick={close} aria-label="Малая геодезия">
           <span className="brand-mark">G</span>
           <span>МАЛАЯ<br />ГЕОДЕЗИЯ</span>
         </Link>
 
-        <nav className={open ? "nav open" : "nav"} aria-label="Основная навигация">
+        <nav className="nav" aria-label="Основная навигация">
           {nav.map(([title, href]) => {
             const active = pathname === href || pathname.startsWith(href + "/");
             return (
-              <Link
-                className={active ? "active" : ""}
-                href={href}
-                key={href}
-                onClick={() => setOpen(false)}
-                aria-current={active ? "page" : undefined}
-              >
+              <Link className={active ? "active" : ""} href={href} key={href} onClick={close} aria-current={active ? "page" : undefined}>
                 {title}
               </Link>
             );
           })}
-          <Link className="header-cta" href="/calculator" onClick={() => setOpen(false)}>Рассчитать</Link>
+          <Link className="header-cta" href="/calculator" onClick={close}>Рассчитать</Link>
         </nav>
 
         <div className="header-tools">
@@ -42,9 +52,56 @@ export function SiteHeader() {
           <StudioDevModeButton />
         </div>
 
-        <button className="mobile-menu" onClick={() => setOpen(!open)} aria-label={open ? "Закрыть меню" : "Открыть меню"} aria-expanded={open}>
-          {open ? <X size={19} /> : <Menu size={19} />}
+        <button
+          className="mobile-menu"
+          type="button"
+          onClick={() => setOpen(value => !value)}
+          aria-label={open ? "Закрыть меню" : "Открыть меню"}
+          aria-expanded={open}
+          aria-controls="mobile-navigation"
+        >
+          {open ? <X size={20} /> : <Menu size={20} />}
         </button>
+      </div>
+
+      <div className={"mobile-nav " + (open ? "is-open" : "")} id="mobile-navigation" aria-hidden={!open}>
+        <button className="mobile-nav-backdrop" type="button" aria-label="Закрыть меню" onClick={close} tabIndex={open ? 0 : -1} />
+        <nav className="mobile-nav-panel" aria-label="Мобильная навигация">
+          <div className="mobile-nav-head">
+            <span className="eyebrow">NAV / 2026</span>
+            <span className="mobile-nav-status"><i /> ONLINE</span>
+          </div>
+
+          <div className="mobile-nav-links">
+            {nav.map(([title, href], index) => {
+              const active = pathname === href || pathname.startsWith(href + "/");
+              return (
+                <Link
+                  className={"mobile-nav-link " + (active ? "active" : "")}
+                  href={href}
+                  key={href}
+                  onClick={close}
+                  tabIndex={open ? 0 : -1}
+                  aria-current={active ? "page" : undefined}
+                >
+                  <span className="mobile-nav-index">0{index + 1}</span>
+                  <strong>{title}</strong>
+                  <ArrowUpRight size={20} />
+                </Link>
+              );
+            })}
+          </div>
+
+          <div className="mobile-nav-bottom">
+            <div>
+              <span className="eyebrow">Следующий шаг</span>
+              <p>Опишите задачу, а мы подберём метод и состав работ.</p>
+            </div>
+            <Link className="mobile-nav-cta" href="/calculator" onClick={close} tabIndex={open ? 0 : -1}>
+              Рассчитать проект <ArrowUpRight size={17} />
+            </Link>
+          </div>
+        </nav>
       </div>
     </header>
   );
