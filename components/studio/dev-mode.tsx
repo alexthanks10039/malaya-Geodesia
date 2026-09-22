@@ -242,9 +242,11 @@ export function StudioDevMode() {
   useEffect(() => {
     if (!enabled) return;
     const raf = window.requestAnimationFrame(() => setNodes(applyDrafts(state, pathname)));
-    const observer = new MutationObserver(() => {
-      if (document.querySelector("[data-studio-dev-ui]")) return;
-      setNodes(applyDrafts(state, pathname));
+    let refreshFrame = 0;
+    const observer = new MutationObserver((mutations) => {
+      if (mutations.every((mutation) => mutation.target instanceof Element && Boolean(mutation.target.closest("[data-studio-dev-ui]")))) return;
+      window.cancelAnimationFrame(refreshFrame);
+      refreshFrame = window.requestAnimationFrame(() => setNodes(applyDrafts(state, pathname)));
     });
     observer.observe(document.body, { childList: true, subtree: true });
     const clickHandler = (event: MouseEvent) => {
@@ -257,7 +259,7 @@ export function StudioDevMode() {
     };
     document.addEventListener("click", clickHandler, true);
     return () => {
-      window.cancelAnimationFrame(raf);
+      window.cancelAnimationFrame(raf);\n      window.cancelAnimationFrame(refreshFrame);
       observer.disconnect();
       document.removeEventListener("click", clickHandler, true);
     };
