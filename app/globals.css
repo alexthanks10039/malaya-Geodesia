@@ -23,7 +23,9 @@ button,input,select{font:inherit}
 .brand-mark{display:grid;place-items:center;width:34px;height:34px;border:1px solid var(--ink);background:var(--ink);color:var(--acid);font-size:15px;font-weight:900}
 .nav{display:flex;gap:5px;align-items:center;font-size:13px;font-weight:800}
 .nav a{padding:10px 12px;border-radius:999px;transition:.22s ease}
-.nav a:hover{background:rgba(16,19,15,.07)}
+.nav a:hover,.nav a.active{background:rgba(16,19,15,.08)}
+.nav a.active{box-shadow:inset 0 -2px 0 var(--ink)}
+:focus-visible{outline:2px solid var(--ink);outline-offset:3px}
 .header-cta{background:var(--dark)!important;color:var(--paper);padding-inline:15px!important}
 .mobile-menu{display:none;border:1px solid var(--line);background:var(--paper);width:40px;height:40px;border-radius:50%}
 .hero{max-width:1280px;margin:auto;min-height:calc(100vh - 59px);display:grid;grid-template-columns:1.03fr .97fr;padding:72px 24px 62px;position:relative;overflow:hidden}
@@ -202,3 +204,5 @@ button,input,select{font:inherit}
   .calculator-main,.calculator-summary{padding:20px}.calc-step h2{font-size:37px}
   .site-footer{grid-template-columns:1fr;padding:42px 18px}
 }
+
+@media (prefers-reduced-motion:reduce){html{scroll-behavior:auto}.button,.scenario-card,.pipeline-item,.service-card,.case-card,.knowledge-card{transition:none}.console-scan{animation:none}.hero:before{mask-image:none}}
