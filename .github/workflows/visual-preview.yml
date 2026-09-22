@@ -53,6 +53,9 @@ jobs:
         run: |
           npx playwright@1.55.0 screenshot --full-page --viewport-size="1440,1100" --wait-for-timeout=3500 http://127.0.0.1:3000/ visual-home-desktop.png
           npx playwright@1.55.0 screenshot --full-page --viewport-size="390,844" --wait-for-timeout=3500 http://127.0.0.1:3000/ visual-home-mobile.png
+          npx playwright@1.55.0 screenshot --full-page --viewport-size="1440,1100" --wait-for-timeout=2000 "http://127.0.0.1:3000/?dev=1" visual-dev-desktop.png
+          npx playwright@1.55.0 screenshot --full-page --viewport-size="390,844" --wait-for-timeout=2000 "http://127.0.0.1:3000/?dev=1" visual-dev-mobile.png
+          npx playwright@1.55.0 screenshot --full-page --viewport-size="1440,1100" --wait-for-timeout=2000 "http://127.0.0.1:3000/calculator?dev=1" visual-calculator-dev.png
 
       - name: Upload visual preview
         uses: actions/upload-artifact@v4
@@ -61,5 +64,8 @@ jobs:
           path: |
             visual-home-desktop.png
             visual-home-mobile.png
+            visual-dev-desktop.png
+            visual-dev-mobile.png
+            visual-calculator-dev.png
             /tmp/next.log
           retention-days: 2
