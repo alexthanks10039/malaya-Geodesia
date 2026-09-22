@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { defaultCalculatorStudioConfig } from "@/studio/config/calculator";
+import { sendOwnerLeadNotification } from "@/lib/telegram";
 
 const MAX_TEXT_LENGTH = 160;
 
@@ -59,10 +60,36 @@ export async function POST(request: Request) {
       return NextResponse.json({ ok: false, message: "Некорректные условия объекта" }, { status: 400 });
     }
 
+    const leadId = "GEO-" + Date.now();
+    const lead = {
+      id: leadId,
+      phone: normalizedPhone,
+      type,
+      area,
+      complexity,
+      output,
+      urgency,
+      estimate: payload.estimate && typeof payload.estimate === "object" ? payload.estimate : null,
+      source: "website",
+      sourcePage: typeof payload.sourcePage === "string" ? payload.sourcePage.slice(0, 200) : "/calculator",
+      createdAt: new Date().toISOString(),
+    };
+
+    let telegram = { ok: false, configured: Boolean(process.env.TG_KEY && process.env.OWNER_ID) };
+    if (telegram.configured) {
+      try {
+        await sendOwnerLeadNotification(lead);
+        telegram = { ok: true, configured: true };
+      } catch (error) {
+        console.error("[lead.telegram_failed]", error);
+      }
+    }
+
     return NextResponse.json({
       ok: true,
-      leadId: "GEO-" + Date.now(),
+      leadId,
       message: "Заявка принята",
+      telegram,
     });
   } catch {
     return NextResponse.json({ ok: false, message: "Некорректный запрос" }, { status: 400 });
