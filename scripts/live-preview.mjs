@@ -2,12 +2,20 @@ import {spawn} from "node:child_process";
 import {request} from "node:http";
 
 const port = process.env.PORT || "3000";
-const url = \`http://127.0.0.1:\${port}\`;
+const url = "http://127.0.0.1:" + port;
 
 function waitForServer(timeoutMs = 120000) {
   const startedAt = Date.now();
 
   return new Promise((resolve, reject) => {
+    const retry = () => {
+      if (Date.now() - startedAt > timeoutMs) {
+        reject(new Error("Next.js dev server did not become ready."));
+        return;
+      }
+      setTimeout(check, 1500);
+    };
+
     const check = () => {
       const req = request(url, {method: "GET"}, (res) => {
         res.resume();
@@ -21,14 +29,6 @@ function waitForServer(timeoutMs = 120000) {
       req.on("error", retry);
       req.setTimeout(2000, () => req.destroy());
       req.end();
-    };
-
-    const retry = () => {
-      if (Date.now() - startedAt > timeoutMs) {
-        reject(new Error("Next.js dev server did not become ready."));
-        return;
-      }
-      setTimeout(check, 1500);
     };
 
     check();
@@ -57,7 +57,7 @@ for (const signal of ["SIGINT", "SIGTERM", "SIGHUP"]) {
 
 try {
   await waitForServer();
-  console.log(\`\\nNext.js is ready: \${url}\`);
+  console.log("\nNext.js is ready: " + url);
 } catch (error) {
   cleanup();
   console.error(error);
@@ -77,9 +77,9 @@ const onTunnelOutput = (chunk) => {
   tunnelBuffer += value;
   process.stdout.write(value);
 
-  const match = tunnelBuffer.match(/https:\\/\\/[a-z0-9-]+\\.trycloudflare\\.com/);
+  const match = tunnelBuffer.match(/https:\/\/[a-z0-9-]+\.trycloudflare\.com/);
   if (match) {
-    console.log(\`\\nLIVE PREVIEW: \${match[0]}\\n\`);
+    console.log("\nLIVE PREVIEW: " + match[0] + "\n");
   }
 
   if (tunnelBuffer.length > 12000) {
