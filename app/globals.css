@@ -252,3 +252,47 @@ button,input,select{font:inherit}
 .photogrammetry-copy{padding:clamp(28px,4vw,54px);display:flex;flex-direction:column;justify-content:center;position:relative;z-index:2}.photogrammetry-copy h2{max-width:520px;color:var(--paper)}.photogrammetry-copy>p:not(.eyebrow){color:#9ba89e;max-width:470px}.scan-specs{display:flex;gap:10px;flex-wrap:wrap;margin:20px 0 28px}.scan-specs span{border:1px solid #344036;border-radius:999px;padding:8px 11px;color:#8f9c91;font:700 9px ui-monospace,SFMono-Regular,Menlo,monospace}.scan-specs b{color:var(--acid)}
 .photogrammetry-visual{position:relative;min-height:570px;overflow:hidden;background:radial-gradient(circle at 50% 55%,#18251c,#080b09 76%)}.photogrammetry-visual .geo-scene{position:absolute;inset:0}.photogrammetry-visual .geo-scene-frame{position:absolute;inset:0;width:100%;aspect-ratio:auto;border:0;border-radius:0;box-shadow:none;background:transparent}.photogrammetry-visual .geo-scene-frame .geo-hud,.photogrammetry-visual .geo-scene-frame .geo-chip,.photogrammetry-visual .geo-scene-frame .geo-crosshair,.photogrammetry-visual .geo-scene-frame .geo-grid-overlay,.photogrammetry-visual .geo-scene-frame .geo-vignette{display:none}.photo-hud{position:absolute;z-index:5;left:20px;right:20px;font:700 9px ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:.08em;color:#93a097}.photo-hud-top{top:18px;border-bottom:1px solid rgba(147,160,151,.16);padding-bottom:11px}.photo-hud-top i{display:inline-block;width:6px;height:6px;border-radius:50%;background:var(--acid);margin-right:7px;box-shadow:0 0 12px var(--acid)}.photo-hud-top b{float:right;color:var(--acid)}.photo-hud-bottom{bottom:18px;display:flex;align-items:end;gap:12px}.photo-hud-bottom span{color:#68766c}.photo-hud-bottom strong{font-size:17px;color:var(--paper);letter-spacing:-.04em}.photo-hud-bottom small{color:#68766c}
 @media(max-width:850px){.photogrammetry-card{grid-template-columns:1fr}.photogrammetry-visual{min-height:460px}.photogrammetry-copy{padding-bottom:18px}.photogrammetry-copy .button{align-self:flex-start}}
+
+/* mobile navigation */
+.mobile-nav{display:none}
+@media(max-width:650px){
+  .site-header{z-index:100;transition:background .25s ease}
+  .site-header.menu-open{background:var(--dark);border-bottom-color:#273129}
+  .site-header.menu-open .brand{color:var(--paper)}
+  .site-header.menu-open .brand-mark{background:var(--acid);border-color:var(--acid);color:var(--dark)}
+  .header-tools{display:none}
+  .mobile-menu{position:relative;z-index:3;display:grid;place-items:center;width:44px;height:44px;border-radius:13px;border-color:var(--line);color:var(--ink);transition:transform .2s ease,background .2s ease,color .2s ease,border-color .2s ease}
+  .menu-open .mobile-menu{background:var(--acid);border-color:var(--acid);color:var(--dark);transform:rotate(0deg)}
+  .nav{display:none}
+  .mobile-nav{position:fixed;inset:59px 0 0;display:block;visibility:hidden;pointer-events:none;z-index:90}
+  .mobile-nav.is-open{visibility:visible;pointer-events:auto}
+  .mobile-nav-backdrop{position:absolute;inset:0;width:100%;border:0;padding:0;background:rgba(3,6,4,.62);opacity:0;transition:opacity .3s ease;cursor:pointer}
+  .mobile-nav.is-open .mobile-nav-backdrop{opacity:1}
+  .mobile-nav-panel{position:absolute;inset:0 0 0 auto;width:min(100%,560px);padding:18px 18px 22px;background:var(--dark);color:var(--paper);display:flex;flex-direction:column;transform:translateX(100%);transition:transform .42s cubic-bezier(.22,.8,.2,1);overflow:auto;overscroll-behavior:contain}
+  .mobile-nav.is-open .mobile-nav-panel{transform:translateX(0)}
+  .mobile-nav-panel:before{content:"";position:absolute;inset:0;pointer-events:none;background-image:linear-gradient(rgba(255,255,255,.055) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.055) 1px,transparent 1px);background-size:36px 36px;mask-image:linear-gradient(to bottom,rgba(0,0,0,.9),transparent 82%)}
+  .mobile-nav-head,.mobile-nav-links,.mobile-nav-bottom{position:relative;z-index:1}
+  .mobile-nav-head{display:flex;justify-content:space-between;align-items:center;padding:7px 0 15px;border-bottom:1px solid #293129}
+  .mobile-nav-head .eyebrow{color:#7f8c80}
+  .mobile-nav-status{display:flex;align-items:center;gap:7px;color:#849184;font:800 8px ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:.09em}
+  .mobile-nav-status i{display:block;width:6px;height:6px;border-radius:50%;background:var(--acid);box-shadow:0 0 12px rgba(217,255,82,.7);animation:statusBlink 2s ease-in-out infinite}
+  .mobile-nav-links{display:grid;margin-top:9px}
+  .mobile-nav-link{display:grid;grid-template-columns:38px 1fr auto;align-items:center;gap:8px;min-height:72px;border-bottom:1px solid #293129;color:#dfe6dc;transition:padding .25s ease,color .2s ease,background .2s ease}
+  .mobile-nav-link:hover,.mobile-nav-link.active{padding-left:7px;color:var(--acid)}
+  .mobile-nav-link.active{background:linear-gradient(90deg,rgba(217,255,82,.08),transparent)}
+  .mobile-nav-index{color:#687568;font:800 9px ui-monospace,SFMono-Regular,Menlo,monospace}
+  .mobile-nav-link strong{font-size:clamp(31px,9vw,45px);line-height:.9;letter-spacing:-.06em;font-weight:850}
+  .mobile-nav-link svg{color:#6f7d70;transition:transform .2s ease,color .2s ease}
+  .mobile-nav-link:hover svg,.mobile-nav-link.active svg{color:var(--acid);transform:translate(2px,-2px)}
+  .mobile-nav-bottom{margin-top:auto;padding-top:25px;display:grid;gap:16px}
+  .mobile-nav-bottom .eyebrow{color:#7f8c80}
+  .mobile-nav-bottom p{max-width:400px;margin:7px 0 0;color:#9ba79b;font-size:12px;line-height:1.45}
+  .mobile-nav-cta{display:flex;justify-content:space-between;align-items:center;padding:15px 17px;background:var(--acid);color:var(--dark);border-radius:14px;font-size:12px;font-weight:900}
+  .mobile-nav-cta:hover{background:#e4ff7a}
+}
+@media(max-width:380px){
+  .mobile-nav-link{min-height:64px;grid-template-columns:30px 1fr auto}
+  .mobile-nav-link strong{font-size:30px}
+  .mobile-nav-panel{padding-left:15px;padding-right:15px}
+}
+@media(prefers-reduced-motion:reduce){.mobile-nav-panel,.mobile-nav-backdrop,.mobile-menu,.mobile-nav-link{transition:none}.mobile-nav-status i{animation:none}}
