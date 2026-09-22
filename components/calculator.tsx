@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   ArrowLeft,
   ArrowRight,
@@ -12,46 +12,74 @@ import {
   RotateCcw,
 } from "lucide-react";
 import { calculateEstimate } from "@/lib/calculator";
-
-const types = [
-  { name: "Топографическая съёмка", hint: "Участок, рельеф, существующие объекты", tag: "TOP" },
-  { name: "Исполнительная съёмка", hint: "Контроль фактического положения на стройке", tag: "BUILD" },
-  { name: "Аэрофотосъёмка", hint: "Ортофото, поверхность и облако точек", tag: "UAV" },
-  { name: "Лазерное сканирование", hint: "Плотное 3D-облако точек", tag: "LIDAR" },
-  { name: "3D-моделирование", hint: "Цифровая модель объекта", tag: "3D" },
-  { name: "Расчёт объёмов", hint: "Котлован, насыпь, карьер, склад", tag: "VOL" },
-];
-
-const outputs = ["DWG", "PDF", "GeoTIFF", "LAS/LAZ", "E57", "OBJ", "Не знаю"];
-const urgencies = ["Обычный срок", "Срочно", "Очень срочно"];
-const conditions = ["Лес", "Сложный рельеф", "Плотная застройка", "ЛЭП", "Удалённость"];
-const areaPresets = [
-  { label: "до 0,1 га", value: 1000 },
-  { label: "0,1–0,5 га", value: 3000 },
-  { label: "0,5–1 га", value: 7000 },
-  { label: "1–5 га", value: 20000 },
-  { label: "5+ га", value: 60000 },
-];
+import {
+  defaultCalculatorStudioConfig,
+  normalizeCalculatorConfig,
+  type CalculatorStudioConfig,
+} from "@/studio/config/calculator";
+import {
+  STUDIO_MODE_KEY,
+  readCalculatorConfig,
+} from "@/studio/runtime/storage";
 
 export function Calculator() {
+  const [calculatorConfig, setCalculatorConfig] = useState<CalculatorStudioConfig>(
+    defaultCalculatorStudioConfig,
+  );
   const [step, setStep] = useState(1);
-  const [type, setType] = useState(types[0].name);
+  const [type, setType] = useState(defaultCalculatorStudioConfig.types[0].name);
   const [area, setArea] = useState(10000);
   const [complexity, setComplexity] = useState<string[]>([]);
-  const [output, setOutput] = useState(outputs[0]);
-  const [urgency, setUrgency] = useState(urgencies[0]);
+  const [output, setOutput] = useState(defaultCalculatorStudioConfig.outputs[0]);
+  const [urgency, setUrgency] = useState(defaultCalculatorStudioConfig.urgencies[0]);
   const [phone, setPhone] = useState("");
   const [sent, setSent] = useState(false);
   const [leadId, setLeadId] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
+  useEffect(() => {
+    if (window.sessionStorage.getItem(STUDIO_MODE_KEY) !== "1") return;
+
+    const stored = readCalculatorConfig();
+    if (stored) setCalculatorConfig(normalizeCalculatorConfig(stored));
+  }, []);
+
+  useEffect(() => {
+    const nextType = calculatorConfig.types.some((item) => item.name === type)
+      ? type
+      : calculatorConfig.types[0]?.name;
+    if (nextType && nextType !== type) setType(nextType);
+
+    const nextOutput = calculatorConfig.outputs.includes(output)
+      ? output
+      : calculatorConfig.outputs[0];
+    if (nextOutput && nextOutput !== output) setOutput(nextOutput);
+
+    const nextUrgency = calculatorConfig.urgencies.includes(urgency)
+      ? urgency
+      : calculatorConfig.urgencies[0];
+    if (nextUrgency && nextUrgency !== urgency) setUrgency(nextUrgency);
+
+    setArea((current) => Math.max(
+      calculatorConfig.pricing.minArea,
+      Math.min(calculatorConfig.pricing.maxArea, current),
+    ));
+    setComplexity((current) => current.filter((item) => calculatorConfig.conditions.includes(item)));
+  }, [
+    calculatorConfig,
+    output,
+    type,
+    urgency,
+  ]);
+
   const estimate = useMemo(
-    () => calculateEstimate({ type, area, complexity, output, urgency }),
-    [type, area, complexity, output, urgency],
+    () => calculateEstimate({ type, area, complexity, output, urgency }, calculatorConfig),
+    [type, area, complexity, output, urgency, calculatorConfig],
   );
 
-  const selectedType = types.find((item) => item.name === type) ?? types[0];
+  const selectedType =
+    calculatorConfig.types.find((item) => item.name === type) ?? calculatorConfig.types[0];
 
   const toggleCondition = (value: string) =>
     setComplexity((current) =>
@@ -61,13 +89,14 @@ export function Calculator() {
     );
 
   const changeArea = (delta: number) => {
-    setArea((current) => Math.max(100, Math.min(500000, current + delta)));
+    const { minArea, maxArea } = calculatorConfig.pricing;
+    setArea((current) => Math.max(minArea, Math.min(maxArea, current + delta)));
   };
 
   const next = () => {
     setError("");
-    if (step === 2 && (!Number.isFinite(area) || area < 100)) {
-      setError("Укажите площадь от 100 м².");
+    if (step === 2 && (!Number.isFinite(area) || area < calculatorConfig.pricing.minArea)) {
+      setError("Укажите допустимую площадь объекта.");
       return;
     }
     setStep((current) => Math.min(4, current + 1));
@@ -80,11 +109,11 @@ export function Calculator() {
 
   function reset() {
     setStep(1);
-    setType(types[0].name);
+    setType(calculatorConfig.types[0]?.name ?? defaultCalculatorStudioConfig.types[0].name);
     setArea(10000);
     setComplexity([]);
-    setOutput(outputs[0]);
-    setUrgency(urgencies[0]);
+    setOutput(calculatorConfig.outputs[0] ?? defaultCalculatorStudioConfig.outputs[0]);
+    setUrgency(calculatorConfig.urgencies[0] ?? defaultCalculatorStudioConfig.urgencies[0]);
     setPhone("");
     setSent(false);
     setLeadId("");
@@ -201,7 +230,7 @@ export function Calculator() {
             </p>
 
             <div className="choice-grid calculator-services">
-              {types.map((item) => {
+              {calculatorConfig.types.map((item) => {
                 const active = type === item.name;
                 return (
                   <button
@@ -224,8 +253,8 @@ export function Calculator() {
 
             <div className="selected-method">
               <span>Выбрано</span>
-              <strong>{selectedType.name}</strong>
-              <small>{selectedType.hint}</small>
+              <strong>{selectedType?.name}</strong>
+              <small>{selectedType?.hint}</small>
             </div>
           </div>
         )}
@@ -239,30 +268,38 @@ export function Calculator() {
             </p>
 
             <div className="area-control">
-              <button type="button" onClick={() => changeArea(-1000)} aria-label="Уменьшить площадь">
+              <button type="button" onClick={() => changeArea(-calculatorConfig.pricing.areaStep)} aria-label="Уменьшить площадь">
                 <Minus size={18} />
               </button>
               <label>
                 <span>Площадь, м²</span>
                 <input
                   type="number"
-                  min={100}
-                  max={500000}
-                  step={100}
+                  min={calculatorConfig.pricing.minArea}
+                  max={calculatorConfig.pricing.maxArea}
+                  step={calculatorConfig.pricing.areaStep}
                   inputMode="numeric"
                   value={area}
-                  onChange={(event) =>
-                    setArea(Math.max(100, Math.min(500000, Number(event.target.value) || 100)))
-                  }
+                  onChange={(event) => {
+                    const raw = Number(event.target.value);
+                    setArea(
+                      Number.isFinite(raw)
+                        ? Math.max(
+                            calculatorConfig.pricing.minArea,
+                            Math.min(calculatorConfig.pricing.maxArea, raw),
+                          )
+                        : calculatorConfig.pricing.minArea,
+                    );
+                  }}
                 />
               </label>
-              <button type="button" onClick={() => changeArea(1000)} aria-label="Увеличить площадь">
+              <button type="button" onClick={() => changeArea(calculatorConfig.pricing.areaStep)} aria-label="Увеличить площадь">
                 <Plus size={18} />
               </button>
             </div>
 
             <div className="area-presets">
-              {areaPresets.map((preset) => (
+              {calculatorConfig.areaPresets.map((preset) => (
                 <button
                   type="button"
                   className={area === preset.value ? "area-preset active" : "area-preset"}
@@ -285,7 +322,7 @@ export function Calculator() {
             </p>
 
             <div className="choice-grid conditions-grid">
-              {conditions.map((item) => {
+              {calculatorConfig.conditions.map((item) => {
                 const active = complexity.includes(item);
                 return (
                   <button
@@ -305,7 +342,7 @@ export function Calculator() {
             <div className="calc-subsection">
               <span className="calc-label">Срок выполнения</span>
               <div className="choice-grid compact">
-                {urgencies.map((item) => (
+                {calculatorConfig.urgencies.map((item) => (
                   <button
                     type="button"
                     className={urgency === item ? "choice active" : "choice"}
@@ -323,7 +360,7 @@ export function Calculator() {
               <label className="field">
                 <span>Формат результата</span>
                 <select value={output} onChange={(event) => setOutput(event.target.value)}>
-                  {outputs.map((item) => <option key={item}>{item}</option>)}
+                  {calculatorConfig.outputs.map((item) => <option key={item}>{item}</option>)}
                 </select>
               </label>
             </div>
