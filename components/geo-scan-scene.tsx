@@ -28,19 +28,20 @@ export function GeoScanScene({ variant = "terrain", layers }: { variant?: "terra
     const camera = new THREE.PerspectiveCamera(38, 1, 0.1, 100);
     camera.position.set(variant === "index" ? 0.1 : 7.2, variant === "index" ? 9.8 : 5.2, variant === "index" ? 0.1 : 10.5);
 
+    const isolatedPreview = process.env.NEXT_PUBLIC_MALAYA_ISOLATED_PREVIEW === "1";
     const renderer = new THREE.WebGLRenderer({
       canvas,
-      antialias: true,
+      antialias: !isolatedPreview,
       alpha: true,
       powerPreference: "high-performance",
     });
-    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.75));
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, isolatedPreview ? 1 : 1.25));
     renderer.setClearColor(0x000000, 0);
 
     const terrainGroup = new THREE.Group();
     scene.add(terrainGroup);
 
-    const gridSize = 110;
+    const gridSize = isolatedPreview ? 55 : 110;
     const count = gridSize * gridSize;
     const positions = new Float32Array(count * 3);
     const colors = new Float32Array(count * 3);
@@ -124,13 +125,13 @@ export function GeoScanScene({ variant = "terrain", layers }: { variant?: "terra
     contourGroup.rotation.y = 0.08;
     terrainGroup.add(contourGroup);
 
-    for (let ring = 0; ring < 10; ring += 1) {
+    for (let ring = 0; ring < (isolatedPreview ? 5 : 10); ring += 1) {
       const radiusX = 0.8 + ring * 0.41;
       const radiusZ = 0.55 + ring * 0.34;
       const ringPoints: THREE.Vector3[] = [];
 
-      for (let i = 0; i <= 160; i += 1) {
-        const a = (i / 160) * Math.PI * 2;
+      for (let i = 0; i <= (isolatedPreview ? 80 : 160); i += 1) {
+        const a = (i / (isolatedPreview ? 80 : 160)) * Math.PI * 2;
         const wobble =
           1 +
           0.08 * Math.sin(a * 3 + ring * 0.8) +
