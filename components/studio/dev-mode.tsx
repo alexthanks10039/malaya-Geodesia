@@ -73,9 +73,10 @@ function readableLabel(element:Element){return (directText(element)||element.get
 function elementPath(element:Element){
   const path:string[]=[];let current:Element|null=element;
   while(current&&current!==document.body){
-    const container=current.parentElement;if(!container)break;
-    const siblings=Array.from(container.children);
-    const sameTag=siblings.filter((node)=>node.tagName===current?.tagName);
+    const container: Element | null = current.parentElement;
+    if(!container)break;
+    const siblings: Element[] = Array.from(container.children);
+    const sameTag: Element[] = siblings.filter((node: Element) => node.tagName===current?.tagName);
     path.unshift(current.tagName.toLowerCase()+"-"+Math.max(0,sameTag.indexOf(current)));
     current=container;
   }
