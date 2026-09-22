@@ -474,7 +474,7 @@ export function Calculator() {
               {estimate.breakdown.map((item) => (
                 <span key={item.key}>
                   <b>{item.label}</b>
-                  {item.kind === "input" ? item.value.toLocaleString("ru-RU") + " ₸" : item.value.toFixed(2) + "×"}
+                  {item.kind === "input" || item.key === "rawPrice" ? item.value.toLocaleString("ru-RU") + " ₸" : item.value.toFixed(2) + "×"}
                 </span>
               ))}
             </div>
