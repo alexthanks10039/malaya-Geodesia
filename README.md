@@ -25,3 +25,37 @@ npm run dev
 ## Design
 
 Визуальный язык: geospatial / engineering / digital twin. Motion используется для UI-анимаций; GSAP и React Three Fiber заложены в следующих этапах.
+
+
+## Live Preview
+
+### Вариант 1: автоматически через GitHub Actions
+
+Каждый push в `main` запускает отдельный live-preview:
+
+1. GitHub Actions запускает `next dev`.
+2. Cloudflare Quick Tunnel публикует его наружу.
+3. URL появляется в GitHub Actions в блоке **Live Preview** и в статусе коммита **Live Preview**.
+4. Новый push в `main` автоматически перезапускает preview на новом состоянии проекта.
+
+Это именно dev-preview, не production. Quick Tunnel генерирует временный публичный `trycloudflare.com` адрес. Для разработки это удобно, но ссылку нельзя считать закрытой.
+
+### Вариант 2: локально с одной командой
+
+После `npm install`:
+
+```bash
+npm run live
+```
+
+Команда поднимает Next.js dev server и Cloudflare Quick Tunnel. В консоли появится:
+
+```
+LIVE PREVIEW: https://....trycloudflare.com
+```
+
+За счёт `next dev` изменения кода видны сразу после сохранения.
+
+### Почему здесь нет второго проекта
+
+Live Preview работает поверх текущего `malaya-Geodesia`. Отдельного фронтенда, отдельного API или отдельного репозитория не создаётся.
