@@ -1,8 +1,9 @@
 import Link from "next/link";
-import { ArrowRight, Boxes, Crosshair, Database, Ruler, ScanLine, CircleDot } from "lucide-react";
+import { ArrowRight, Boxes, Crosshair, Database, Ruler, ScanLine } from "lucide-react";
 import { Hero } from "@/components/hero";
 import { Reveal, Stagger, StaggerItem } from "@/components/scroll-reveal";
 import { ServiceCard } from "@/components/service-card";
+import { GeoScanScene } from "@/components/geo-scan-scene";
 import { services, cases, technologies } from "@/lib/data";
 
 const scenarios = [
@@ -69,20 +70,20 @@ export default function Home() {
       </Reveal>
 
       <Reveal className="section">
-        <div className="map-card">
-          <div>
-            <p className="eyebrow">GEOSPATIAL DATA / INDEX</p>
-            <h2>База геодезии, где термины связаны с технологиями и форматами.</h2>
-            <p>Справочник строится как связанная база знаний, чтобы быстро разобраться, что измерять и какой результат нужен.</p>
+        <div className="map-card photogrammetry-card">
+          <div className="photogrammetry-copy">
+            <p className="eyebrow">AERIAL PHOTOGRAMMETRY / POINT CLOUD</p>
+            <h2>Местность превращается в облако точек.</h2>
+            <p>БПЛА снимает участок с воздуха, а фотограмметрия собирает из снимков плотную 3D-модель рельефа и объектов.</p>
+            <div className="scan-specs">
+              <span><b>3D</b> рельеф</span><span><b>RGB</b> фототекстура</span><span><b>XYZ</b> координаты</span>
+            </div>
             <Link className="button button-light" href="/knowledge">Открыть справочник <ArrowRight size={16} /></Link>
           </div>
-          <div className="map-visual" aria-hidden="true">
-            <span className="point p1">43.2382 / 76.9456</span>
-            <span className="point p2">43.2196 / 76.8897</span>
-            <span className="route r1" /><span className="route r2" />
-            <CircleDot className="point map-dot" size={22} style={{ left: "24%", top: "43%" }} />
-            <CircleDot className="point map-dot" size={22} style={{ right: "22%", bottom: "28%" }} />
-            <span className="map-pulse pulse-a" /><span className="map-pulse pulse-b" />
+          <div className="photogrammetry-visual" aria-hidden="true">
+            <GeoScanScene />
+            <div className="photo-hud photo-hud-top"><i /> AERIAL SCAN / GRID 04 <b>LIVE</b></div>
+            <div className="photo-hud photo-hud-bottom"><span>POINT CLOUD</span><strong>2.4M pts</strong><small>GROUND + OBJECTS</small></div>
           </div>
         </div>
       </Reveal>
