@@ -37,7 +37,7 @@ export function GeoScanScene() {
     const terrainGroup = new THREE.Group();
     scene.add(terrainGroup);
 
-    const count = 110 * 110;
+    const count = 155 * 155;
     const positions = new Float32Array(count * 3);
     const colors = new Float32Array(count * 3);
     const cyan = new THREE.Color("#d9ff52");
@@ -52,7 +52,7 @@ export function GeoScanScene() {
         const wave = Math.sin(nx * 9.5) * 0.52 + Math.cos(nz * 10.5) * 0.42;
         const ridge = Math.sin((nx + nz) * 15) * 0.2;
         const mound = Math.exp(-((nx * nx) * 9 + (nz * nz) * 12)) * 1.85;
-        const noise = (seeded(x * 110 + z) - 0.5) * 0.14;
+        const noise = (seeded(x * 155 + z) - 0.5) * 0.14;
         const y = wave * 0.23 + ridge * 0.22 + mound + noise;
 
         positions[cursor * 3] = nx * 8.2;
@@ -85,7 +85,7 @@ export function GeoScanScene() {
     points.rotation.y = 0.08;
     terrainGroup.add(points);
 
-    const contourGroup = new THREE.Group();
+    const photogrammetryGrid = new THREE.Group();\n    photogrammetryGrid.rotation.x = -0.38;\n    photogrammetryGrid.rotation.y = 0.08;\n    terrainGroup.add(photogrammetryGrid);\n    for (let line = 0; line < 13; line += 1) {\n      const geometry = new THREE.BufferGeometry();\n      const pts: THREE.Vector3[] = [];\n      const y = -0.58 + line * 0.075;\n      for (let i = 0; i < 70; i += 1) {\n        const x = (i / 69 - 0.5) * 8.8;\n        pts.push(new THREE.Vector3(x, y, Math.sin(i * 0.13 + line) * 0.05));\n      }\n      geometry.setFromPoints(pts);\n      photogrammetryGrid.add(new THREE.Line(geometry, new THREE.LineBasicMaterial({color: 0x91a294, transparent: true, opacity: 0.09})));\n    }\n\n    const contourGroup = new THREE.Group();
     contourGroup.rotation.x = -0.32;
     contourGroup.rotation.y = 0.08;
     terrainGroup.add(contourGroup);
@@ -233,7 +233,7 @@ export function GeoScanScene() {
       camera.position.y += (5.2 - pointer.y * 1.5 - camera.position.y) * 0.02;
       camera.lookAt(0, 0.2, 0);
 
-      points.rotation.z = elapsed * 0.025;
+      points.rotation.z = elapsed * 0.018;\n      points.material.opacity = 0.78 + Math.sin(elapsed * 1.4) * 0.08;\n      photogrammetryGrid.rotation.z = elapsed * 0.012;
       contourGroup.rotation.z = elapsed * 0.018;
 
       const scanY = -2.35 + ((elapsed * 0.7) % 4.8);
