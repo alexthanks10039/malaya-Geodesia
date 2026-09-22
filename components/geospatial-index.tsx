@@ -13,13 +13,14 @@ type GeoRecord = {
   coverage: string;
   coordinates: string;
   note: string;
+  elevation: string;
 };
 
 const records: GeoRecord[] = [
-  { id: "A-17", name: "Участок A-17", type: "TOPO", points: "1.24M", coverage: "96%", coordinates: "43.2382° N / 76.9456° E", note: "Рельеф, отметки и существующие объекты" },
-  { id: "K-04", name: "Карьер K-04", type: "UAV", points: "2.40M", coverage: "99%", coordinates: "43.6154° N / 76.8921° E", note: "Ортофото, поверхность и облако точек" },
-  { id: "F-02", name: "Фасад F-02", type: "LIDAR", points: "680K", coverage: "94%", coordinates: "43.2561° N / 76.9378° E", note: "Геометрия фасада для CAD / BIM" },
-  { id: "S-09", name: "Площадка S-09", type: "GNSS", points: "840K", coverage: "97%", coordinates: "43.2927° N / 76.8814° E", note: "Контрольные точки и исполнительная съёмка" },
+  { id: "A-17", name: "Участок A-17", type: "TOPO", points: "1.24M", coverage: "96%", coordinates: "43.2382° N / 76.9456° E", elevation: "+842.12 m", note: "Рельеф, отметки и существующие объекты" },
+  { id: "K-04", name: "Карьер K-04", type: "UAV", points: "2.40M", coverage: "99%", coordinates: "43.6154° N / 76.8921° E", elevation: "+618.44 m", note: "Ортофото, поверхность и облако точек" },
+  { id: "F-02", name: "Фасад F-02", type: "LIDAR", points: "680K", coverage: "94%", coordinates: "43.2561° N / 76.9378° E", elevation: "+910.07 m", note: "Геометрия фасада для CAD / BIM" },
+  { id: "S-09", name: "Площадка S-09", type: "GNSS", points: "840K", coverage: "97%", coordinates: "43.2927° N / 76.8814° E", elevation: "+756.31 m", note: "Контрольные точки и исполнительная съёмка" },
 ];
 
 const filters = [
@@ -155,7 +156,7 @@ export function GeospatialIndex() {
           <span><i /> DATA INDEX / {selected.type}</span>
           <b>LIVE</b>
         </div>
-        <div className="geo-index-axis">X 76.9456 · Y 43.2382 · Z +842.12</div>
+        <div className="geo-index-axis">{selected.coordinates} · Z {selected.elevation}</div>
         <div className="photo-hud photo-hud-bottom">
           <span>SPATIAL INDEX</span>
           <strong>{selected.points}</strong>
