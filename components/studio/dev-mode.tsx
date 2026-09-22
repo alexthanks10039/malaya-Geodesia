@@ -18,28 +18,71 @@ const STYLE_MAP: Record<keyof StudioCssOverrides, string> = {
 
 type PreviewMode = "select" | "interact";
 type NodeSummary = { id: string; tag: string; label: string; className: string };
-type Selected = NodeSummary & { textEditable: boolean; css: StudioCssOverrides };
+type Selected = NodeSummary & { textEditable: boolean; css: StudioCssOverrides };\n\nconst STYLE_LABELS: Record<keyof StudioCssOverrides, string> = { fontSize: "Размер", lineHeight: "Интерлиньяж", color: "Цвет", background: "Фон", padding: "Внутренний отступ", margin: "Внешний отступ", borderRadius: "Скругление", width: "Ширина", maxWidth: "Макс. ширина", gap: "Gap", letterSpacing: "Трекинг", opacity: "Прозрачность", display: "Display" };
 
 function getNodeId(element: Element) { return element.getAttribute("data-studio-node-id") ?? ""; }
 
+const EDITABLE_TAGS = new Set(["a", "button", "input", "select", "textarea", "img", "video", "h1", "h2", "h3", "h4", "h5", "h6", "p", "li", "label", "span"]);
+const SKIP_TAGS = new Set(["html", "head", "script", "style", "noscript", "svg", "path", "option"]);
+
+function elementPath(element: Element) {
+  const parts: string[] = [];
+  let current: Element | null = element;
+  while (current && current !== document.body) {
+    const parent: Element | null = current.parentElement;
+    if (!parent) break;
+    const siblings = Array.from(parent.children).filter((child) => child.tagName === current!.tagName);
+    const index = Math.max(0, siblings.indexOf(current));
+    parts.unshift(`${current.tagName.toLowerCase()}-${index}`);
+    current = parent;
+  }
+  return `dev-${parts.join("-")}`;
+}
+
+function directText(element: Element) {
+  return Array.from(element.childNodes)
+    .filter((node): node is Text => node.nodeType === Node.TEXT_NODE)
+    .map((node) => node.textContent ?? "")
+    .join(" ")
+    .replace(/\\s+/g, " ")
+    .trim();
+}
+
+function readableLabel(element: Element) {
+  const direct = directText(element);
+  const aria = element.getAttribute("aria-label") ?? "";
+  const alt = element.getAttribute("alt") ?? "";
+  const title = element.getAttribute("title") ?? "";
+  return (direct || aria || alt || title || element.tagName.toLowerCase())
+    .replace(/\\s+/g, " ")
+    .trim()
+    .slice(0, 64);
+}
+
 function collectNodes(): NodeSummary[] {
-  const elements = [document.documentElement, document.body, ...Array.from(document.body?.querySelectorAll("*") ?? [])];
+  const elements = Array.from(document.body?.querySelectorAll("*") ?? []);
   return elements
     .filter((element) => {
       const tag = element.tagName.toLowerCase();
-      return !["html", "head", "script", "style", "noscript"].includes(tag) && !element.closest("[data-studio-dev-ui]");
+      if (SKIP_TAGS.has(tag) || element.closest("[data-studio-dev-ui]")) return false;
+      const text = directText(element);
+      const isLeaf = element.children.length === 0;
+      const isEditable = EDITABLE_TAGS.has(tag);
+      const isSemanticBlock = ["header", "nav", "main", "section", "article", "footer", "form"].includes(tag) && Boolean(text);
+      return (isLeaf && (text || isEditable)) || isSemanticBlock;
     })
-    .map((element, index) => {
-      const id = element.getAttribute("data-studio-node-id") ?? `dev-${index}-${element.tagName.toLowerCase()}`;
+    .map((element) => {
+      const existing = element.getAttribute("data-studio-node-id");
+      const id = existing || elementPath(element);
       element.setAttribute("data-studio-node-id", id);
-      const directText = Array.from(element.childNodes)
-        .filter((node): node is Text => node.nodeType === Node.TEXT_NODE)
-        .map((node) => node.textContent ?? "").join(" ").replace(/\s+/g, " ").trim();
-      const label = (directText || element.textContent || element.tagName).replace(/\s+/g, " ").trim().slice(0, 72);
-      return { id, tag: element.tagName.toLowerCase(), label: label || element.tagName.toLowerCase(), className: typeof element.className === "string" ? element.className : "" };
+      return {
+        id,
+        tag: element.tagName.toLowerCase(),
+        label: readableLabel(element),
+        className: typeof element.className === "string" ? element.className : "",
+      };
     });
 }
-
 function readElementCss(element: Element): StudioCssOverrides {
   const style = window.getComputedStyle(element);
   return {
@@ -245,7 +288,7 @@ export function StudioDevMode() {
       {enabled && (
         <aside className="studio-dev-panel" data-studio-dev-ui>
           <div className="studio-dev-head">
-            <div><div className="studio-dev-eyebrow"><span className="studio-dev-dot" /> DEV MODE</div><strong>Редактор страницы</strong><small>{pathname}</small></div>
+            <div><div className="studio-dev-eyebrow"><span className="studio-dev-dot" /> DEV MODE <span className="studio-dev-live">LIVE</span></div><strong>Редактор страницы</strong><small>{pathname} · изменения только у тебя</small></div>
             <button type="button" className="studio-dev-close" onClick={() => setActive(false)} aria-label="Закрыть"><X size={15} /></button>
           </div>
 
@@ -255,7 +298,7 @@ export function StudioDevMode() {
             <Link href="/studio" target="_blank" rel="noreferrer"><Settings2 size={13} /> FULL STUDIO</Link>
           </div>
 
-          <div className="studio-dev-search"><input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Найти блок, класс или текст" /><span>{filteredNodes.length}</span></div>
+          <div className="studio-dev-search"><input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Найти текст, класс или тег" /><span>{filteredNodes.length}</span></div>
 
           <div className="studio-dev-list">
             {!filteredNodes.length && <p className="studio-dev-empty">На странице пока нечего выбрать.</p>}
