@@ -1,6 +1,8 @@
 name: Preview
 
 on:
+  push:
+    branches: [main]
   pull_request:
     types: [opened, synchronize, reopened]
 
@@ -45,3 +47,13 @@ jobs:
           name: malaya-geodesia-preview
           path: geodesy-preview.tar.gz
           retention-days: 7
+
+      - name: Preview summary
+        run: |
+          {
+            echo "## Preview build"
+            echo ""
+            echo "- Commit: $GITHUB_SHA"
+            echo "- Build: npm run build"
+            echo "- Artifact: malaya-geodesia-preview"
+          } >> "$GITHUB_STEP_SUMMARY"
