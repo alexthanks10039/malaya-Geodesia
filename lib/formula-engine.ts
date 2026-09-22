@@ -141,9 +141,9 @@ class ExpressionParser {
   }
 
   private parsePower(): number {
-    const left = this.parseUnary();
+    const left = this.parsePrimary();
     if (!this.matchOperator('^')) return left;
-    const right = this.parsePower();
+    const right = this.parseUnary();
     const result = Math.pow(left, right);
     if (!Number.isFinite(result)) throw new Error('Степень дала нечисловой результат.');
     return result;
@@ -152,7 +152,7 @@ class ExpressionParser {
   private parseUnary(): number {
     if (this.matchOperator('+')) return +this.parseUnary();
     if (this.matchOperator('-')) return -this.parseUnary();
-    return this.parsePrimary();
+    return this.parsePower();
   }
 
   private parsePrimary(): number {
