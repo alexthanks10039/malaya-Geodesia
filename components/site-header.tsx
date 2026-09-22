@@ -1,11 +1,14 @@
 "use client";
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { useState } from "react";
 import { Menu, X } from "lucide-react";
 
 export function SiteHeader() {
+  const pathname = usePathname();
   const [open, setOpen] = useState(false);
   const nav = [["Услуги", "/services"], ["Калькулятор", "/calculator"], ["Кейсы", "/cases"], ["Справочник", "/knowledge"]];
+
   return (
     <header className="site-header">
       <div className="header-inner">
@@ -13,11 +16,28 @@ export function SiteHeader() {
           <span className="brand-mark">G</span>
           <span>МАЛАЯ<br />ГЕОДЕЗИЯ</span>
         </Link>
+
         <nav className={open ? "nav open" : "nav"} aria-label="Основная навигация">
-          {nav.map(([title, href]) => <Link href={href} key={href} onClick={() => setOpen(false)}>{title}</Link>)}
+          {nav.map(([title, href]) => {
+            const active = pathname === href || pathname.startsWith(`${href}/`);
+            return (
+              <Link
+                className={active ? "active" : ""}
+                href={href}
+                key={href}
+                onClick={() => setOpen(false)}
+                aria-current={active ? "page" : undefined}
+              >
+                {title}
+              </Link>
+            );
+          })}
           <Link className="header-cta" href="/calculator" onClick={() => setOpen(false)}>Рассчитать</Link>
         </nav>
-        <button className="mobile-menu" onClick={() => setOpen(!open)} aria-label={open ? "Закрыть меню" : "Открыть меню"}>{open ? <X size={19} /> : <Menu size={19} />}</button>
+
+        <button className="mobile-menu" onClick={() => setOpen(!open)} aria-label={open ? "Закрыть меню" : "Открыть меню"} aria-expanded={open}>
+          {open ? <X size={19} /> : <Menu size={19} />}
+        </button>
       </div>
     </header>
   );
