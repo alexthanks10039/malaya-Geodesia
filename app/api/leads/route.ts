@@ -21,7 +21,7 @@ export async function POST(request: Request) {
     const output = typeof body?.output === "string" ? body.output : "";
     const urgency = typeof body?.urgency === "string" ? body.urgency : "";
     const area = Number(body?.area);
-    const complexity = Array.isArray(body?.complexity) ? body.complexity : [];
+    const complexity: unknown[] = Array.isArray(body?.complexity) ? body.complexity : [];
 
     if (!phone) {
       return NextResponse.json({ ok: false, message: "Укажите телефон" }, { status: 400 });
