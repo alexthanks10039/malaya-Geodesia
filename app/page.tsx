@@ -72,7 +72,6 @@ export default function Home() {
       <Reveal className="section">
         <GeospatialIndex />
       </Reveal>
->
 
       <Reveal className="section">
         <div className="section-heading">
