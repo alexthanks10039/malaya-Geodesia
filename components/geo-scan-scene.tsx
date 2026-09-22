@@ -9,7 +9,10 @@ function seeded(seed: number) {
 }
 
 export function GeoScanScene({ variant = "terrain", layers }: { variant?: "terrain" | "index"; layers?: { points?: boolean; grid?: boolean; scan?: boolean } }) {
-  const hostRef = useRef<HTMLDivElement>(null);\n  const layerPoints = layers?.points ?? true;\n  const layerGrid = layers?.grid ?? true;\n  const layerScan = layers?.scan ?? true;
+  const hostRef = useRef<HTMLDivElement>(null);
+  const layerPoints = layers?.points ?? true;
+  const layerGrid = layers?.grid ?? true;
+  const layerScan = layers?.scan ?? true;
 
   useEffect(() => {
     const host = hostRef.current;
@@ -85,12 +88,14 @@ export function GeoScanScene({ variant = "terrain", layers }: { variant?: "terra
     const points = new THREE.Points(pointGeometry, pointMaterial);
     points.rotation.x = -0.32;
     points.rotation.y = 0.08;
-    terrainGroup.add(points);\n    points.visible = layerPoints;
+    terrainGroup.add(points);
+    points.visible = layerPoints;
 
     const photogrammetryGrid = new THREE.Group();
     photogrammetryGrid.rotation.x = -0.38;
     photogrammetryGrid.rotation.y = 0.08;
-    terrainGroup.add(photogrammetryGrid);\n    photogrammetryGrid.visible = layerGrid;
+    terrainGroup.add(photogrammetryGrid);
+    photogrammetryGrid.visible = layerGrid;
 
     for (let line = 0; line < 13; line += 1) {
       const geometry = new THREE.BufferGeometry();
@@ -150,7 +155,8 @@ export function GeoScanScene({ variant = "terrain", layers }: { variant?: "terra
     grid.position.y = -1.38;
     grid.material.transparent = true;
     grid.material.opacity = 0.28;
-    scene.add(grid);\n    grid.visible = variant === "index" ? layerGrid : layerGrid;
+    scene.add(grid);
+    grid.visible = variant === "index" ? layerGrid : layerGrid;
 
     const scanPlane = new THREE.Mesh(
       new THREE.PlaneGeometry(11.5, 8.3),
@@ -178,7 +184,9 @@ export function GeoScanScene({ variant = "terrain", layers }: { variant?: "terra
     );
     scanLine.rotation.y = -0.04;
     scanLine.position.set(0, 0.78, -1.7);
-    scene.add(scanLine);\n    scanLine.visible = layerScan;\n    scanPlane.visible = layerScan;
+    scene.add(scanLine);
+    scanLine.visible = layerScan;
+    scanPlane.visible = layerScan;
 
     const pointer = { x: 0, y: 0 };
     let targetX = 0;
