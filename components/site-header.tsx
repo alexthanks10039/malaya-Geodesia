@@ -1,7 +1,6 @@
 "use client";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
-import { useState } from "react";
+import { usePathname, useState } from "react";
 import { Menu, X } from "lucide-react";
 import { ThemeToggle } from "@/components/theme-toggle";
 
@@ -18,9 +17,9 @@ export function SiteHeader() {
           <span>МАЛАЯ<br />ГЕОДЕЗИЯ</span>
         </Link>
 
-        <div className="header-tools">\n          <ThemeToggle />\n        </div>\n\n        <nav className={open ? "nav open" : "nav"} aria-label="Основная навигация">
+        <nav className={open ? "nav open" : "nav"} aria-label="Основная навигация">
           {nav.map(([title, href]) => {
-            const active = pathname === href || pathname.startsWith(`${href}/`);
+            const active = pathname === href || pathname.startsWith(href + "/");
             return (
               <Link
                 className={active ? "active" : ""}
@@ -35,6 +34,10 @@ export function SiteHeader() {
           })}
           <Link className="header-cta" href="/calculator" onClick={() => setOpen(false)}>Рассчитать</Link>
         </nav>
+
+        <div className="header-tools">
+          <ThemeToggle />
+        </div>
 
         <button className="mobile-menu" onClick={() => setOpen(!open)} aria-label={open ? "Закрыть меню" : "Открыть меню"} aria-expanded={open}>
           {open ? <X size={19} /> : <Menu size={19} />}
