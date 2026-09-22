@@ -1,39 +1,44 @@
-const base: Record<string, number> = {
-  "Топографическая съёмка": 120000,
-  "Исполнительная съёмка": 150000,
-  "Аэрофотосъёмка": 180000,
-  "Лазерное сканирование": 260000,
-  "3D-моделирование": 220000,
-  "Расчёт объёмов": 140000,
-};
+import type { CalculatorStudioConfig } from "@/studio/config/calculator";
+import { defaultCalculatorStudioConfig } from "@/studio/config/calculator";
 
-const urgencyFactor: Record<string, number> = {
-  "Обычный срок": 1,
-  "Срочно": 1.18,
-  "Очень срочно": 1.35,
-};
+export function calculateEstimate(
+  input: {
+    type: string;
+    area: number;
+    complexity: string[];
+    output: string;
+    urgency?: string;
+  },
+  config: CalculatorStudioConfig = defaultCalculatorStudioConfig,
+) {
+  const pricing = config.pricing;
+  const area = Math.max(pricing.minArea, Math.min(pricing.maxArea, input.area || pricing.minArea));
+  const areaFactor = Math.max(
+    pricing.minAreaFactor,
+    Math.min(pricing.maxAreaFactor, area / pricing.areaBase),
+  );
+  const complexityFactor = 1 + input.complexity.length * pricing.complexityFactorPerCondition;
+  const formatFactor = pricing.formatFactor[input.output] ?? 1;
+  const deadlineFactor = pricing.urgencyFactor[input.urgency ?? config.urgencies[0]] ?? 1;
+  const basePrice = pricing.base[input.type] ?? 120000;
+  const raw = basePrice * areaFactor * complexityFactor * formatFactor * deadlineFactor;
+  const price = Math.round(raw / pricing.roundingStep) * pricing.roundingStep;
 
-export function calculateEstimate(input: {
-  type: string;
-  area: number;
-  complexity: string[];
-  output: string;
-  urgency?: string;
-}) {
-  const area = Math.max(100, input.area || 100);
-  const areaFactor = Math.max(1, Math.min(3.5, area / 10000));
-  const complexityFactor = 1 + input.complexity.length * 0.12;
-  const formatFactor = ["LAS/LAZ", "E57"].includes(input.output) ? 1.08 : 1;
-  const deadlineFactor = urgencyFactor[input.urgency ?? "Обычный срок"] ?? 1;
-  const raw = (base[input.type] ?? 120000) * areaFactor * complexityFactor * formatFactor * deadlineFactor;
-  const price = Math.round(raw / 5000) * 5000;
   const days = Math.max(
     2,
-    Math.round(2 + areaFactor + input.complexity.length * 0.5),
+    Math.round(
+      pricing.dayBase +
+      areaFactor * pricing.dayAreaWeight +
+      input.complexity.length * pricing.dayComplexityWeight,
+    ),
   );
-  const adjustedDays =
-    input.urgency === "Очень срочно" ? Math.max(1, days - 2) :
-    input.urgency === "Срочно" ? Math.max(2, days - 1) : days;
 
-  return { price, days: adjustedDays };
+  const adjustedDays =
+    input.urgency === "Очень срочно"
+      ? Math.max(1, days - pricing.veryUrgentDaysReduction)
+      : input.urgency === "Срочно"
+        ? Math.max(2, days - pricing.urgentDaysReduction)
+        : days;
+
+  return { price, days };
 }
