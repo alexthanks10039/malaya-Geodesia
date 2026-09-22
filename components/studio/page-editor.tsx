@@ -412,7 +412,10 @@ export function StudioPageEditor() {
         <div className="studio-tabs">
           <button className={activePanel === "element" ? "active" : ""} onClick={() => setActivePanel("element")}>Элементы</button>
           <button className={activePanel === "design" ? "active" : ""} onClick={() => setActivePanel("design")}>Дизайн</button>
-          {pagePath === "/cases" && (\n            <button className={activePanel === "cases" ? "active" : ""} onClick={() => setActivePanel("cases")}>Кейсы</button>\n          )}\n          {pagePath === "/calculator" && (
+          {pagePath === "/cases" && (
+            <button className={activePanel === "cases" ? "active" : ""} onClick={() => setActivePanel("cases")}>Кейсы</button>
+          )}
+          {pagePath === "/calculator" && (
             <button className={activePanel === "calculator" ? "active" : ""} onClick={() => setActivePanel("calculator")}>Калькулятор</button>
           )}
         </div>
@@ -491,7 +494,11 @@ export function StudioPageEditor() {
             </div>
           )}
 
-          {activePanel === "cases" && (\n            <div className="studio-panel-scroll studio-panel-wide"><CaseStudioEditor onChanged={refreshPreview} /></div>\n          )}\n\n          {activePanel === "calculator" && (
+          {activePanel === "cases" && (
+            <div className="studio-panel-scroll studio-panel-wide"><CaseStudioEditor onChanged={refreshPreview} /></div>
+          )}
+
+          {activePanel === "calculator" && (
             <div className="studio-panel-scroll studio-panel-wide">
               <CalculatorStudioEditor onChanged={refreshPreview} />
               <div className="studio-note">
