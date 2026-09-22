@@ -11,6 +11,7 @@ import {
   Undo2,
 } from "lucide-react";
 import { CalculatorStudioEditor } from "@/components/studio/calculator-editor";
+import { CaseStudioEditor } from "@/components/studio/case-editor";
 import { studioPages } from "@/studio/config/pages";
 import { defaultCalculatorStudioConfig } from "@/studio/config/calculator";
 import {
@@ -143,7 +144,7 @@ export function StudioPageEditor() {
   const [search, setSearch] = useState("");
   const [previewMode, setPreviewMode] = useState<PreviewMode>("select");
   const [device, setDevice] = useState<Device>("desktop");
-  const [activePanel, setActivePanel] = useState<"element" | "calculator" | "design">("element");
+  const [activePanel, setActivePanel] = useState<"element" | "calculator" | "design" | "cases">("element");
   const [dirty, setDirty] = useState(false);
 
   const filteredNodes = useMemo(() => {
@@ -411,7 +412,7 @@ export function StudioPageEditor() {
         <div className="studio-tabs">
           <button className={activePanel === "element" ? "active" : ""} onClick={() => setActivePanel("element")}>Элементы</button>
           <button className={activePanel === "design" ? "active" : ""} onClick={() => setActivePanel("design")}>Дизайн</button>
-          {pagePath === "/calculator" && (
+          {pagePath === "/cases" && (\n            <button className={activePanel === "cases" ? "active" : ""} onClick={() => setActivePanel("cases")}>Кейсы</button>\n          )}\n          {pagePath === "/calculator" && (
             <button className={activePanel === "calculator" ? "active" : ""} onClick={() => setActivePanel("calculator")}>Калькулятор</button>
           )}
         </div>
@@ -490,7 +491,7 @@ export function StudioPageEditor() {
             </div>
           )}
 
-          {activePanel === "calculator" && (
+          {activePanel === "cases" && (\n            <div className="studio-panel-scroll studio-panel-wide"><CaseStudioEditor onChanged={refreshPreview} /></div>\n          )}\n\n          {activePanel === "calculator" && (
             <div className="studio-panel-scroll studio-panel-wide">
               <CalculatorStudioEditor onChanged={refreshPreview} />
               <div className="studio-note">
