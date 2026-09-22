@@ -82,6 +82,11 @@ export function CalculatorStudioEditor({ onChanged }: Props) {
   const [config, setConfig] = useState<CalculatorStudioConfig>(defaultCalculatorStudioConfig);
   const [hydrated, setHydrated] = useState(false);
   const [dirty, setDirty] = useState(false);
+  const [testType, setTestType] = useState(defaultCalculatorStudioConfig.types[0]?.name ?? "");
+  const [testArea, setTestArea] = useState(defaultCalculatorStudioConfig.areaPresets[0]?.value ?? 1000);
+  const [testOutput, setTestOutput] = useState(defaultCalculatorStudioConfig.outputs[0] ?? "DWG");
+  const [testUrgency, setTestUrgency] = useState(defaultCalculatorStudioConfig.urgencies[0] ?? "Обычный срок");
+  const [testConditions, setTestConditions] = useState<string[]>([]);
 
   useEffect(() => {
     const stored = readCalculatorConfig();
@@ -97,13 +102,23 @@ export function CalculatorStudioEditor({ onChanged }: Props) {
 
   const diagnostics = useMemo(() => getFormulaDiagnostics(config), [config]);
 
-  const sampleInput = useMemo(() => ({
-    type: config.types[0]?.name ?? "",
-    area: config.areaPresets[0]?.value ?? config.pricing.minArea,
-    complexity: config.conditions.slice(0, 1),
-    output: config.outputs[0] ?? "DWG",
-    urgency: config.urgencies[0],
-  }), [config]);
+  const sampleInput = useMemo(() => {
+    const type = config.types.some((item) => item.name === testType)
+      ? testType
+      : config.types[0]?.name ?? "";
+    const output = config.outputs.includes(testOutput)
+      ? testOutput
+      : config.outputs[0] ?? "DWG";
+    const urgency = config.urgencies.includes(testUrgency)
+      ? testUrgency
+      : config.urgencies[0] ?? "Обычный срок";
+    const area = Math.max(
+      config.pricing.minArea,
+      Math.min(config.pricing.maxArea, Number.isFinite(testArea) ? testArea : config.pricing.minArea),
+    );
+    const conditions = testConditions.filter((item) => config.conditions.includes(item));
+    return { type, area, complexity: conditions, output, urgency };
+  }, [config, testArea, testConditions, testOutput, testType, testUrgency]);
 
   const sampleEstimate = useMemo(
     () => calculateEstimate(sampleInput, config),
@@ -493,6 +508,54 @@ export function CalculatorStudioEditor({ onChanged }: Props) {
         Поля редактируют локальный draft и автоматически сохраняются в браузере. «Применить» обновляет preview калькулятора.
         Формулы вычисляются безопасным математическим движком без eval.
       </p>
+
+      <section className="studio-card">
+        <div className="studio-card-head">
+          <div><b>Сценарий проверки</b><span>меняй входы без изменения конфига</span></div>
+        </div>
+        <div className="studio-grid-fields">
+          <label>
+            <span>Метод</span>
+            <select value={sampleInput.type} onChange={(e) => setTestType(e.target.value)}>
+              {config.types.map((item) => <option key={item.name} value={item.name}>{item.name}</option>)}
+            </select>
+          </label>
+          <label>
+            <span>Площадь, м²</span>
+            <input type="number" min={config.pricing.minArea} max={config.pricing.maxArea} step={config.pricing.areaStep} value={sampleInput.area} onChange={(e) => setTestArea(Number(e.target.value))} />
+          </label>
+          <label>
+            <span>Формат</span>
+            <select value={sampleInput.output} onChange={(e) => setTestOutput(e.target.value)}>
+              {config.outputs.map((item) => <option key={item} value={item}>{item}</option>)}
+            </select>
+          </label>
+          <label>
+            <span>Срочность</span>
+            <select value={sampleInput.urgency} onChange={(e) => setTestUrgency(e.target.value)}>
+              {config.urgencies.map((item) => <option key={item} value={item}>{item}</option>)}
+            </select>
+          </label>
+        </div>
+        <div className="studio-test-conditions">
+          <span>Условия</span>
+          <div>
+            {config.conditions.map((item) => {
+              const active = sampleInput.complexity.includes(item);
+              return (
+                <button
+                  type="button"
+                  key={item}
+                  className={active ? "active" : ""}
+                  onClick={() => setTestConditions((current) => active ? current.filter((value) => value !== item) : [...current, item])}
+                >
+                  {item}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      </section>
 
       <section className="studio-card studio-calc-preview-card">
         <div className="studio-card-head">
