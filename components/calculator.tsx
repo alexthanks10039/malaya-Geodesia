@@ -110,7 +110,7 @@ export function Calculator() {
   function reset() {
     setStep(1);
     setType(calculatorConfig.types[0]?.name ?? defaultCalculatorStudioConfig.types[0].name);
-    setArea(10000);
+    setArea(calculatorConfig.areaPresets[0]?.value ?? calculatorConfig.pricing.minArea);
     setComplexity([]);
     setOutput(calculatorConfig.outputs[0] ?? defaultCalculatorStudioConfig.outputs[0]);
     setUrgency(calculatorConfig.urgencies[0] ?? defaultCalculatorStudioConfig.urgencies[0]);
@@ -310,6 +310,19 @@ export function Calculator() {
                 </button>
               ))}
             </div>
+            <label className="area-range">
+              <span>Быстрый выбор масштаба</span>
+              <input
+                type="range"
+                min={calculatorConfig.pricing.minArea}
+                max={calculatorConfig.pricing.maxArea}
+                step={calculatorConfig.pricing.areaStep}
+                value={area}
+                onChange={(event) => setArea(Number(event.target.value))}
+                aria-label="Площадь объекта"
+              />
+              <div><small>{calculatorConfig.pricing.minArea.toLocaleString("ru-RU")} м²</small><small>{calculatorConfig.pricing.maxArea.toLocaleString("ru-RU")} м²</small></div>
+            </label>
           </div>
         )}
 
@@ -453,6 +466,20 @@ export function Calculator() {
           <span><b>Формат</b>{output}</span>
           <span><b>Срок</b>{urgency}</span>
         </div>
+
+        {!!estimate.breakdown.length && (
+          <details className="summary-breakdown">
+            <summary>Как считается</summary>
+            <div>
+              {estimate.breakdown.map((item) => (
+                <span key={item.key}>
+                  <b>{item.label}</b>
+                  {item.kind === "input" ? item.value.toLocaleString("ru-RU") + " ₸" : item.value.toFixed(2) + "×"}
+                </span>
+              ))}
+            </div>
+          </details>
+        )}
 
         <p className="summary-note">
           Цена считается автоматически по базовым параметрам и нужна для первичной оценки. Точный расчёт — после уточнения объекта.
