@@ -275,7 +275,7 @@ export function StudioPageEditor() {
 
     window.addEventListener("message", messageHandler);
     return () => window.removeEventListener("message", messageHandler);
-  });
+  }, [pagePath, state, previewMode, selected]);
 
   useEffect(() => {
     refreshPreview();
