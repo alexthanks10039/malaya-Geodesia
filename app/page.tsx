@@ -3,7 +3,7 @@ import { ArrowRight, Boxes, Crosshair, Database, Ruler, ScanLine } from "lucide-
 import { Hero } from "@/components/hero";
 import { Reveal, Stagger, StaggerItem } from "@/components/scroll-reveal";
 import { ServiceCard } from "@/components/service-card";
-import { GeoScanScene } from "@/components/geo-scan-scene";
+import { GeospatialIndex } from "@/components/geospatial-index";
 import { services, cases, technologies } from "@/lib/data";
 
 const scenarios = [
@@ -70,23 +70,9 @@ export default function Home() {
       </Reveal>
 
       <Reveal className="section">
-        <div className="map-card photogrammetry-card">
-          <div className="photogrammetry-copy">
-            <p className="eyebrow">GEOSPATIAL DATA / INDEX</p>
-            <h2>Участок читается как массив пространственных данных.</h2>
-            <p>Каждая точка получает координаты, высоту и положение в сетке. Вместо объёмной сцены здесь показываем саму структуру геоданных: покрытие, координатную сетку и проход сканирования.</p>
-            <div className="scan-specs">
-              <span><b>3D</b> рельеф</span><span><b>RGB</b> фототекстура</span><span><b>XYZ</b> координаты</span>
-            </div>
-            <Link className="button button-light" href="/knowledge">Открыть справочник <ArrowRight size={16} /></Link>
-          </div>
-          <div className="photogrammetry-visual" aria-hidden="true">
-            <GeoScanScene variant="index" />
-            <div className="photo-hud photo-hud-top"><i /> DATA INDEX / COVERAGE 04 <b>LIVE</b></div>
-            <div className="photo-hud photo-hud-bottom"><span>SPATIAL INDEX</span><strong>2.4M pts</strong><small>XYZ / COVERAGE</small></div>
-          </div>
-        </div>
+        <GeospatialIndex />
       </Reveal>
+>
 
       <Reveal className="section">
         <div className="section-heading">
