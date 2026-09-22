@@ -1,11 +1,11 @@
 const IDENTIFIER_RE = /^[A-Za-z_][A-Za-z0-9_]*$/;
 
 type Token =
-  | { type: "number"; value: number }
-  | { type: "identifier"; value: string }
-  | { type: "operator"; value: "+" | "-" | "*" | "/" | "^" }
-  | { type: "paren"; value: "(" | ")" }
-  | { type: "comma"; value: "," };
+  | { type: 'number'; value: number }
+  | { type: 'identifier'; value: string }
+  | { type: 'operator'; value: '+' | '-' | '*' | '/' | '^' }
+  | { type: 'paren'; value: '(' | ')' }
+  | { type: 'comma'; value: ',' };
 
 export type FormulaDefinition = {
   key: string;
@@ -19,15 +19,15 @@ export type FormulaEvaluationResult = {
 };
 
 export const FORMULA_FUNCTIONS = [
-  "abs",
-  "ceil",
-  "clamp",
-  "floor",
-  "max",
-  "min",
-  "pow",
-  "round",
-  "roundTo",
+  'abs',
+  'ceil',
+  'clamp',
+  'floor',
+  'max',
+  'min',
+  'pow',
+  'round',
+  'roundTo',
 ] as const;
 
 export function isFormulaKey(value: string): boolean {
@@ -36,7 +36,7 @@ export function isFormulaKey(value: string): boolean {
 
 function tokenize(expression: string): Token[] {
   if (expression.length > 600) {
-    throw new Error("Формула слишком длинная: максимум 600 символов.");
+    throw new Error('Формула слишком длинная: максимум 600 символов.');
   }
 
   const tokens: Token[] = [];
@@ -52,45 +52,45 @@ function tokenize(expression: string): Token[] {
 
     if (/\d|\./.test(char)) {
       const match = expression.slice(index).match(/^(?:\d+(?:\.\d*)?|\.\d+)(?:[eE][+-]?\d+)?/);
-      if (!match) throw new Error("Некорректное число рядом с "" + char + "".");
+      if (!match) throw new Error('Некорректное число рядом с "' + char + '".');
       const value = Number(match[0]);
-      if (!Number.isFinite(value)) throw new Error("Числовое значение должно быть конечным.");
-      tokens.push({ type: "number", value });
+      if (!Number.isFinite(value)) throw new Error('Числовое значение должно быть конечным.');
+      tokens.push({ type: 'number', value });
       index += match[0].length;
       continue;
     }
 
     if (/[A-Za-z_]/.test(char)) {
       const match = expression.slice(index).match(/^[A-Za-z_][A-Za-z0-9_]*/);
-      if (!match) throw new Error("Некорректное имя переменной рядом с "" + char + "".");
-      tokens.push({ type: "identifier", value: match[0] });
+      if (!match) throw new Error('Некорректное имя переменной рядом с "' + char + '".');
+      tokens.push({ type: 'identifier', value: match[0] });
       index += match[0].length;
       continue;
     }
 
-    if ("+-*/^".includes(char)) {
-      tokens.push({ type: "operator", value: char as Token["value"] });
+    if ('+-*/^'.includes(char)) {
+      tokens.push({ type: 'operator', value: char as Token['value'] });
       index += 1;
       continue;
     }
 
-    if (char === "(" || char === ")") {
-      tokens.push({ type: "paren", value: char });
+    if (char === '(' || char === ')') {
+      tokens.push({ type: 'paren', value: char });
       index += 1;
       continue;
     }
 
-    if (char === ",") {
-      tokens.push({ type: "comma", value: char });
+    if (char === ',') {
+      tokens.push({ type: 'comma', value: char });
       index += 1;
       continue;
     }
 
-    throw new Error("Недопустимый символ "" + char + "".");
+    throw new Error('Недопустимый символ "' + char + '".');
   }
 
   if (tokens.length > 240) {
-    throw new Error("Формула содержит слишком много частей.");
+    throw new Error('Формула содержит слишком много частей.');
   }
 
   return tokens;
@@ -98,7 +98,7 @@ function tokenize(expression: string): Token[] {
 
 class ExpressionParser {
   private index = 0;
-  private lastValue = "";
+  private lastValue = '';
 
   constructor(
     private readonly tokens: Token[],
@@ -106,22 +106,22 @@ class ExpressionParser {
   ) {}
 
   parse(): number {
-    if (!this.tokens.length) throw new Error("Формула пуста.");
+    if (!this.tokens.length) throw new Error('Формула пуста.');
     const result = this.parseAdditive();
     if (this.index !== this.tokens.length) {
-      throw new Error("В формуле остались необработанные символы.");
+      throw new Error('В формуле остались необработанные символы.');
     }
-    if (!Number.isFinite(result)) throw new Error("Формула вернула нечисловой результат.");
+    if (!Number.isFinite(result)) throw new Error('Формула вернула нечисловой результат.');
     return result;
   }
 
   private parseAdditive(): number {
     let result = this.parseMultiplicative();
 
-    while (this.matchOperator("+") || this.matchOperator("-")) {
-      const operator = this.previousTokenValue() as "+" | "-";
+    while (this.matchOperator('+') || this.matchOperator('-')) {
+      const operator = this.previousTokenValue() as '+' | '-';
       const right = this.parseMultiplicative();
-      result = operator === "+" ? result + right : result - right;
+      result = operator === '+' ? result + right : result - right;
     }
 
     return result;
@@ -130,11 +130,11 @@ class ExpressionParser {
   private parseMultiplicative(): number {
     let result = this.parsePower();
 
-    while (this.matchOperator("*") || this.matchOperator("/")) {
-      const operator = this.previousTokenValue() as "*" | "/";
+    while (this.matchOperator('*') || this.matchOperator('/')) {
+      const operator = this.previousTokenValue() as '*' | '/';
       const right = this.parsePower();
-      if (operator === "/" && right === 0) throw new Error("Деление на ноль.");
-      result = operator === "*" ? result * right : result / right;
+      if (operator === '/' && right === 0) throw new Error('Деление на ноль.');
+      result = operator === '*' ? result * right : result / right;
     }
 
     return result;
@@ -142,55 +142,55 @@ class ExpressionParser {
 
   private parsePower(): number {
     const left = this.parseUnary();
-    if (!this.matchOperator("^")) return left;
+    if (!this.matchOperator('^')) return left;
     const right = this.parsePower();
     const result = Math.pow(left, right);
-    if (!Number.isFinite(result)) throw new Error("Степень дала нечисловой результат.");
+    if (!Number.isFinite(result)) throw new Error('Степень дала нечисловой результат.');
     return result;
   }
 
   private parseUnary(): number {
-    if (this.matchOperator("+")) return +this.parseUnary();
-    if (this.matchOperator("-")) return -this.parseUnary();
+    if (this.matchOperator('+')) return +this.parseUnary();
+    if (this.matchOperator('-')) return -this.parseUnary();
     return this.parsePrimary();
   }
 
   private parsePrimary(): number {
     const token = this.peek();
-    if (!token) throw new Error("Ожидалось число, переменная или функция.");
+    if (!token) throw new Error('Ожидалось число, переменная или функция.');
 
-    if (token.type === "number") {
+    if (token.type === 'number') {
       this.index += 1;
       return token.value;
     }
 
-    if (token.type === "identifier") {
+    if (token.type === 'identifier') {
       this.index += 1;
-      if (this.matchParen("(")) {
+      if (this.matchParen('(')) {
         const args: number[] = [];
-        if (!this.matchParen(")")) {
+        if (!this.matchParen(')')) {
           do {
             args.push(this.parseAdditive());
           } while (this.matchComma());
-          this.expectParen(")");
+          this.expectParen(')');
         }
         return callFunction(token.value, args);
       }
       return this.resolveIdentifier(token.value);
     }
 
-    if (this.matchParen("(")) {
+    if (this.matchParen('(')) {
       const result = this.parseAdditive();
-      this.expectParen(")");
+      this.expectParen(')');
       return result;
     }
 
-    throw new Error("Ожидалось число, переменная или функция.");
+    throw new Error('Ожидалось число, переменная или функция.');
   }
 
-  private matchOperator(value: "+" | "-" | "*" | "/" | "^"): boolean {
+  private matchOperator(value: '+' | '-' | '*' | '/' | '^'): boolean {
     const token = this.peek();
-    if (token?.type === "operator" && token.value === value) {
+    if (token?.type === 'operator' && token.value === value) {
       this.index += 1;
       this.lastValue = token.value;
       return true;
@@ -198,9 +198,9 @@ class ExpressionParser {
     return false;
   }
 
-  private matchParen(value: "(" | ")"): boolean {
+  private matchParen(value: '(' | ')'): boolean {
     const token = this.peek();
-    if (token?.type === "paren" && token.value === value) {
+    if (token?.type === 'paren' && token.value === value) {
       this.index += 1;
       this.lastValue = token.value;
       return true;
@@ -210,16 +210,16 @@ class ExpressionParser {
 
   private matchComma(): boolean {
     const token = this.peek();
-    if (token?.type === "comma") {
+    if (token?.type === 'comma') {
       this.index += 1;
-      this.lastValue = ",";
+      this.lastValue = ',';
       return true;
     }
     return false;
   }
 
-  private expectParen(value: "(" | ")"): void {
-    if (!this.matchParen(value)) throw new Error("Ожидался символ "" + value + "".");
+  private expectParen(value: '(' | ')'): void {
+    if (!this.matchParen(value)) throw new Error('Ожидался символ "' + value + '".');
   }
 
   private peek(): Token | undefined {
@@ -233,40 +233,40 @@ class ExpressionParser {
 
 function callFunction(name: string, args: number[]): number {
   if (!(FORMULA_FUNCTIONS as readonly string[]).includes(name)) {
-    throw new Error("Неизвестная функция "" + name + "".");
+    throw new Error('Неизвестная функция "' + name + '".');
   }
 
-  if (name === "min" || name === "max") {
-    if (!args.length) throw new Error(name + " требует минимум один аргумент.");
-    return name === "min" ? Math.min(...args) : Math.max(...args);
+  if (name === 'min' || name === 'max') {
+    if (!args.length) throw new Error(name + ' требует минимум один аргумент.');
+    return name === 'min' ? Math.min(...args) : Math.max(...args);
   }
 
-  if (name === "abs" || name === "ceil" || name === "floor" || name === "round") {
-    if (args.length !== 1) throw new Error(name + " требует 1 аргумент.");
+  if (name === 'abs' || name === 'ceil' || name === 'floor' || name === 'round') {
+    if (args.length !== 1) throw new Error(name + ' требует 1 аргумент.');
     const value = args[0];
-    if (name === "abs") return Math.abs(value);
-    if (name === "ceil") return Math.ceil(value);
-    if (name === "floor") return Math.floor(value);
+    if (name === 'abs') return Math.abs(value);
+    if (name === 'ceil') return Math.ceil(value);
+    if (name === 'floor') return Math.floor(value);
     return Math.round(value);
   }
 
-  if (name === "pow") {
-    if (args.length !== 2) throw new Error("pow требует 2 аргумента.");
+  if (name === 'pow') {
+    if (args.length !== 2) throw new Error('pow требует 2 аргумента.');
     return Math.pow(args[0], args[1]);
   }
 
-  if (name === "clamp") {
-    if (args.length !== 3) throw new Error("clamp требует 3 аргумента.");
+  if (name === 'clamp') {
+    if (args.length !== 3) throw new Error('clamp требует 3 аргумента.');
     return Math.max(args[1], Math.min(args[2], args[0]));
   }
 
-  if (name === "roundTo") {
-    if (args.length !== 2) throw new Error("roundTo требует 2 аргумента.");
-    if (args[1] <= 0) throw new Error("Шаг округления должен быть больше нуля.");
+  if (name === 'roundTo') {
+    if (args.length !== 2) throw new Error('roundTo требует 2 аргумента.');
+    if (args[1] <= 0) throw new Error('Шаг округления должен быть больше нуля.');
     return Math.round(args[0] / args[1]) * args[1];
   }
 
-  throw new Error("Функция "" + name + "" не поддерживается.");
+  throw new Error('Функция "' + name + '" не поддерживается.');
 }
 
 export function evaluateExpression(
@@ -279,11 +279,11 @@ export function evaluateExpression(
   const visiting = new Set<string>();
 
   const resolve = (name: string): number => {
-    if (!isFormulaKey(name)) throw new Error("Некорректное имя "" + name + "".");
+    if (!isFormulaKey(name)) throw new Error('Некорректное имя "' + name + '".');
 
     if (Object.prototype.hasOwnProperty.call(variables, name)) {
       const value = variables[name];
-      if (!Number.isFinite(value)) throw new Error("Переменная "" + name + "" нечисловая.");
+      if (!Number.isFinite(value)) throw new Error('Переменная "' + name + '" нечисловая.');
       return value;
     }
 
@@ -292,11 +292,11 @@ export function evaluateExpression(
 
     const formula = formulaMap.get(name);
     if (formula === undefined) {
-      throw new Error("Переменная "" + name + "" не найдена.");
+      throw new Error('Переменная "' + name + '" не найдена.');
     }
 
     if (visiting.has(name)) {
-      throw new Error("Обнаружен цикл формул: "" + name + "".");
+      throw new Error('Обнаружен цикл формул: "' + name + '".');
     }
 
     visiting.add(name);
@@ -319,14 +319,14 @@ export function evaluateFormulas(
 
   for (const definition of definitions) {
     if (!isFormulaKey(definition.key)) {
-      throw new Error("Некорректный ключ формулы "" + definition.key + "".");
+      throw new Error('Некорректный ключ формулы "' + definition.key + '".');
     }
     if (keys.has(definition.key)) {
-      throw new Error("Дублирующийся ключ формулы "" + definition.key + "".");
+      throw new Error('Дублирующийся ключ формулы "' + definition.key + '".');
     }
     keys.add(definition.key);
     if (!definition.expression.trim()) {
-      throw new Error("Формула "" + definition.key + "" пустая.");
+      throw new Error('Формула "' + definition.key + '" пустая.');
     }
   }
 
@@ -350,15 +350,15 @@ export function validateFormulaDefinitions(
   try {
     evaluateFormulas(definitions, variables);
   } catch (error) {
-    errors.push(error instanceof Error ? error.message : "Не удалось проверить формулы.");
+    errors.push(error instanceof Error ? error.message : 'Не удалось проверить формулы.');
   }
 
   for (const definition of definitions) {
     if (!isFormulaKey(definition.key)) {
-      errors.push("Ключ "" + definition.key + "" должен содержать только латинские буквы, цифры и "_".");
+      errors.push('Ключ "' + definition.key + '" должен содержать только латинские буквы, цифры и "_".');
     }
     if (!definition.expression.trim()) {
-      errors.push("Формула "" + (definition.key || "без ключа") + "" пустая.");
+      errors.push('Формула "' + (definition.key || 'без ключа') + '" пустая.');
     }
   }
 
