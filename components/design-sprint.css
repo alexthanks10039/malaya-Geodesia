@@ -305,3 +305,48 @@
   .service-icon{width:30px;height:30px}
   .service-card h3{margin-top:28px}
 }
+
+
+.page-title{max-width:980px}
+.page-title .eyebrow{display:flex;align-items:center;gap:10px}
+.page-title .eyebrow:after{content:"";width:36px;height:1px;background:var(--line)}
+.page-title h1{text-wrap:balance}
+.search-box{min-height:58px;border-radius:17px;padding-right:8px;box-shadow:0 10px 30px color-mix(in srgb,var(--ink) 5%,transparent)}
+.search-box svg{color:var(--muted)}
+.search-box input{font-size:15px}
+.knowledge-card{border-radius:18px;min-height:255px;padding:21px;display:flex;flex-direction:column}
+.knowledge-card h3{margin-top:34px}
+.knowledge-card .tag-row{margin-top:auto;padding-top:18px}
+.tag{background:color-mix(in srgb,var(--bg) 65%,transparent)}
+.tech-card{position:relative;overflow:hidden}
+.tech-card:after{content:"";position:absolute;right:-35px;bottom:-35px;width:110px;height:110px;border:1px solid var(--line);border-radius:50%;box-shadow:0 0 0 18px color-mix(in srgb,var(--line) 20%,transparent),0 0 0 36px color-mix(in srgb,var(--line) 9%,transparent);opacity:.55}
+.tech-card:hover:after{transform:scale(1.08);transition:.3s ease}
+.detail-cta{border:1px solid color-mix(in srgb,var(--ink) 8%,transparent)}
+.detail-cta h2{margin:0 0 7px;letter-spacing:-.05em}
+.detail-cta p{margin:0;max-width:560px;color:color-mix(in srgb,var(--ink) 66%,transparent);line-height:1.45}
+
+.calculator-shell{align-items:start}
+.calculator-main,.calculator-summary{border-radius:20px}
+.calculator-summary{box-shadow:0 16px 45px color-mix(in srgb,var(--ink) 6%,transparent)}
+.summary-kicker{padding-bottom:14px;border-bottom:1px solid var(--line)}
+.summary-lines span{display:grid;grid-template-columns:76px 1fr;gap:8px}
+.summary-lines b{color:var(--ink);font-size:10px}
+.summary-note{margin:22px 0 0;padding-top:18px;border-top:1px dashed var(--line);font-size:10px;line-height:1.45;color:var(--muted)}
+.progress-head{display:flex;justify-content:space-between;align-items:center}
+.progress-head span:last-child{color:var(--ink)}
+.calc-intro{max-width:650px;color:var(--muted);line-height:1.55;margin:-12px 0 25px}
+.choice-service{position:relative;overflow:hidden}
+.choice-service:before{content:"";position:absolute;left:0;top:0;bottom:0;width:3px;background:var(--acid);transform:scaleY(0);transform-origin:center;transition:.2s ease}
+.choice-service.active:before{transform:scaleY(1)}
+.choice-service.active{box-shadow:0 10px 24px color-mix(in srgb,var(--ink) 8%,transparent)}
+.estimate-preview strong{font-size:32px}
+.field input::placeholder{color:var(--muted);opacity:.7}
+
+@media(max-width:650px){
+  .page-title{margin-bottom:38px}
+  .page-title:after{margin-top:24px}
+  .knowledge-card{min-height:215px}
+  .knowledge-card h3{margin-top:26px}
+  .summary-lines span{grid-template-columns:68px 1fr}
+  .calculator-summary>strong{font-size:34px}
+}
