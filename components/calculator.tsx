@@ -28,7 +28,7 @@ export function Calculator() {
   );
   const [step, setStep] = useState(1);
   const [type, setType] = useState(defaultCalculatorStudioConfig.types[0].name);
-  const [area, setArea] = useState(10000);
+  const [area, setArea] = useState(defaultCalculatorStudioConfig.areaPresets[0]?.value ?? defaultCalculatorStudioConfig.pricing.minArea);
   const [complexity, setComplexity] = useState<string[]>([]);
   const [output, setOutput] = useState(defaultCalculatorStudioConfig.outputs[0]);
   const [urgency, setUrgency] = useState(defaultCalculatorStudioConfig.urgencies[0]);
