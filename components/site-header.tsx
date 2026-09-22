@@ -4,6 +4,7 @@ import { useState } from "react";
 import { usePathname } from "next/navigation";
 import { Menu, X } from "lucide-react";
 import { ThemeToggle } from "@/components/theme-toggle";
+import { StudioQuickAccess } from "@/components/studio/quick-access";
 
 export function SiteHeader() {
   const pathname = usePathname();
@@ -38,6 +39,7 @@ export function SiteHeader() {
 
         <div className="header-tools">
           <ThemeToggle />
+          <StudioQuickAccess />
         </div>
 
         <button className="mobile-menu" onClick={() => setOpen(!open)} aria-label={open ? "Закрыть меню" : "Открыть меню"} aria-expanded={open}>
