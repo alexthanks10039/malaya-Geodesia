@@ -77,3 +77,15 @@ button:disabled { cursor: not-allowed; opacity: .58; transform: none !important;
 @media (prefers-reduced-motion: reduce) {
   .live-dot { animation: none; }
 }
+
+
+/* Dynamic calculator controls */
+.area-range{display:grid;gap:7px;margin-top:18px;padding-top:16px;border-top:1px solid var(--line)}
+.area-range>span{font-size:10px;color:var(--muted);font-weight:800;text-transform:uppercase;letter-spacing:.06em}
+.area-range input{width:100%;accent-color:var(--ink);cursor:pointer}
+.area-range>div{display:flex;justify-content:space-between;color:var(--muted);font-size:10px}
+.summary-breakdown{margin-top:18px;border-top:1px solid var(--line);padding-top:12px}
+.summary-breakdown summary{cursor:pointer;color:var(--muted);font-size:11px;font-weight:800}
+.summary-breakdown>div{display:grid;gap:7px;margin-top:10px}
+.summary-breakdown span{display:flex;justify-content:space-between;gap:12px;color:var(--muted);font-size:10px}
+.summary-breakdown span b{color:var(--ink)}
