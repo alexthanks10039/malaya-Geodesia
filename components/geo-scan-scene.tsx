@@ -8,8 +8,8 @@ function seeded(seed: number) {
   return x - Math.floor(x);
 }
 
-export function GeoScanScene({ variant = "terrain" }: { variant?: "terrain" | "index" }) {
-  const hostRef = useRef<HTMLDivElement>(null);
+export function GeoScanScene({ variant = "terrain", layers }: { variant?: "terrain" | "index"; layers?: { points?: boolean; grid?: boolean; scan?: boolean } }) {
+  const hostRef = useRef<HTMLDivElement>(null);\n  const layerPoints = layers?.points ?? true;\n  const layerGrid = layers?.grid ?? true;\n  const layerScan = layers?.scan ?? true;
 
   useEffect(() => {
     const host = hostRef.current;
@@ -85,12 +85,12 @@ export function GeoScanScene({ variant = "terrain" }: { variant?: "terrain" | "i
     const points = new THREE.Points(pointGeometry, pointMaterial);
     points.rotation.x = -0.32;
     points.rotation.y = 0.08;
-    terrainGroup.add(points);
+    terrainGroup.add(points);\n    points.visible = layerPoints;
 
     const photogrammetryGrid = new THREE.Group();
     photogrammetryGrid.rotation.x = -0.38;
     photogrammetryGrid.rotation.y = 0.08;
-    terrainGroup.add(photogrammetryGrid);
+    terrainGroup.add(photogrammetryGrid);\n    photogrammetryGrid.visible = layerGrid;
 
     for (let line = 0; line < 13; line += 1) {
       const geometry = new THREE.BufferGeometry();
@@ -150,7 +150,7 @@ export function GeoScanScene({ variant = "terrain" }: { variant?: "terrain" | "i
     grid.position.y = -1.38;
     grid.material.transparent = true;
     grid.material.opacity = 0.28;
-    scene.add(grid);
+    scene.add(grid);\n    grid.visible = variant === "index" ? layerGrid : layerGrid;
 
     const scanPlane = new THREE.Mesh(
       new THREE.PlaneGeometry(11.5, 8.3),
@@ -178,7 +178,7 @@ export function GeoScanScene({ variant = "terrain" }: { variant?: "terrain" | "i
     );
     scanLine.rotation.y = -0.04;
     scanLine.position.set(0, 0.78, -1.7);
-    scene.add(scanLine);
+    scene.add(scanLine);\n    scanLine.visible = layerScan;\n    scanPlane.visible = layerScan;
 
     const pointer = { x: 0, y: 0 };
     let targetX = 0;
@@ -273,7 +273,7 @@ export function GeoScanScene({ variant = "terrain" }: { variant?: "terrain" | "i
       renderer.dispose();
       canvas.remove();
     };
-  }, [variant]);
+  }, [variant, layerPoints, layerGrid, layerScan]);
 
   return <div ref={hostRef} className="geo-scene" />;
 }
