@@ -220,8 +220,10 @@ export function GeoScanScene({ variant = "terrain" }: { variant?: "terrain" | "i
 
       terrainGroup.rotation.y = 0.08 + pointer.x * 0.18;
       terrainGroup.rotation.x = pointer.y * 0.08;
-      camera.position.x += (7.2 + pointer.x * 1.9 - camera.position.x) * 0.02;
-      camera.position.y += (5.2 - pointer.y * 1.5 - camera.position.y) * 0.02;
+      const baseCameraX = variant === "index" ? 0.1 : 7.2;
+      const baseCameraY = variant === "index" ? 9.8 : 5.2;
+      camera.position.x += (baseCameraX + (variant === "index" ? pointer.x * 0.7 : pointer.x * 1.9) - camera.position.x) * 0.02;
+      camera.position.y += (baseCameraY - pointer.y * (variant === "index" ? 0.7 : 1.5) - camera.position.y) * 0.02;
       camera.lookAt(0, 0.2, 0);
 
       points.rotation.z = variant === "index" ? 0 : elapsed * 0.018;
@@ -269,7 +271,7 @@ export function GeoScanScene({ variant = "terrain" }: { variant?: "terrain" | "i
       renderer.dispose();
       canvas.remove();
     };
-  }, []);
+  }, [variant]);
 
   return <div ref={hostRef} className="geo-scene" />;
 }
