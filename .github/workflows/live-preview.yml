@@ -56,7 +56,7 @@ jobs:
       - name: Start public live tunnel
         shell: bash
         env:
-          GH_TOKEN: \${{ github.token }}
+          GH_TOKEN: ${{ github.token }}
         run: |
           nohup npx --yes wrangler tunnel quick-start http://127.0.0.1:3000 > /tmp/geodesia-tunnel.log 2>&1 &
           echo $! > /tmp/geodesia-tunnel.pid
@@ -87,12 +87,7 @@ jobs:
             echo "This preview is temporary and intended for development."
           } >> "$GITHUB_STEP_SUMMARY"
 
-          gh api --method POST \
-            "/repos/$GITHUB_REPOSITORY/statuses/$GITHUB_SHA" \
-            -f state=success \
-            -f context="Live Preview" \
-            -f description="Temporary live preview is running" \
-            -f target_url="$URL"
+          gh api --method POST             "/repos/$GITHUB_REPOSITORY/statuses/$GITHUB_SHA"             -f state=success             -f context="Live Preview"             -f description="Temporary live preview is running"             -f target_url="$URL"
 
       - name: Keep preview alive
         shell: bash
@@ -103,7 +98,12 @@ jobs:
       - name: Failure diagnostics
         if: failure()
         shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: |
+          if [ -n "${LIVE_PREVIEW_URL:-}" ]; then
+            gh api --method POST               "/repos/$GITHUB_REPOSITORY/statuses/$GITHUB_SHA"               -f state=failure               -f context="Live Preview"               -f description="Live preview stopped"               -f target_url="$LIVE_PREVIEW_URL" || true
+          fi
           echo "### Next.js log"
           cat /tmp/geodesia-next.log || true
           echo
