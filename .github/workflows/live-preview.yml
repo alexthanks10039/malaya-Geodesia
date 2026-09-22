@@ -93,7 +93,25 @@ jobs:
         shell: bash
         run: |
           echo "Live preview: $LIVE_PREVIEW_URL"
-          wait "$(cat /tmp/geodesia-tunnel.pid)"
+          echo "Keeping the GitHub runner alive while the preview endpoint responds..."
+
+          for i in {1..680}; do
+            if ! kill -0 "$(cat /tmp/geodesia-tunnel.pid)" 2>/dev/null; then
+              echo "Cloudflare tunnel process exited"
+              cat /tmp/geodesia-tunnel.log || true
+              exit 1
+            fi
+
+            if ! curl -fsS --max-time 10 "$LIVE_PREVIEW_URL/" >/dev/null; then
+              echo "Live preview endpoint stopped responding"
+              cat /tmp/geodesia-tunnel.log || true
+              exit 1
+            fi
+
+            sleep 30
+          done
+
+          echo "Live preview reached the workflow timeout window."
 
       - name: Failure diagnostics
         if: failure()
