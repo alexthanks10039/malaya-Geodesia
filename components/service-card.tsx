@@ -1,1 +1,18 @@
-import Link from "next/link"; import {ArrowUpRight} from "lucide-react"; import type {Service} from "@/lib/data"; export function ServiceCard({service}:{service:Service}){return <Link className="service-card" href={`/services/${service.slug}`}><span className="eyebrow">{service.category}</span><h3>{service.name}</h3><p>{service.short}</p><div className="service-bottom"><span>{service.deliverable}</span><ArrowUpRight size={18}/></div></Link>}
+import Link from "next/link";
+import { ArrowUpRight, ScanLine } from "lucide-react";
+import type { Service } from "@/lib/data";
+
+export function ServiceCard({ service }: { service: Service }) {
+  return (
+    <Link className="service-card" href={`/services/${service.slug}`}>
+      <span className="eyebrow">{service.category}</span>
+      <h3>{service.name}</h3>
+      <p>{service.short}</p>
+      <div className="service-bottom">
+        <span>{service.deliverable}</span>
+        <ScanLine size={16} />
+        <ArrowUpRight size={18} />
+      </div>
+    </Link>
+  );
+}
