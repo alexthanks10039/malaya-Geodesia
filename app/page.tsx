@@ -81,7 +81,7 @@ export default function Home() {
             <Link className="button button-light" href="/knowledge">Открыть справочник <ArrowRight size={16} /></Link>
           </div>
           <div className="photogrammetry-visual" aria-hidden="true">
-            <GeoScanScene />
+            <GeoScanScene variant="index" />
             <div className="photo-hud photo-hud-top"><i /> DATA INDEX / COVERAGE 04 <b>LIVE</b></div>
             <div className="photo-hud photo-hud-bottom"><span>SPATIAL INDEX</span><strong>2.4M pts</strong><small>XYZ / COVERAGE</small></div>
           </div>
