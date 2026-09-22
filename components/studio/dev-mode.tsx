@@ -261,7 +261,8 @@ export function StudioDevMode() {
     };
     document.addEventListener("click", clickHandler, true);
     return () => {
-      window.cancelAnimationFrame(raf);\n      window.cancelAnimationFrame(refreshFrame);
+      window.cancelAnimationFrame(raf);
+      window.cancelAnimationFrame(refreshFrame);
       observer.disconnect();
       document.removeEventListener("click", clickHandler, true);
     };
