@@ -1,0 +1,78 @@
+name: Visual preview
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - "app/**"
+      - "components/**"
+      - "lib/**"
+      - "public/**"
+      - "package.json"
+      - "next.config.ts"
+      - ".github/workflows/visual-preview.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  visual-preview:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v5
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: package.json
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Build Next.js
+        run: npm run build
+
+      - name: Start preview server
+        run: |
+          nohup npm run start -- --hostname 127.0.0.1 > /tmp/next.log 2>&1 &
+          for i in {1..30}; do
+            if curl -fsS http://127.0.0.1:3000/ > /dev/null; then
+              break
+            fi
+            sleep 2
+          done
+          curl -fsS http://127.0.0.1:3000/ > /dev/null
+
+      - name: Install Playwright Chromium
+        run: npx playwright@1.55.0 install --with-deps chromium
+
+      - name: Capture screenshots
+        run: |
+          node <<'EOF'
+          const { chromium } = require(require.resolve("playwright", { paths: ["/home/runner/.npm/_npx"] }));
+          (async () => {
+            const browser = await chromium.launch({ headless: true });
+            const desktop = await browser.newPage({ viewport: { width: 1440, height: 1100 }, deviceScaleFactor: 1 });
+            await desktop.goto("http://127.0.0.1:3000/", { waitUntil: "networkidle" });
+            await desktop.screenshot({ path: "visual-home-desktop.png", fullPage: true });
+
+            const mobile = await browser.newPage({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 1 });
+            await mobile.goto("http://127.0.0.1:3000/", { waitUntil: "networkidle" });
+            await mobile.screenshot({ path: "visual-home-mobile.png", fullPage: true });
+
+            await browser.close();
+          })();
+          EOF
+
+      - name: Upload visual preview
+        uses: actions/upload-artifact@v4
+        with:
+          name: malaya-geodesia-visual-preview
+          path: |
+            visual-home-desktop.png
+            visual-home-mobile.png
+            /tmp/next.log
+          retention-days: 2
