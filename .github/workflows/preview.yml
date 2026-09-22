@@ -1,0 +1,46 @@
+name: Preview
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  build-preview:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: TypeScript check
+        run: npm run lint
+
+      - name: Build Next.js
+        run: npm run build
+
+      - name: Create preview artifact
+        run: |
+          mkdir -p preview
+          cp -r .next preview/next-build
+          cp package.json preview/
+          cp next.config.ts preview/ 2>/dev/null || true
+          tar -czf geodesy-preview.tar.gz preview
+
+      - name: Upload preview artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: malaya-geodesia-preview
+          path: geodesy-preview.tar.gz
+          retention-days: 7
