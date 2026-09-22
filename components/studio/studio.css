@@ -1,3 +1,6 @@
+body:has(.studio-app){overflow:hidden}
+body:has(.studio-app) .site-header,body:has(.studio-app) .site-footer{display:none!important}
+body:has(.studio-app) main{margin:0!important;max-width:none!important;padding:0!important}
 .studio-app{min-height:100vh;background:#141612;color:#f0f2ea;font-family:ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
 .studio-topbar{height:70px;display:grid;grid-template-columns:260px minmax(280px,1fr) auto;gap:20px;align-items:center;padding:0 18px;border-bottom:1px solid #2d312b;background:#191b17;position:sticky;top:0;z-index:30}
 .studio-brand{display:flex;align-items:center;gap:11px}.studio-brand-mark{width:34px;height:34px;display:grid;place-items:center;border-radius:10px;background:#d9ff52;color:#151713;font-weight:950}.studio-brand b{display:block;font-size:12px;letter-spacing:.1em}.studio-brand span{display:block;color:#919a8b;font:10px ui-monospace,SFMono-Regular,monospace;margin-top:3px}
