@@ -72,9 +72,9 @@ export default function Home() {
       <Reveal className="section">
         <div className="map-card photogrammetry-card">
           <div className="photogrammetry-copy">
-            <p className="eyebrow">AERIAL PHOTOGRAMMETRY / POINT CLOUD</p>
-            <h2>Местность превращается в облако точек.</h2>
-            <p>БПЛА снимает участок с воздуха, а фотограмметрия собирает из снимков плотную 3D-модель рельефа и объектов.</p>
+            <p className="eyebrow">GEOSPATIAL DATA / INDEX</p>
+            <h2>Участок читается как массив пространственных данных.</h2>
+            <p>Каждая точка получает координаты, высоту и положение в сетке. Вместо объёмной сцены здесь показываем саму структуру геоданных: покрытие, координатную сетку и проход сканирования.</p>
             <div className="scan-specs">
               <span><b>3D</b> рельеф</span><span><b>RGB</b> фототекстура</span><span><b>XYZ</b> координаты</span>
             </div>
@@ -82,8 +82,8 @@ export default function Home() {
           </div>
           <div className="photogrammetry-visual" aria-hidden="true">
             <GeoScanScene />
-            <div className="photo-hud photo-hud-top"><i /> AERIAL SCAN / GRID 04 <b>LIVE</b></div>
-            <div className="photo-hud photo-hud-bottom"><span>POINT CLOUD</span><strong>2.4M pts</strong><small>GROUND + OBJECTS</small></div>
+            <div className="photo-hud photo-hud-top"><i /> DATA INDEX / COVERAGE 04 <b>LIVE</b></div>
+            <div className="photo-hud photo-hud-bottom"><span>SPATIAL INDEX</span><strong>2.4M pts</strong><small>XYZ / COVERAGE</small></div>
           </div>
         </div>
       </Reveal>
