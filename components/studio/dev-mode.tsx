@@ -9,6 +9,7 @@ import {
   Copy,
   Download,
   Eye,
+  EyeOff,
   Maximize2,
   MousePointer2,
   RotateCcw,
