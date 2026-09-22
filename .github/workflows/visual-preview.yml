@@ -51,21 +51,8 @@ jobs:
 
       - name: Capture screenshots
         run: |
-          node <<'EOF'
-          const { chromium } = require(require.resolve("playwright", { paths: ["/home/runner/.npm/_npx"] }));
-          (async () => {
-            const browser = await chromium.launch({ headless: true });
-            const desktop = await browser.newPage({ viewport: { width: 1440, height: 1100 }, deviceScaleFactor: 1 });
-            await desktop.goto("http://127.0.0.1:3000/", { waitUntil: "networkidle" });
-            await desktop.screenshot({ path: "visual-home-desktop.png", fullPage: true });
-
-            const mobile = await browser.newPage({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 1 });
-            await mobile.goto("http://127.0.0.1:3000/", { waitUntil: "networkidle" });
-            await mobile.screenshot({ path: "visual-home-mobile.png", fullPage: true });
-
-            await browser.close();
-          })();
-          EOF
+          npx playwright@1.55.0 screenshot --full-page --viewport-size="1440,1100" --wait-for-timeout=3500 http://127.0.0.1:3000/ visual-home-desktop.png
+          npx playwright@1.55.0 screenshot --full-page --viewport-size="390,844" --wait-for-timeout=3500 http://127.0.0.1:3000/ visual-home-mobile.png
 
       - name: Upload visual preview
         uses: actions/upload-artifact@v4
