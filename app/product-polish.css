@@ -50,3 +50,5 @@
 @media (prefers-reduced-motion: reduce){
   *,*::before,*::after{scroll-behavior:auto!important;animation-duration:.001ms!important;transition-duration:.001ms!important}
 }
+.choice-grid.compact{grid-template-columns:repeat(3,1fr);margin-top:10px}.field-hint{font-size:12px;line-height:1.45;color:var(--muted);margin:8px 0 0}.spin{animation:spin .8s linear infinite}@keyframes spin{to{transform:rotate(360deg)}}
+@media (max-width:720px){.choice-grid.compact{grid-template-columns:1fr}}
