@@ -113,7 +113,8 @@ export function GeoScanScene({ variant = "terrain" }: { variant?: "terrain" | "i
       );
     }
 
-    const contourGroup = new THREE.Group();\n    if (variant === "index") contourGroup.visible = false;
+    const contourGroup = new THREE.Group();
+    if (variant === "index") contourGroup.visible = false;
     contourGroup.rotation.x = -0.32;
     contourGroup.rotation.y = 0.08;
     terrainGroup.add(contourGroup);
@@ -144,7 +145,8 @@ export function GeoScanScene({ variant = "terrain" }: { variant?: "terrain" | "i
       contourGroup.add(new THREE.LineLoop(geometry, material));
     }
 
-    const grid = new THREE.GridHelper(13, 26, 0x66786a, 0x223128);\n    if (variant === "index") grid.visible = false;
+    const grid = new THREE.GridHelper(13, 26, 0x66786a, 0x223128);
+    if (variant === "index") grid.visible = false;
     grid.position.y = -1.38;
     grid.material.transparent = true;
     grid.material.opacity = 0.28;
