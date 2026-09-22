@@ -179,7 +179,8 @@ export function StudioDevMode() {
 
   useEffect(() => {
     const saved = window.localStorage.getItem(DEV_ENABLED_KEY) === "1";
-    setEnabled(saved);
+    const queryEnabled = new URLSearchParams(window.location.search).get("dev") === "1";
+    setEnabled(saved || queryEnabled);
     const toggleHandler = () => setActive(window.localStorage.getItem(DEV_ENABLED_KEY) !== "1");
     const keyHandler = (event: KeyboardEvent) => {
       if ((event.ctrlKey || event.metaKey) && event.shiftKey && event.key.toLowerCase() === "e") {
