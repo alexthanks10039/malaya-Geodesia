@@ -69,14 +69,18 @@ export default function Home() {
         </div>
         <div className="pipeline">
           {[
-            [Crosshair, "Задача", "Фиксируем объект и нужный результат."],
-            [ScanLine, "Съёмка", "GNSS, RTK, тахеометр, БПЛА или LiDAR."],
-            [Boxes, "Обработка", "Собираем цифровую модель и проверяем качество."],
-            [Database, "Результат", "DWG, PDF, GeoTIFF, LAS/LAZ, E57, 3D."],
-          ].map(([Icon, title, text], i) => {
-            const Component = Icon as typeof Crosshair;
-            return <div className="pipeline-item" key={String(title)}><span>0{i + 1}</span><Component size={27} /><h3>{title}</h3><p>{text}</p></div>;
-          })}
+            { Icon: Crosshair, title: "Задача", text: "Фиксируем объект и нужный результат." },
+            { Icon: ScanLine, title: "Съёмка", text: "GNSS, RTK, тахеометр, БПЛА или LiDAR." },
+            { Icon: Boxes, title: "Обработка", text: "Собираем цифровую модель и проверяем качество." },
+            { Icon: Database, title: "Результат", text: "DWG, PDF, GeoTIFF, LAS/LAZ, E57, 3D." },
+          ].map(({ Icon, title, text }, i) => (
+            <div className="pipeline-item" key={title}>
+              <span>0{i + 1}</span>
+              <Icon size={27} />
+              <h3>{title}</h3>
+              <p>{text}</p>
+            </div>
+          ))}
         </div>
       </section>
 
