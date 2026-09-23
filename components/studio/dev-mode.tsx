@@ -25,7 +25,7 @@ import type { StudioCssOverrides, StudioState } from "@/studio/types";
 const DEV_ENABLED_KEY = "malaya-studio-dev-enabled";
 export const STUDIO_TOGGLE_EVENT = "malaya-studio-toggle";
 
-const STYLE_MAP: Record<keyof StudioCssOverrides, string> = {
+const STYLE_MAP: Partial<Record<keyof StudioCssOverrides, string>> = {
   fontSize: "font-size",
   lineHeight: "line-height",
   color: "color",
