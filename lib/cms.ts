@@ -42,29 +42,6 @@ export async function getAuditRecord(id:number,entityType?:string,entityId?:stri
  const row=result.rows[0];
  return row?({id:row.id,entityType:row.entity_type,entityId:row.entity_id,action:row.action,actor:row.actor,beforeData:row.before_data,afterData:row.after_data,metadata:row.metadata,createdAt:new Date(row.created_at).toISOString()} satisfies AuditRecord):null;
 }
-export async function rollbackContent(id:string,type:ContentType,auditId:number,expectedVersion?:number){
- if(!isDatabaseConfigured())throw new Error("DATABASE_URL is required for writes");
- const current=await getAdminContent(id,type);
- if(!current)throw new Error("Content not found");
- if(expectedVersion!==undefined&&expectedVersion!==current.version)throw new Error("Version conflict: refresh Studio");
- const revision=await getAuditRecord(auditId,type,id);
- if(!revision)throw new Error("Revision not found");
- const snapshot=revision.afterData;
- if(!snapshot||typeof snapshot.data!=="object"||snapshot.data===null)throw new Error("Revision has no restorable draft");
- const data=snapshot.data as Record<string,unknown>;
- const slug=typeof snapshot.slug==="string"?snapshot.slug:current.slug;
- const path=rowPath(type,slug);
- return withTransaction(async client=>{
-   const values=[slug,path,JSON.stringify(data),id,type] as unknown[];
-   const versionClause=expectedVersion===undefined?"":" AND version=$6";
-   if(expectedVersion!==undefined)values.push(expectedVersion);
-   const result=await client.query<CmsRow>("UPDATE cms_content SET draft_slug=$1,draft_path=$2,draft_data=$3,status="+(current.publishedData?"'changes'":"'draft'")+" ,version=version+1 WHERE id=$4 AND content_type=$5"+versionClause+" RETURNING id,content_type,draft_slug,draft_path,published_slug,published_path,draft_data,published_data,status,version,created_at,updated_at,published_at",values);
-   if(!result.rows[0])throw new Error("Version conflict: refresh Studio");
-   const item=mapRow(result.rows[0]);
-   await insertAudit(client,type,id,"rollback",auditPayload(current),auditPayload(item),{sourceAuditId:auditId});
-   return item;
- });
-}
 export async function listAuditLogs(options:{entityType?:string;entityId?:string;limit?:number}={}){if(!isDatabaseConfigured())return[];const limit=Math.min(Math.max(options.limit??100,1),250),values:unknown[]=[],where:string[]=[];if(options.entityType){values.push(options.entityType);where.push("entity_type=$"+values.length);}if(options.entityId){values.push(options.entityId);where.push("entity_id=$"+values.length);}values.push(limit);const whereSql=where.length?"WHERE "+where.join(" AND "):"";const result=await query<AuditRow>("SELECT id,entity_type,entity_id,action,actor,before_data,after_data,metadata,created_at FROM cms_audit_log "+whereSql+" ORDER BY created_at DESC LIMIT $"+values.length,values);return result.rows.map(row=>({id:row.id,entityType:row.entity_type,entityId:row.entity_id,action:row.action,actor:row.actor,beforeData:row.before_data,afterData:row.after_data,metadata:row.metadata,createdAt:new Date(row.created_at).toISOString()} satisfies AuditRecord));}
 export type CmsVersion={id:number;contentId:string;contentType:ContentType;version:number;action:string;slug:string;path:string;status:ContentStatus;data:Record<string,unknown>;publishedData:Record<string,unknown>|null;createdAt:string};
 type CmsVersionRow={id:number;content_id:string;content_type:ContentType;version:number;action:string;slug:string;path:string;status:ContentStatus;draft_data:Record<string,unknown>|null;published_data:Record<string,unknown>|null;created_at:string};
