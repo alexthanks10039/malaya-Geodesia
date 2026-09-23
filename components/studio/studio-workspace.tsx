@@ -488,6 +488,7 @@ export function StudioWorkspace() {
   const [versions, setVersions] = useState<VersionSnapshot[]>([]);
   const [toast, setToast] = useState("");
   const [focusMode, setFocusMode] = useState(false);
+  const [mobilePanel, setMobilePanel] = useState<"none" | "left" | "right">("none");
 
   const flatNodes = useMemo(() => flatten(nodes), [nodes]);
   const filteredTree = useMemo(() => filterTree(nodes, search), [nodes, search]);
@@ -1028,7 +1029,11 @@ export function StudioWorkspace() {
     });
 
   return (
-    <main className={focusMode ? "studio-v2 studio-v2-focus" : "studio-v2"}>
+    <main className={[
+      "studio-v2",
+      focusMode ? "studio-v2-focus" : "",
+      mobilePanel !== "none" ? "studio-v2-mobile-" + mobilePanel : "",
+    ].filter(Boolean).join(" ")}>
       <header className="studio-v2-topbar">
         <div className="studio-v2-brand">
           <span className="studio-v2-mark">G</span>
@@ -1082,6 +1087,8 @@ export function StudioWorkspace() {
         </div>
 
         <div className="studio-v2-toolbar-center">
+          <button type="button" className="studio-v2-mobile-toggle" onClick={() => setMobilePanel((value) => value === "left" ? "none" : "left")} title="Layers / Design panel"><Layers3 size={14} /> Layers</button>
+          <button type="button" className="studio-v2-mobile-toggle" onClick={() => setMobilePanel((value) => value === "right" ? "none" : "right")} title="Inspector panel"><Code2 size={14} /> Inspector</button>
           <button type="button" className={previewMode === "select" ? "active" : ""} onClick={() => setPreviewMode("select")} title="Select mode"><MousePointer2 size={14} /> Select</button>
           <button type="button" className={previewMode === "interact" ? "active" : ""} onClick={() => setPreviewMode("interact")} title="Interact mode"><Eye size={14} /> Interact</button>
         </div>
