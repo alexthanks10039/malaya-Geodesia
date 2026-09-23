@@ -3,6 +3,7 @@
 import { Puck, type Data } from "@puckeditor/core";
 import { useEffect, useRef, useState } from "react";
 import config, { initialPuckData, type PuckSiteComponents, type PuckSiteRootProps } from "@/components/studio/puck/config";
+import { StudioLogout } from "@/components/studio/studio-logout";
 
 const STORAGE_KEY = "malaya-studio-puck-draft";
 const API_BASE = "/api/admin/content/page";
@@ -268,7 +269,7 @@ export function PuckStudio() {
           <div className="puck-studio-actions">
             <span className={"puck-studio-status puck-status-" + status.toLowerCase().replace(/\s+/g, "-")}><i /> {status}</span>
             <button type="button" className="puck-studio-reset" onClick={() => void resetDraft()}>Сбросить draft</button>
-            <a className="puck-studio-back" href="/studio">← Native Studio</a>
+            <a className="puck-studio-back" href="/studio">← Native Studio</a><StudioLogout />
           </div>
         </div>
 
