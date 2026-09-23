@@ -22,6 +22,16 @@ export type StudioCssOverrides = {
   height?: string;
   gap?: string;
   display?: string;
+  flexDirection?: string;
+  flexWrap?: string;
+  justifyContent?: string;
+  alignItems?: string;
+  alignSelf?: string;
+  gridTemplateColumns?: string;
+  gridTemplateRows?: string;
+  overflow?: string;
+  minWidth?: string;
+  minHeight?: string;
   opacity?: string;
   position?: string;
   zIndex?: string;
@@ -46,6 +56,11 @@ export type StudioPositionOffset = {
   y: number;
 };
 
+export type StudioLayoutConstraints = {
+  horizontal?: "none" | "left" | "right" | "stretch";
+  vertical?: "none" | "top" | "bottom" | "stretch";
+};
+
 export type StudioElementOverride = {
   text?: string;
   css?: StudioCssOverrides;
@@ -59,6 +74,7 @@ export type StudioElementOverride = {
   };
   hidden?: boolean;
   locked?: boolean;
+  constraints?: StudioLayoutConstraints;
   inserted?: StudioInsertedBlock;
 };
 
