@@ -41,7 +41,7 @@ const STYLE_MAP: Partial<Record<keyof StudioCssOverrides, string>> = {
   display: "display",
 };
 
-const STYLE_LABELS: Record<keyof StudioCssOverrides, string> = {
+const STYLE_LABELS: Partial<Record<keyof StudioCssOverrides, string>> = {
   fontSize: "Размер",
   lineHeight: "Интерлиньяж",
   color: "Цвет",
@@ -194,7 +194,9 @@ export function StudioDevMode(){
   };
   const updateStyle=(property:keyof StudioCssOverrides,value:string)=>{
     const element=findElement(selected?.id??"");if(!element||!selected)return;
-    element.style.setProperty(STYLE_MAP[property],value);
+    const cssName=STYLE_MAP[property];
+    if(!cssName)return;
+    element.style.setProperty(cssName,value);
     persist(mergePageOverride(state,pathname,selected.id,{css:{[property]:value}}));
     setSelected((current)=>current?{...current,css:{...current.css,[property]:value}}:current);
   };
