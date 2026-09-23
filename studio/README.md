@@ -1,72 +1,99 @@
 # Malaya Studio
 
-Внутренний визуальный редактор проекта «Малая геодезия».
+Встроенный визуальный workspace для проектирования сайта прямо поверх реального Next.js UI.
 
-## Что умеет
+## Модель
 
-- Открывает реальные страницы проекта в preview-iframe.
-- Позволяет выбрать почти любой DOM-элемент кликом или из списка.
-- Редактирует текст и визуальные CSS-свойства элемента.
-- Хранит черновые override в браузере редактора.
-- Экспортирует override в JSON.
-- Имеет отдельный редактор калькулятора: услуги, подсказки, теги, форматы результата, сроки, условия, площади, базовые цены и коэффициенты.
-- Режим Studio активируется только внутри /studio; обычная версия сайта продолжает использовать исходные значения.
+`GitHub main → Vercel Preview/Production`
 
-## Логическая файловая система
+`/studio → Layers → Canvas → Inspector → local draft → Snapshot/Export → Preview`
 
-studio/
-├── README.md
-├── config/
-│   ├── calculator.ts    # Схема и исходные значения калькулятора.
-│   └── pages.ts         # Реестр страниц, доступных в Studio.
-├── runtime/
-│   └── storage.ts       # Ключи и безопасные функции browser storage.
-└── types.ts             # Общие типы редактора.
+Vercel Preview Deployments создают изолированную версию ветки и обновляются на каждый push, поэтому Studio не подменяет deployment workflow, а работает перед ним как визуальный слой проектирования.
 
-app/
-└── studio/
-    └── page.tsx         # Внутренний маршрут /studio.
+## Основной workflow
 
-components/
-└── studio/
-    ├── page-editor.tsx  # Основной UI: preview, дерево элементов, inspector.
-    └── studio.css       # Стили самого редактора.
+1. Открыть `/studio`.
+2. Выбрать страницу в PAGE.
+3. Выбрать Desktop / Tablet / Mobile.
+4. В режиме Select нажать на элемент в canvas или выбрать его в Layers.
+5. Изменить контент, типографику, layout, appearance или custom CSS в Inspector.
+6. Использовать Grid для проверки сетки.
+7. Save создаёт локальный snapshot.
+8. Export сохраняет полный draft JSON.
+9. Import возвращает draft из JSON.
+10. После проверки изменения проходят обычный CI + Vercel Preview workflow.
 
-## Как работает редактирование
+## Что умеет visual editor
 
-1. /studio включает флаг Studio в sessionStorage.
-2. Preview открывает выбранную страницу проекта в iframe.
-3. Studio добавляет к DOM preview служебные ID и обработчики выбора.
-4. Изменения элемента сохраняются в localStorage как черновые override.
-5. При повторной загрузке preview override накладываются на реальную страницу.
-6. Обычный посетитель сайта не получает эти override, потому что флаг Studio не установлен.
+- иерархическое DOM-дерево Layers;
+- поиск по тегу, тексту и CSS-классу;
+- стабильные runtime selectors;
+- click-to-select в реальном preview;
+- режим Select / Interact;
+- Desktop / Tablet / Mobile viewport;
+- zoom 60–130%;
+- визуальная grid-подложка;
+- inline изменение текста;
+- типографика: font-size, line-height, weight, tracking, alignment;
+- layout: display, width, max-width, height, gap, position, z-index, padding, margin;
+- appearance: color, background, border, radius, shadow, opacity;
+- advanced: transform, transition, custom CSS;
+- изменение ссылок и alt;
+- скрытие существующего элемента;
+- добавление Text / Button / Divider / Container;
+- удаление созданных Studio-блоков;
+- Undo / Redo до 50 шагов;
+- snapshots до 12 версий;
+- review comments, привязанные к слою;
+- экспорт / импорт draft JSON;
+- глобальные design tokens;
+- специализированные редакторы калькулятора и кейсов внутри той же среды.
 
-## Калькулятор
+## Draft storage
 
-Калькулятор имеет собственную конфигурацию в studio/config/calculator.ts.
+Studio использует browser localStorage.
 
-Редактируются:
+Ключи:
 
-- список видов работ;
-- название, описание и код каждого метода;
-- форматы выдачи;
-- варианты срочности;
-- условия объекта;
-- пресеты площади;
-- базовая цена каждого метода;
-- коэффициент срочности;
-- коэффициент сложности;
-- коэффициент отдельных форматов;
-- параметры расчёта сроков;
-- минимальная/максимальная площадь и шаг;
-- шаг округления цены.
+- `malaya-studio-overrides`
+- `malaya-studio-calculator`
+- `malaya-studio-versions`
 
-Изменения калькулятора сохраняются отдельным ключом Studio и подхватываются только preview калькулятора в режиме Studio.
+Черновик не записывает JSX/CSS в GitHub автоматически. Это намеренное разделение между визуальным проектированием и source control.
 
-## Важное
+## Вставленные блоки
 
-Studio — редактор черновиков. Он не делает автоматический deploy и не записывает изменения прямо в исходный JSX/CSS.
+Studio может добавить безопасные runtime-блоки:
 
-Для публикации дизайн-изменений нужен отдельный шаг: сгенерировать из черновика код/конфигурацию и проверить CI/Preview перед merge.
+- Text → `<p>`
+- Button → `<a>`
+- Divider → `<div>`
+- Container → `<div>`
 
-Цены в конфигурации калькулятора являются продуктовой логикой проекта, а не подтверждённым рыночным прайсом.
+Они сохраняются как данные draft и восстанавливаются при следующем открытии preview. Для production-кода их необходимо принять в source layer отдельно.
+
+## Legacy Dev Mode
+
+Старый quick Dev Mode сохранён для обратной совместимости.
+
+Внутри нового Studio preview он автоматически отключён параметром `studioPreview=1`, чтобы два редактора не конфликтовали.
+
+## Vercel
+
+Vercel использует Preview Deployments как изолированные среды для веток и PR. Vercel Toolbar предоставляет отдельный слой collaboration: Comments, Draft Mode и другие инструменты проверки live deployment. Studio намеренно не дублирует deployment/CI и оставляет их Vercel/GitHub.
+
+## Горячие клавиши
+
+- `Ctrl/Cmd + Z` — Undo
+- `Ctrl/Cmd + Shift + Z` — Redo
+- `Ctrl/Cmd + S` — Snapshot
+- `/` — поиск Layers
+- `Esc` — закрыть selection
+
+## Проверка перед merge
+
+`npm run lint`
+
+`npm run build`
+
+После push Vercel создаёт новый deployment для ветки, а CI выполняет TypeScript check и production build.
