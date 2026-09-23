@@ -5,8 +5,8 @@ import { cookies } from "next/headers";
 const COOKIE_NAME = "malaya_studio_session";
 const SESSION_TTL_SECONDS = 60 * 60 * 12;
 
-// Временно отключено, включить позже.
-export const STUDIO_AUTH_DISABLED = true;
+// Emergency development switch. Keep false/undefined in production.
+export const STUDIO_AUTH_DISABLED = process.env.STUDIO_AUTH_DISABLED === "true";
 
 function secret(): string {
   const value = process.env.ADMIN_SESSION_SECRET;
@@ -17,8 +17,7 @@ function secret(): string {
 }
 
 function password(): string {
-  // Временно: пароль для обратного включения Studio = 1.
-  return "1";
+  return process.env.ADMIN_PASSWORD?.trim() || "";
 }
 
 function sign(payload: string): string {
@@ -84,7 +83,9 @@ export async function requireAdminApi(): Promise<{ ok: true } | { ok: false; res
 
 export async function loginAdmin(candidate: string): Promise<boolean> {
   try {
-    return safeEqual(candidate, password());
+    const configured = password();
+    if (!configured) return false;
+    return safeEqual(candidate, configured);
   } catch {
     return false;
   }
