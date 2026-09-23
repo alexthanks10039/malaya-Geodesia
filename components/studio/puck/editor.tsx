@@ -143,7 +143,7 @@ export function PuckStudio() {
         : fetch(API_BASE, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ slug: "home", data: cmsData, expectedVersion: page?.version }),
+            body: JSON.stringify({ slug: "home", data: cmsData }),
           });
 
       const response = await request;
@@ -190,7 +190,7 @@ export function PuckStudio() {
         const createResponse = await fetch(API_BASE, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ slug: "home", data: cmsData }),
+          body: JSON.stringify({ slug: "home", data: cmsData, expectedVersion: page?.version }),
         });
         const createPayload = await createResponse.json() as { ok?: boolean; item?: CmsPage; message?: string };
         if (!createResponse.ok || !createPayload.ok || !createPayload.item) {
