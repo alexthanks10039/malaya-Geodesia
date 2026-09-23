@@ -303,6 +303,7 @@ export function StudioPageEditor() {
     const element = getSelectedElement();
     if (!element) return;
     const cssName = STYLE_MAP[property];
+    if (!cssName) return;
     element.style.setProperty(cssName, value);
 
     const next = mergePageOverride(state, pagePath, selected?.id ?? "", {
