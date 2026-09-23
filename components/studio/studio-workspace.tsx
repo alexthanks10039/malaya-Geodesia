@@ -13,6 +13,11 @@ import {
   Download,
   Eye,
   EyeOff,
+  Lock,
+  Unlock,
+  CopyPlus,
+  Group,
+  MoreVertical,
   ExternalLink,
   FilePlus2,
   Grid3X3,
@@ -671,6 +676,8 @@ export function StudioWorkspace() {
       previewMode === "select"
         ? "[data-studio-node-id]:hover{outline:1px dashed rgba(217,255,82,.92)!important;outline-offset:2px;cursor:crosshair!important}"
         : "[data-studio-node-id]:hover{cursor:default!important}",
+      '[data-studio-node-id][data-studio-locked="true"]{cursor:not-allowed!important;opacity:.72}',
+
       "[data-studio-node-id].studio-frame-selected{outline:2px solid #d9ff52!important;outline-offset:3px;box-shadow:0 0 0 4px rgba(217,255,82,.16)!important}",
       "[data-studio-node-id].studio-frame-multi-selected{outline:1px solid rgba(217,255,82,.75)!important;outline-offset:2px;box-shadow:0 0 0 2px rgba(217,255,82,.08)!important}",
       "[data-studio-inserted]{outline-offset:2px}",
@@ -1457,6 +1464,103 @@ export function StudioWorkspace() {
 
   function clearMultiSelection() {
     setSelectedIds(selected ? [selected.id] : []);
+  }
+
+  function toggleLocked(id = selected?.id) {
+    if (!id) return;
+    const currentState = stateRef.current;
+    const page = currentState.pages[pagePath] ?? {};
+    const current = page[id] ?? {};
+    const locked = !current.locked;
+    const next = { ...currentState, pages: { ...currentState.pages, [pagePath]: { ...page, [id]: { ...current, locked } } } };
+    commit(next);
+    const element = findElement(frameRef.current?.contentDocument ?? null, id);
+    if (element) {
+      if (locked) element.setAttribute("data-studio-locked", "true");
+      else element.removeAttribute("data-studio-locked");
+    }
+    notify(locked ? "Layer locked" : "Layer unlocked");
+  }
+
+  function duplicateInserted(ids = selectedIds.length ? selectedIds : selected ? [selected.id] : []) {
+    const currentState = stateRef.current;
+    const page = currentState.pages[pagePath] ?? {};
+    const sourceIds = ids.filter((id) => Boolean(page[id]?.inserted));
+    if (!sourceIds.length) {
+      notify("Duplicate доступен для Studio-блоков");
+      return;
+    }
+
+    const used = new Set(Object.keys(page));
+    const idMap = new Map<string, string>();
+    let counter = 1;
+    const newPage = { ...page };
+
+    const makeId = () => {
+      let id = stableInsertedId("duplicate-" + crypto.randomUUID());
+      while (used.has(id)) id = stableInsertedId("duplicate-" + crypto.randomUUID() + "-" + counter++);
+      used.add(id);
+      return id;
+    };
+
+    const cloneTree = (sourceId: string, parentId: string) => {
+      const source = page[sourceId]?.inserted;
+      if (!source) return;
+      const nextId = makeId();
+      idMap.set(sourceId + ":" + parentId, nextId);
+      newPage[nextId] = {
+        ...page[sourceId],
+        inserted: {
+          ...source,
+          parentId,
+          text: source.text,
+          css: source.css ? { ...source.css } : undefined,
+          order: (source.order ?? 0) + 1,
+        },
+      };
+      Object.entries(page)
+        .filter(([, override]) => override.inserted?.parentId === sourceId)
+        .forEach(([childId]) => cloneTree(childId, nextId));
+    };
+
+    sourceIds.forEach((id) => {
+      const source = page[id]?.inserted;
+      if (source) cloneTree(id, source.parentId);
+    });
+
+    commit({ ...currentState, pages: { ...currentState.pages, [pagePath]: newPage } });
+    setSelectedIds([]);
+    setSelected(null);
+    refreshFrame();
+    notify(sourceIds.length > 1 ? "Блоки дублированы" : "Блок дублирован");
+  }
+
+  function groupInsertedSelection() {
+    const ids = selectedIds.filter((id) => Boolean(stateRef.current.pages[pagePath]?.[id]?.inserted));
+    if (ids.length < 2) {
+      notify("Выбери минимум два Studio-блока");
+      return;
+    }
+    const page = stateRef.current.pages[pagePath] ?? {};
+    const sources = ids.map((id) => page[id]?.inserted).filter((item): item is StudioInsertedBlock => Boolean(item));
+    const parentId = sources[0]?.parentId;
+    if (!parentId || sources.some((item) => item.parentId !== parentId)) {
+      notify("Блоки должны быть в одном контейнере");
+      return;
+    }
+    const groupId = stableInsertedId("frame-" + crypto.randomUUID());
+    const maxOrder = Math.max(...Object.values(page).map((item) => item.inserted?.order ?? 0), 0);
+    const nextPage = { ...page, [groupId]: { inserted: { parentId, kind: "container", text: "Frame", order: maxOrder + 1, css: { display: "block" } } } };
+    ids.forEach((id, index) => {
+      const override = nextPage[id];
+      if (!override?.inserted) return;
+      nextPage[id] = { ...override, inserted: { ...override.inserted, parentId: groupId, order: index } };
+    });
+    commit({ ...stateRef.current, pages: { ...stateRef.current.pages, [pagePath]: nextPage } });
+    setSelected(groupId, true);
+    setSelectedIds([groupId]);
+    refreshFrame();
+    notify("Frame создан");
   }
 
   function removeSelected() {
