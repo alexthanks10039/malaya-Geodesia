@@ -5,6 +5,9 @@ import { cookies } from "next/headers";
 const COOKIE_NAME = "malaya_studio_session";
 const SESSION_TTL_SECONDS = 60 * 60 * 12;
 
+// Временно отключено, включить позже.
+export const STUDIO_AUTH_DISABLED = true;
+
 function secret(): string {
   const value = process.env.ADMIN_SESSION_SECRET;
   if (!value || value.length < 32) {
@@ -14,11 +17,8 @@ function secret(): string {
 }
 
 function password(): string {
-  const value = process.env.ADMIN_PASSWORD;
-  if (!value) {
-    throw new Error("ADMIN_PASSWORD is not configured");
-  }
-  return value;
+  // Временно: пароль для обратного включения Studio = 1.
+  return "1";
 }
 
 function sign(payload: string): string {
@@ -46,7 +46,7 @@ function verifyToken(token: string | undefined): boolean {
 }
 
 export async function isAdminAuthenticated(): Promise<boolean> {
-  if (process.env.STUDIO_AUTH_DISABLED === "true") return true;
+  if (STUDIO_AUTH_DISABLED) return true;
   try {
     const store = await cookies();
     return verifyToken(store.get(COOKIE_NAME)?.value);
@@ -57,8 +57,8 @@ export async function isAdminAuthenticated(): Promise<boolean> {
 
 export async function requireAdminApi(): Promise<{ ok: true } | { ok: false; response: Response }> {
   try {
-    if (process.env.STUDIO_AUTH_DISABLED === "true") return { ok: true };
-    if (!process.env.ADMIN_PASSWORD || !process.env.ADMIN_SESSION_SECRET) {
+    if (STUDIO_AUTH_DISABLED) return { ok: true };
+    if (!process.env.ADMIN_SESSION_SECRET) {
       return {
         ok: false,
         response: Response.json(
