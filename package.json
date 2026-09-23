@@ -10,7 +10,8 @@
     "live": "node scripts/live-preview.mjs",
     "db:migrate": "node scripts/db-migrate.mjs",
     "db:seed": "tsx scripts/seed.ts",
-    "codespace": "bash scripts/codespace-preview.sh"
+    "codespace": "bash scripts/codespace-preview.sh",
+    "prebuild": "node scripts/db-migrate-if-configured.mjs"
   },
   "engines": {
     "node": "24.x"

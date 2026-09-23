@@ -5,6 +5,9 @@ import { Reveal, Stagger, StaggerItem } from "@/components/scroll-reveal";
 import { ServiceCard } from "@/components/service-card";
 import { GeospatialIndex } from "@/components/geospatial-index";
 import { services, cases, technologies } from "@/lib/data";
+import { getPublishedBySlug } from "@/lib/cms";
+import { Render, type Data } from "@puckeditor/core";
+import puckConfig, { type PuckSiteComponents, type PuckSiteRootProps } from "@/components/studio/puck/config";
 
 const scenarios = [
   ["Построить дом", "Топография + высоты + данные для проекта"],
@@ -20,7 +23,54 @@ const pipeline = [
   { Icon: Database, title: "Результат", text: "DWG, PDF, GeoTIFF, LAS/LAZ, E57, 3D." },
 ];
 
-export default function Home() {
+type PuckPagePayload = {
+  kind?: unknown;
+  puck?: unknown;
+};
+
+function isPuckData(value: unknown): value is Data<PuckSiteComponents, PuckSiteRootProps> {
+  if (!value || typeof value !== "object") return false;
+  const data = value as Partial<Data<PuckSiteComponents, PuckSiteRootProps>>;
+  return Array.isArray(data.content) && typeof data.root === "object" && data.root !== null;
+}
+
+function publishedPuckData(value: Record<string, unknown> | null): Data<PuckSiteComponents, PuckSiteRootProps> | null {
+  if (!value) return null;
+  const payload = value as PuckPagePayload;
+  return payload.kind === "puck-page" && isPuckData(payload.puck) ? payload.puck : null;
+}
+
+async function publishedHome() {
+  try {
+    const page = await getPublishedBySlug("page", "home");
+    return page ? publishedPuckData(page.publishedData) : null;
+  } catch {
+    return null;
+  }
+}
+
+export async function generateMetadata() {
+  const data = await publishedHome();
+  if (!data) {
+    return {
+      title: "Малая геодезия",
+      description: "Геодезия, 3D и пространственные данные для строительства и проектирования.",
+    };
+  }
+  return {
+    title: data.root.props?.pageTitle || "Малая геодезия",
+    description: data.root.props?.pageDescription || "Геодезия, 3D и пространственные данные для строительства и проектирования.",
+  };
+}
+
+export const dynamic = "force-dynamic";
+
+export default async function Home() {
+  const puckData = await publishedHome();
+  if (puckData) {
+    return <Render config={puckConfig} data={puckData} />;
+  }
+
   return (
     <div>
       <Hero />
