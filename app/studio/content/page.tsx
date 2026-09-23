@@ -1,3 +1,3 @@
-import{ContentStudioEditor}from"@/components/studio/content-studio";
+import{ContentStudioEditor}from"@/components/studio/content-studio";import{redirect}from"next/navigation";import{isAdminAuthenticated}from"@/lib/admin-auth";
 export const metadata={title:"Malaya Studio — CMS",description:"CRUD, файловое пространство, публикации и лог изменений."};
-export default function StudioContentPage(){return <ContentStudioEditor/>}
+export default async function StudioContentPage(){if(!(await isAdminAuthenticated()))redirect("/studio/login");return <ContentStudioEditor/>}

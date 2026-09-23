@@ -3,6 +3,7 @@
 import { Puck, type Data } from "@puckeditor/core";
 import { useEffect, useRef, useState } from "react";
 import config, { initialPuckData, type PuckSiteComponents, type PuckSiteRootProps } from "@/components/studio/puck/config";
+import { StudioLogout } from "@/components/studio/studio-logout";
 
 const STORAGE_KEY = "malaya-studio-puck-draft";
 const API_BASE = "/api/admin/content/page";
@@ -137,7 +138,7 @@ export function PuckStudio() {
         ? fetch(API_BASE + "/" + currentRemote.id, {
             method: "PATCH",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ slug: "home", data: cmsData }),
+            body: JSON.stringify({ slug: "home", data: cmsData, expectedVersion: currentRemote?.version }),
           })
         : fetch(API_BASE, {
             method: "POST",
@@ -170,7 +171,7 @@ export function PuckStudio() {
     window.localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
     setStatus("SAVING");
 
-    try {
+    const runPublish = async () => {
       const cmsData = wrapForCms(next);
       let page = remoteRef.current;
 
@@ -178,34 +179,48 @@ export function PuckStudio() {
         const saveResponse = await fetch(API_BASE + "/" + page.id, {
           method: "PATCH",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ slug: "home", data: cmsData }),
+          body: JSON.stringify({ slug: "home", data: cmsData, expectedVersion: page.version }),
         });
         const savePayload = await saveResponse.json() as { ok?: boolean; item?: CmsPage; message?: string };
-        if (!saveResponse.ok || !savePayload.ok || !savePayload.item) throw new Error(savePayload.message || "Не удалось сохранить draft");
+        if (!saveResponse.ok || !savePayload.ok || !savePayload.item) {
+          throw new Error(savePayload.message || "Не удалось сохранить draft");
+        }
         page = savePayload.item;
       } else {
         const createResponse = await fetch(API_BASE, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ slug: "home", data: cmsData }),
+          body: JSON.stringify({ slug: "home", data: cmsData, expectedVersion: page?.version }),
         });
         const createPayload = await createResponse.json() as { ok?: boolean; item?: CmsPage; message?: string };
-        if (!createResponse.ok || !createPayload.ok || !createPayload.item) throw new Error(createPayload.message || "Не удалось создать страницу");
+        if (!createResponse.ok || !createPayload.ok || !createPayload.item) {
+          throw new Error(createPayload.message || "Не удалось создать страницу");
+        }
         page = createPayload.item;
       }
 
       const publishResponse = await fetch(API_BASE + "/" + page.id, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ action: "publish" }),
+        body: JSON.stringify({ action: "publish", expectedVersion: page.version }),
       });
       const publishPayload = await publishResponse.json() as { ok?: boolean; item?: CmsPage; message?: string };
-      if (!publishResponse.ok || !publishPayload.ok || !publishPayload.item) throw new Error(publishPayload.message || "Не удалось опубликовать");
+      if (!publishResponse.ok || !publishPayload.ok || !publishPayload.item) {
+        throw new Error(publishPayload.message || "Не удалось опубликовать");
+      }
+
       remoteRef.current = publishPayload.item;
       setRemote(publishPayload.item);
       setVersion(publishPayload.item.version);
       setStatus("PUBLISHED");
       window.localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
+    };
+
+    try {
+      // Wait for any earlier autosave to finish. Otherwise an older queued
+      // onChange could overwrite the freshly published draft after Publish.
+      savingRef.current = savingRef.current.then(runPublish, runPublish);
+      await savingRef.current;
     } catch (error) {
       setStatus("ERROR");
       throw error;
@@ -254,7 +269,7 @@ export function PuckStudio() {
           <div className="puck-studio-actions">
             <span className={"puck-studio-status puck-status-" + status.toLowerCase().replace(/\s+/g, "-")}><i /> {status}</span>
             <button type="button" className="puck-studio-reset" onClick={() => void resetDraft()}>Сбросить draft</button>
-            <a className="puck-studio-back" href="/studio">← Native Studio</a>
+            <a className="puck-studio-back" href="/studio">← Native Studio</a><StudioLogout />
           </div>
         </div>
 

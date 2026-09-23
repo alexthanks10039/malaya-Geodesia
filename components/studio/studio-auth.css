@@ -1,0 +1,17 @@
+.studio-login{min-height:100dvh;display:grid;place-items:center;padding:24px;background:#10130f;color:#e7eee3}
+.studio-login-card{width:min(420px,100%);padding:28px;border:1px solid #2d352a;border-radius:14px;background:#0b0f0b;box-shadow:0 24px 80px rgba(0,0,0,.35)}
+.studio-login-kicker{display:block;margin-bottom:10px;color:#d9ff52;font:900 8px ui-monospace,SFMono-Regular,monospace;letter-spacing:.12em}
+.studio-login-card h1{margin:0 0 8px;font-size:28px}
+.studio-login-card p{margin:0 0 22px;color:#7e8978;font-size:11px;line-height:1.55}
+.studio-login-card form{display:grid;gap:14px}
+.studio-login-card label{display:grid;gap:7px}
+.studio-login-card label span{color:#8e9a88;font:800 8px ui-monospace,SFMono-Regular,monospace}
+.studio-login-card input{height:42px;padding:0 12px;border:1px solid #343d31;border-radius:8px;background:#121712;color:#e7eee3;outline:none}
+.studio-login-card input:focus{border-color:#d9ff52;box-shadow:0 0 0 3px rgba(217,255,82,.08)}
+.studio-login-card button{height:42px;border:0;border-radius:8px;background:#d9ff52;color:#10130f;font:900 9px ui-monospace,SFMono-Regular,monospace;cursor:pointer}
+.studio-login-card button:disabled{cursor:not-allowed;opacity:.45}
+.studio-login-error{margin-top:12px;padding:10px 12px;border:1px solid #6a3e36;border-radius:8px;background:#241512;color:#ffb6a8;font-size:10px}
+
+.studio-logout{display:inline-flex;align-items:center;gap:6px;min-height:30px;padding:0 9px;border:1px solid #30372d;border-radius:7px;background:#11150f;color:#839080;font:800 7px ui-monospace,SFMono-Regular,monospace;cursor:pointer}
+.studio-logout:hover{color:#d9ff52;border-color:#5b684f}
+.studio-logout:disabled{opacity:.5;cursor:wait}
