@@ -30,6 +30,5 @@ export async function failTelegramUpdate(updateId: number, error: unknown) {
   await query(
     "UPDATE telegram_updates SET last_error=$2 WHERE update_id=$1",
     [updateId, error instanceof Error ? error.message.slice(0, 500) : "Telegram update failed"],
-    [updateId],
   );
 }
