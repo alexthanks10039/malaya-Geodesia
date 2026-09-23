@@ -751,6 +751,155 @@ export function StudioWorkspace() {
     const element = findElement(doc, selected.id);
     if (!element) return;
 
+    const guideHost = doc.createElement("div");
+    guideHost.id = "malaya-studio-guides";
+    guideHost.innerHTML = '<span data-guide="vertical"></span><span data-guide="horizontal"></span>';
+    doc.body.appendChild(guideHost);
+    const verticalGuide = guideHost.querySelector('[data-guide="vertical"]');
+    const horizontalGuide = guideHost.querySelector('[data-guide="horizontal"]');
+    if (!(verticalGuide instanceof HTMLElement) || !(horizontalGuide instanceof HTMLElement)) {
+      guideHost.remove();
+      return;
+    }
+
+    const currentState = stateRef.current;
+    const override = currentState.pages[pagePath]?.[selected.id];
+    const startOffset = device === "desktop"
+      ? override?.positionOffset ?? { x: 0, y: 0 }
+      : override?.responsivePositionOffset?.[device] ?? override?.positionOffset ?? { x: 0, y: 0 };
+    const startRect = element.getBoundingClientRect();
+    const parent = element.parentElement;
+    const candidatesX: number[] = [];
+    const candidatesY: number[] = [];
+
+    if (parent) {
+      const rect = parent.getBoundingClientRect();
+      candidatesX.push(rect.left, rect.left + rect.width / 2, rect.right);
+      candidatesY.push(rect.top, rect.top + rect.height / 2, rect.bottom);
+      parent.querySelectorAll("[data-studio-node-id]").forEach((node) => {
+        if (!(node instanceof HTMLElement) || node === element) return;
+        const rect = node.getBoundingClientRect();
+        candidatesX.push(rect.left, rect.left + rect.width / 2, rect.right);
+        candidatesY.push(rect.top, rect.top + rect.height / 2, rect.bottom);
+      });
+    }
+
+    let drag: { startX: number; startY: number } | null = null;
+
+    const calculateSnap = (rawX: number, rawY: number) => {
+      const grid = 8;
+      let nextX = Math.round(rawX / grid) * grid;
+      let nextY = Math.round(rawY / grid) * grid;
+      let xGuide: number | null = null;
+      let yGuide: number | null = null;
+
+      const proposedLeft = startRect.left + (nextX - startOffset.x);
+      const proposedTop = startRect.top + (nextY - startOffset.y);
+      const sourceX = [proposedLeft, proposedLeft + startRect.width / 2, proposedLeft + startRect.width];
+      const sourceY = [proposedTop, proposedTop + startRect.height / 2, proposedTop + startRect.height];
+
+      let bestX = 7;
+      for (const candidate of candidatesX) {
+        for (const point of sourceX) {
+          const distance = Math.abs(candidate - point);
+          if (distance < bestX) {
+            bestX = distance;
+            nextX += candidate - point;
+            xGuide = candidate;
+          }
+        }
+      }
+
+      const adjustedTop = startRect.top + (nextY - startOffset.y);
+      const adjustedBottomPoints = [adjustedTop, adjustedTop + startRect.height / 2, adjustedTop + startRect.height];
+      let bestY = 7;
+      for (const candidate of candidatesY) {
+        for (const point of adjustedBottomPoints) {
+          const distance = Math.abs(candidate - point);
+          if (distance < bestY) {
+            bestY = distance;
+            nextY += candidate - point;
+            yGuide = candidate;
+          }
+        }
+      }
+
+      return { x: Math.round(nextX), y: Math.round(nextY), xGuide, yGuide };
+    };
+
+    const updateGuideUi = (result: { x: number; y: number; xGuide: number | null; yGuide: number | null }) => {
+      element.style.translate = result.x + "px " + result.y + "px";
+      if (result.xGuide === null) {
+        verticalGuide.style.opacity = "0";
+      } else {
+        verticalGuide.style.left = Math.round(result.xGuide) + "px";
+        verticalGuide.style.opacity = "1";
+      }
+      if (result.yGuide === null) {
+        horizontalGuide.style.opacity = "0";
+      } else {
+        horizontalGuide.style.top = Math.round(result.yGuide) + "px";
+        horizontalGuide.style.opacity = "1";
+      }
+      const resizeUi = doc.getElementById("malaya-studio-resize-ui");
+      if (resizeUi instanceof HTMLElement) {
+        const rect = element.getBoundingClientRect();
+        resizeUi.style.left = rect.left + "px";
+        resizeUi.style.top = rect.top + "px";
+      }
+    };
+
+    const pointerDown = (event: PointerEvent) => {
+      if (event.button !== 0) return;
+      if (event.target instanceof Element && event.target.closest("[data-studio-resize-handle]")) return;
+      if (event.target instanceof Element && event.target.closest("[data-studio-dev-ui]")) return;
+      drag = { startX: event.clientX, startY: event.clientY };
+      element.setPointerCapture?.(event.pointerId);
+      element.style.cursor = "move";
+    };
+
+    const pointerMove = (event: PointerEvent) => {
+      if (!drag) return;
+      event.preventDefault();
+      event.stopPropagation();
+      const result = calculateSnap(
+        startOffset.x + event.clientX - drag.startX,
+        startOffset.y + event.clientY - drag.startY,
+      );
+      updateGuideUi(result);
+      updatePositionOffset(selected.id, { x: result.x, y: result.y }, "move:" + device + ":" + selected.id);
+    };
+
+    const pointerUp = () => {
+      if (!drag) return;
+      drag = null;
+      element.style.cursor = "";
+      verticalGuide.style.opacity = "0";
+      horizontalGuide.style.opacity = "0";
+      liveEditRef.current = null;
+    };
+
+    element.addEventListener("pointerdown", pointerDown);
+    doc.addEventListener("pointermove", pointerMove, true);
+    doc.addEventListener("pointerup", pointerUp, true);
+    doc.addEventListener("pointercancel", pointerUp, true);
+
+    return () => {
+      element.removeEventListener("pointerdown", pointerDown);
+      doc.removeEventListener("pointermove", pointerMove, true);
+      doc.removeEventListener("pointerup", pointerUp, true);
+      doc.removeEventListener("pointercancel", pointerUp, true);
+      guideHost.remove();
+      element.style.cursor = "";
+    };
+  }, [device, pagePath, previewMode, selected, updatePositionOffset]);
+
+  useEffect(() => {
+    const doc = frameRef.current?.contentDocument ?? null;
+    if (!doc?.body || !selected || previewMode !== "select") return;
+    const element = findElement(doc, selected.id);
+    if (!element) return;
+
     doc.querySelector("#malaya-studio-resize-ui")?.remove();
     const overlay = doc.createElement("div");
     overlay.id = "malaya-studio-resize-ui";
