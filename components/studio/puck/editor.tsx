@@ -86,6 +86,7 @@ export function PuckStudio() {
   const [remote, setRemote] = useState<CmsPage | null>(null);
   const [version, setVersion] = useState(0);
   const saveTimerRef = useRef<number | null>(null);
+  const remoteRef = useRef<CmsPage | null>(null);
   const savingRef = useRef(Promise.resolve());
 
   useEffect(() => {
@@ -95,6 +96,7 @@ export function PuckStudio() {
       try {
         const page = await readCmsPage();
         if (cancelled) return;
+        remoteRef.current = page;
         setRemote(page);
         setVersion(page?.version ?? 0);
         const serverDraft = page ? puckFromCms(page.data) : null;
@@ -130,8 +132,9 @@ export function PuckStudio() {
     const cmsData = wrapForCms(next);
     savingRef.current = savingRef.current.then(async () => {
       setStatus("SAVING");
-      const request = remote
-        ? fetch(API_BASE + "/" + remote.id, {
+      const currentRemote = remoteRef.current;
+      const request = currentRemote
+        ? fetch(API_BASE + "/" + currentRemote.id, {
             method: "PATCH",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ slug: "home", data: cmsData }),
@@ -145,6 +148,7 @@ export function PuckStudio() {
       const response = await request;
       const payload = await response.json() as { ok?: boolean; item?: CmsPage; message?: string };
       if (!response.ok || !payload.ok || !payload.item) throw new Error(payload.message || "Не удалось сохранить CMS");
+      remoteRef.current = payload.item;
       setRemote(payload.item);
       setVersion(payload.item.version);
       setStatus("DRAFT SAVED");
@@ -168,7 +172,7 @@ export function PuckStudio() {
 
     try {
       const cmsData = wrapForCms(next);
-      let page = remote;
+      let page = remoteRef.current;
 
       if (page) {
         const saveResponse = await fetch(API_BASE + "/" + page.id, {
@@ -197,6 +201,7 @@ export function PuckStudio() {
       });
       const publishPayload = await publishResponse.json() as { ok?: boolean; item?: CmsPage; message?: string };
       if (!publishResponse.ok || !publishPayload.ok || !publishPayload.item) throw new Error(publishPayload.message || "Не удалось опубликовать");
+      remoteRef.current = publishPayload.item;
       setRemote(publishPayload.item);
       setVersion(publishPayload.item.version);
       setStatus("PUBLISHED");
@@ -215,6 +220,7 @@ export function PuckStudio() {
       const fallback = serverDraft ?? initialPuckData;
       setData(fallback);
       window.localStorage.setItem(STORAGE_KEY, JSON.stringify(fallback));
+      remoteRef.current = page;
       setRemote(page);
       setVersion(page?.version ?? 0);
       setStatus("SYNCED");
