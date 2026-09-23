@@ -1523,7 +1523,7 @@ export function StudioWorkspace() {
     const page = currentState.pages[pagePath] ?? {};
     const current = page[id] ?? {};
     const hidden = !(current.hidden ?? false);
-    const next = { ...currentState, pages: { ...current.pages, [pagePath]: { ...page, [id]: { ...current, hidden } } } };
+    const next = { ...currentState, pages: { ...currentState.pages, [pagePath]: { ...page, [id]: { ...current, hidden } } } };
     commit(next);
     const element = findElement(frameRef.current?.contentDocument ?? null, id);
     if (element) element.style.setProperty("display", hidden ? "none" : "");
