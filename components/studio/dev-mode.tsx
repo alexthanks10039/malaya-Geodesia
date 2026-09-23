@@ -71,14 +71,16 @@ function getNodeId(element:Element){return element.getAttribute("data-studio-nod
 function directText(element:Element){return Array.from(element.childNodes).filter((node):node is Text=>node.nodeType===Node.TEXT_NODE).map((node)=>node.textContent??"").join(" ").replace(/\s+/g," ").trim()}
 function readableLabel(element:Element){return (directText(element)||element.getAttribute("aria-label")||element.getAttribute("alt")||element.getAttribute("title")||element.tagName.toLowerCase()).replace(/\s+/g," ").trim().slice(0,72)}
 function elementPath(element:Element){
-  const path:string[]=[];let current:Element|null=element;
-  while(current&&current!==document.body){
-    const container: Element | null = current.parentElement;
-    if(!container)break;
-    const siblings: Element[] = Array.from(container.children);
-    const sameTag: Element[] = siblings.filter((node: Element) => node.tagName===current?.tagName);
-    path.unshift(current.tagName.toLowerCase()+"-"+Math.max(0,sameTag.indexOf(current)));
-    current=container;
+  const path:string[]=[];
+  let current:Element|null=element;
+  while(current!==null&&current!==document.body){
+    const parent:Element|null=current.parentElement;
+    if(parent===null)break;
+    const siblings=Array.from(parent.children) as Element[];
+    const currentTag=current.tagName;
+    const sameTag=siblings.filter((sibling:Element)=>sibling.tagName===currentTag);
+    path.unshift(currentTag.toLowerCase()+"-"+Math.max(0,sameTag.indexOf(current)));
+    current=parent;
   }
   return "dev-"+path.join("-");
 }
