@@ -851,7 +851,7 @@ export function StudioWorkspace() {
 
     const pointerDown = (event: PointerEvent) => {
       if (event.button !== 0) return;
-      if (event.target instanceof Element && event.target.closest("[data-studio-resize-handle]")) return;
+      if (event.target instanceof Element && event.target.closest("[data-resize]")) return;
       if (event.target instanceof Element && event.target.closest("[data-studio-dev-ui]")) return;
       drag = { startX: event.clientX, startY: event.clientY };
       element.setPointerCapture?.(event.pointerId);
@@ -1156,9 +1156,13 @@ export function StudioWorkspace() {
     if (!current?.responsiveCss?.[device]) return;
     const responsiveCss = { ...(current.responsiveCss ?? {}) };
     delete responsiveCss[device];
+    const responsivePositionOffset = { ...(current.responsivePositionOffset ?? {}) };
+    delete responsivePositionOffset[device];
     const nextOverride = { ...current };
     if (Object.keys(responsiveCss).length) nextOverride.responsiveCss = responsiveCss;
     else delete nextOverride.responsiveCss;
+    if (Object.keys(responsivePositionOffset).length) nextOverride.responsivePositionOffset = responsivePositionOffset;
+    else delete nextOverride.responsivePositionOffset;
     page[selected.id] = nextOverride;
     commit({ ...state, pages: { ...state.pages, [pagePath]: page } });
     refreshFrame();
@@ -1528,7 +1532,7 @@ export function StudioWorkspace() {
         </div>
 
         <div className="studio-v2-toolbar-right">
-          <button type="button" className={showGrid ? "active" : ""} onClick={() => setShowGrid((value) => !value)}><Grid3X3 size={14} /> Grid</button>
+          <button type="button" className={showGrid ? "active" : ""} onClick={() => setShowGrid((value) => !value)}><Grid3X3 size={14} /> Grid / Snap</button>
           <div className="studio-v2-device">
             <button type="button" className={device === "desktop" ? "active" : ""} onClick={() => setDevice("desktop")} title="Desktop"><Monitor size={14} /></button>
             <button type="button" className={device === "tablet" ? "active" : ""} onClick={() => setDevice("tablet")} title="Tablet"><Tablet size={14} /></button>
@@ -1781,6 +1785,33 @@ export function StudioWorkspace() {
 
                     {openSections[section] && section === "layout" ? (
                       <div className="studio-v2-section-body">
+                        <div className="studio-v2-position-grid">
+                          <label className="studio-v2-field">
+                            <span>X / ${device === "desktop" ? "base" : DEVICE_LABEL[device]}</span>
+                            <input
+                              type="number"
+                              value={Math.round(activePositionOffset?.x ?? 0)}
+                              onFocus={() => { liveEditRef.current = null; }}
+                              onChange={(event) => updatePositionOffset(selected.id, { x: Number(event.target.value) || 0, y: activePositionOffset?.y ?? 0 }, "position:" + device + ":" + selected.id)}
+                              onBlur={finishLiveEdit}
+                            />
+                          </label>
+                          <label className="studio-v2-field">
+                            <span>Y / ${device === "desktop" ? "base" : DEVICE_LABEL[device]}</span>
+                            <input
+                              type="number"
+                              value={Math.round(activePositionOffset?.y ?? 0)}
+                              onFocus={() => { liveEditRef.current = null; }}
+                              onChange={(event) => updatePositionOffset(selected.id, { x: activePositionOffset?.x ?? 0, y: Number(event.target.value) || 0 }, "position:" + device + ":" + selected.id)}
+                              onBlur={finishLiveEdit}
+                            />
+                          </label>
+                          <button type="button" className="studio-v2-position-reset" onClick={() => {
+                            updatePositionOffset(selected.id, { x: 0, y: 0 });
+                            notify("Позиция сброшена");
+                          }}><RotateCcw size={12} /> Reset offset</button>
+                        </div>
+
                         <div className="studio-v2-field-grid">
                           {(["display", "width", "maxWidth", "height", "gap", "position", "zIndex"] as const).map((property) => (
                             <label className="studio-v2-field" key={property}>
