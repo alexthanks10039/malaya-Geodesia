@@ -7,25 +7,60 @@ export type StudioPage = {
 export type StudioCssOverrides = {
   fontSize?: string;
   lineHeight?: string;
+  fontWeight?: string;
+  letterSpacing?: string;
+  textAlign?: string;
   color?: string;
   background?: string;
+  border?: string;
+  borderRadius?: string;
+  boxShadow?: string;
   padding?: string;
   margin?: string;
-  borderRadius?: string;
   width?: string;
   maxWidth?: string;
+  height?: string;
   gap?: string;
-  letterSpacing?: string;
-  opacity?: string;
   display?: string;
+  opacity?: string;
+  position?: string;
+  zIndex?: string;
+  transform?: string;
+  transition?: string;
+  customCss?: string;
+};
+
+export type StudioInsertedBlock = {
+  parentId: string;
+  kind: "text" | "button" | "divider" | "container";
+  text: string;
+  href?: string;
+  css?: StudioCssOverrides;
 };
 
 export type StudioElementOverride = {
   text?: string;
   css?: StudioCssOverrides;
+  attributes?: {
+    href?: string;
+    alt?: string;
+    title?: string;
+  };
+  hidden?: boolean;
+  inserted?: StudioInsertedBlock;
 };
 
 export type StudioPageOverrides = Record<string, StudioElementOverride>;
+
+export type StudioComment = {
+  id: string;
+  pagePath: string;
+  nodeId: string;
+  nodeLabel: string;
+  text: string;
+  resolved: boolean;
+  createdAt: string;
+};
 
 export type StudioGlobalTokens = {
   "--bg"?: string;
@@ -38,6 +73,8 @@ export type StudioGlobalTokens = {
 };
 
 export type StudioState = {
+  version?: number;
   pages: Record<string, StudioPageOverrides>;
   globalTokens: StudioGlobalTokens;
+  comments?: StudioComment[];
 };
