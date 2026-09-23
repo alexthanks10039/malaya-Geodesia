@@ -74,7 +74,7 @@ function puckFromCms(value: unknown): Data<PuckSiteComponents, PuckSiteRootProps
   return Array.isArray(puck.content) && typeof puck.root === "object" ? puck : null;
 }
 
-async function readHistory(id:string){try{const response=await fetch("/api/admin/audit?entityType=page&entityId="+encodeURIComponent(id)+"&limit=30",{cache:"no-store"});const payload=await response.json() as {ok?:boolean;items?:Array<{id:number;action:string;createdAt:string;afterData:Record<string,unknown>|null}>};if(payload.ok)setRevisions(payload.items??[]);}catch{setRevisions([]);}}\n\nasync function readCmsPage(): Promise<CmsPage | null> {
+async function readCmsPage(): Promise<CmsPage | null> {
   const response = await fetch(API_BASE, { cache: "no-store" });
   if (!response.ok) throw new Error("CMS request failed");
   const payload = await response.json() as { ok?: boolean; items?: CmsPage[]; message?: string };
@@ -104,7 +104,7 @@ export function PuckStudio() {
         const page = await readCmsPage();
         if (cancelled) return;
         remoteRef.current = page;
-        setRemote(page);if(page) void readHistory(page.id);
+        setRemote(page);
         setVersion(page?.version ?? 0);
         const serverDraft = page ? puckFromCms(page.data) : null;
         const localDraft = readLocalDraft();
@@ -287,24 +287,6 @@ export function PuckStudio() {
     : data;
   const previewLabel = preview === "published" ? "Опубликованная версия" : "Текущий draft";
 
-  const rollback = async (auditId:number) => {
-    const page = remoteRef.current;
-    if (!page || !window.confirm("Восстановить эту версию как текущий draft?")) return;
-    setStatus("SAVING");
-    try {
-      const response = await fetch(API_BASE + "/" + page.id, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ action: "rollback", auditId, expectedVersion: page.version }),
-      });
-      const payload = await response.json() as { ok?: boolean; item?: CmsPage; message?: string };
-      if (!response.ok || !payload.ok || !payload.item) throw new Error(payload.message || "Не удалось восстановить версию");
-      const next = puckFromCms(payload.item.data);
-      if (!next) throw new Error("В версии нет Puck data");
-      remoteRef.current = payload.item;setRemote(payload.item);setVersion(payload.item.version);setData(next);window.localStorage.setItem(STORAGE_KEY,JSON.stringify(next));setStatus("DRAFT SAVED");void readHistory(payload.item.id);
-    } catch { setStatus("ERROR"); }
-  };
-
   const resetDraft = async () => {
     if (saveTimerRef.current) window.clearTimeout(saveTimerRef.current);
     try {
@@ -346,7 +328,7 @@ export function PuckStudio() {
 
           <div className="puck-studio-actions">
             <span className={"puck-studio-status puck-status-" + status.toLowerCase().replace(/\s+/g, "-")}><i /> {status}</span>
-            <button type="button" className="puck-studio-reset" onClick={() => {setHistoryOpen(current=>!current);if(!historyOpen&&remoteRef.current)void readHistory(remoteRef.current.id)}}>{historyOpen?"Закрыть историю":"История"} </button><button type="button" className="puck-studio-reset" onClick={() => void resetDraft()}>
+            <button type="button" className="puck-studio-reset" onClick={() => void resetDraft()}>
               {status === "LOCAL CONFLICT" ? "Взять серверный draft" : "Сбросить draft"}
             </button>
             <button type="button" className="puck-studio-tool" onClick={() => void loadHistory()} disabled={!remote || historyBusy}>История</button>
@@ -384,7 +366,6 @@ export function PuckStudio() {
         )}
 
         <div className="puck-studio-editor">
-          {historyOpen && <aside className="puck-history-panel"><div className="puck-history-head"><strong>История версий</strong><span>v{version}</span></div>{revisions.slice(0,20).map(row=>{const snapshot=row.afterData;const v=String(snapshot?.version??"—");const current=Number(snapshot?.version)===version;return <div className={"puck-history-row "+(current?"current":"")} key={row.id}><div><b>v{v}</b><span>{row.action}</span><small>{new Date(row.createdAt).toLocaleString("ru-RU")}</small></div>{!current&&snapshot?.data&&<button onClick={()=>void rollback(row.id)}>Восстановить</button>}</div>})}</aside>}
           <Puck
             config={config}
             data={data}
