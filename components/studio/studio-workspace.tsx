@@ -515,6 +515,8 @@ export function StudioWorkspace() {
   const [mobilePanel, setMobilePanel] = useState<"none" | "left" | "right">("none");
   const stateRef = useRef(state);
   const draggedNodeRef = useRef<string | null>(null);
+  const selectedIdsRef = useRef(selectedIds);
+  useEffect(() => { selectedIdsRef.current = selectedIds; }, [selectedIds]);
 
   const flatNodes = useMemo(() => flatten(nodes), [nodes]);
   const filteredTree = useMemo(() => filterTree(nodes, search), [nodes, search]);
@@ -620,8 +622,20 @@ export function StudioWorkspace() {
       const element = findElement(doc, id);
       if (!element) return;
 
-      doc?.querySelectorAll(".studio-frame-selected").forEach((item) => item.classList.remove("studio-frame-selected"));
-      element.classList.add("studio-frame-selected");
+      const currentSelection = selectedIdsRef.current;
+      const nextSelection = additive
+        ? (currentSelection.includes(id) && currentSelection.length === 1
+            ? currentSelection
+            : currentSelection.includes(id)
+              ? currentSelection.filter((item) => item !== id)
+              : [...currentSelection, id])
+        : [id];
+      if (!nextSelection.length) return;
+      doc?.querySelectorAll(".studio-frame-selected,.studio-frame-multi-selected").forEach((item) => item.classList.remove("studio-frame-selected", "studio-frame-multi-selected"));
+      nextSelection.forEach((itemId) => {
+        const target = findElement(doc, itemId);
+        target?.classList.add(itemId === id ? "studio-frame-selected" : "studio-frame-multi-selected");
+      });
 
       const nextSelected: SelectedElement = {
         id,
@@ -637,10 +651,7 @@ export function StudioWorkspace() {
       };
 
       setSelected(nextSelected);
-      setSelectedIds((current) => {
-        if (!additive) return [id];
-        return current.includes(id) ? current.filter((item) => item !== id) : [...current, id];
-      });
+      setSelectedIds(nextSelection);
       setTextDraft(nextSelected.textEditable ? directText(element) : "");
       if (window.innerWidth <= 700) setMobilePanel("right");
       window.requestAnimationFrame(() => element.scrollIntoView({ block: "center", inline: "nearest", behavior: "smooth" }));
@@ -661,6 +672,7 @@ export function StudioWorkspace() {
         ? "[data-studio-node-id]:hover{outline:1px dashed rgba(217,255,82,.92)!important;outline-offset:2px;cursor:crosshair!important}"
         : "[data-studio-node-id]:hover{cursor:default!important}",
       "[data-studio-node-id].studio-frame-selected{outline:2px solid #d9ff52!important;outline-offset:3px;box-shadow:0 0 0 4px rgba(217,255,82,.16)!important}",
+      "[data-studio-node-id].studio-frame-multi-selected{outline:1px solid rgba(217,255,82,.75)!important;outline-offset:2px;box-shadow:0 0 0 2px rgba(217,255,82,.08)!important}",
       "[data-studio-inserted]{outline-offset:2px}",
     ].join("");
 
@@ -1188,6 +1200,7 @@ export function StudioWorkspace() {
     const next = { ...state, pages: { ...state.pages, [pagePath]: page } };
     commit(next);
     setSelected(null);
+    setSelectedIds([]);
     refreshFrame();
     notify("Элемент сброшен");
   }
@@ -1198,6 +1211,7 @@ export function StudioWorkspace() {
     delete pages[pagePath];
     commit({ ...state, pages });
     setSelected(null);
+    setSelectedIds([]);
     refreshFrame();
     notify("Страница сброшена");
   }
@@ -1210,6 +1224,7 @@ export function StudioWorkspace() {
     redoRef.current = [];
     writeState(next);
     setSelected(null);
+    setSelectedIds([]);
     refreshFrame();
     notify("Studio очищен");
   }
