@@ -1421,14 +1421,26 @@ export function StudioWorkspace() {
     if (!id) return;
     const currentState = stateRef.current;
     const page = currentState.pages[pagePath] ?? {};
-    const current = page[selected.id] ?? {};
+    const current = page[id] ?? {};
 
     if (!current.inserted) {
       const element = findElement(frameRef.current?.contentDocument ?? null, id);
       const currentZ = Number.parseInt(getComputedStyle(element ?? document.body).zIndex, 10);
       const zIndex = Number.isFinite(currentZ) ? currentZ : 0;
       const delta = direction === "forward" ? 1 : direction === "backward" ? -1 : direction === "front" ? 1000 : -1000;
-      updateStyle("zIndex", String(zIndex + delta));
+      const nextPage = {
+        ...page,
+        [id]: {
+          ...current,
+          css: {
+            ...(current.css ?? {}),
+            zIndex: String(zIndex + delta),
+          },
+        },
+      };
+      commit({ ...currentState, pages: { ...currentState.pages, [pagePath]: nextPage } });
+      if (element) element.style.zIndex = String(zIndex + delta);
+      notify("Layer order updated");
       return;
     }
 
