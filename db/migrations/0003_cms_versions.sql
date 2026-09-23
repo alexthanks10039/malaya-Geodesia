@@ -13,3 +13,7 @@ CREATE TABLE IF NOT EXISTS cms_content_versions(
  UNIQUE(content_id,version)
 );
 CREATE INDEX IF NOT EXISTS cms_content_versions_content_idx ON cms_content_versions(content_id,created_at DESC);
+
+INSERT INTO cms_content_versions(content_id,content_type,version,action,slug,path,status,draft_data,published_data,created_at)
+SELECT id,content_type,version,'migration',draft_slug,draft_path,status,draft_data,published_data,updated_at FROM cms_content
+ON CONFLICT(content_id,version) DO NOTHING;
