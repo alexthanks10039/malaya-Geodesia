@@ -206,9 +206,10 @@ function frameElementPath(element: Element): string {
   const parts: string[] = [];
   let current: Element | null = element;
   while (current && current !== current.ownerDocument.body) {
-    const parent = current.parentElement;
-    if (!parent) break;
-    const sameTag = Array.from(parent.children).filter((child) => child.tagName === current?.tagName);
+    const parent: Element | null = current.parentElement;
+    if (parent === null) break;
+    const currentTag = current.tagName;
+    const sameTag: Element[] = (Array.from(parent.children) as Element[]).filter((child: Element) => child.tagName === currentTag);
     parts.unshift(current.tagName.toLowerCase() + ":nth-of-type(" + (Math.max(0, sameTag.indexOf(current)) + 1) + ")");
     current = parent;
   }
@@ -754,7 +755,9 @@ export function StudioWorkspace() {
     if (!selected) return;
     const element = findElement(frameRef.current?.contentDocument ?? null, selected.id);
     if (!element) return;
-    element.style.setProperty(STYLE_MAP[property], value);
+    const cssName = STYLE_MAP[property];
+    if (!cssName) return;
+    element.style.setProperty(cssName, value);
     setOverride(
       selected.id,
       (current) => ({
