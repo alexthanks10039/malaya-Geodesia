@@ -1224,7 +1224,7 @@ export function StudioPageEditor() {
           <div className={showGrid ? "studio-v2-canvas-area grid-on" : "studio-v2-canvas-area"}>
             <div className="studio-v2-grid-overlay" />
             <div className="studio-v2-frame" style={canvasStyle}>
-              <iframe ref={frameRef} title="Malaya Studio preview" src={pagePath} onLoad={installFrame} />
+              <iframe ref={frameRef} title="Malaya Studio preview" src={pagePath + (pagePath.includes("?") ? "&" : "?") + "studioPreview=1"} onLoad={installFrame} />
             </div>
           </div>
 
