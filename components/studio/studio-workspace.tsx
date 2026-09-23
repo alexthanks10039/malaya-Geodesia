@@ -489,6 +489,7 @@ export function StudioWorkspace() {
   const [pagePath, setPagePath] = useState("/");
   const [nodes, setNodes] = useState<NodeSummary[]>([]);
   const [selected, setSelected] = useState<SelectedElement | null>(null);
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [state, setState] = useState<StudioState>(() => readStudioState());
   const [initialState] = useState<StudioState>(() => readStudioState());
   const [search, setSearch] = useState("");
@@ -614,7 +615,7 @@ export function StudioWorkspace() {
   }, []);
 
   const selectInFrame = useCallback(
-    (id: string) => {
+    (id: string, additive = false) => {
       const doc = frameRef.current?.contentDocument ?? null;
       const element = findElement(doc, id);
       if (!element) return;
@@ -636,6 +637,10 @@ export function StudioWorkspace() {
       };
 
       setSelected(nextSelected);
+      setSelectedIds((current) => {
+        if (!additive) return [id];
+        return current.includes(id) ? current.filter((item) => item !== id) : [...current, id];
+      });
       setTextDraft(nextSelected.textEditable ? directText(element) : "");
       if (window.innerWidth <= 700) setMobilePanel("right");
       window.requestAnimationFrame(() => element.scrollIntoView({ block: "center", inline: "nearest", behavior: "smooth" }));
@@ -670,6 +675,12 @@ export function StudioWorkspace() {
     const nextNodes = collectTree(doc);
     setNodes(nextNodes);
 
+    if (selectedIds.length) {
+      doc.querySelectorAll(".studio-frame-selected,.studio-frame-multi-selected").forEach((item) => {
+        item.classList.remove("studio-frame-selected", "studio-frame-multi-selected");
+      });
+      selectedIds.forEach((id) => findElement(doc, id)?.classList.add(id === selected?.id ? "studio-frame-selected" : "studio-frame-multi-selected"));
+    }
     if (selected?.id) {
       const selectedNow = findElement(doc, selected.id);
       if (selectedNow) {
@@ -699,7 +710,7 @@ export function StudioWorkspace() {
       if (!(element instanceof HTMLElement)) return;
       event.preventDefault();
       event.stopPropagation();
-      selectInFrame(element.getAttribute("data-studio-node-id") ?? "");
+      selectInFrame(element.getAttribute("data-studio-node-id") ?? "", event.shiftKey);
     };
 
     doc.addEventListener("click", clickHandler, true);
@@ -747,7 +758,7 @@ export function StudioWorkspace() {
 
   useEffect(() => {
     const doc = frameRef.current?.contentDocument ?? null;
-    if (!doc?.body || !selected || previewMode !== "select") return;
+    if (!doc?.body || !selected || selectedIds.length > 1 || previewMode !== "select") return;
     const element = findElement(doc, selected.id);
     if (!element) return;
 
@@ -892,7 +903,7 @@ export function StudioWorkspace() {
       guideHost.remove();
       element.style.cursor = "";
     };
-  }, [device, pagePath, previewMode, selected, updatePositionOffset]);
+  }, [device, pagePath, previewMode, selected, selectedIds.length, updatePositionOffset]);
 
   useEffect(() => {
     const doc = frameRef.current?.contentDocument ?? null;
@@ -998,7 +1009,7 @@ export function StudioWorkspace() {
       doc.defaultView?.removeEventListener("resize", position);
       overlay.remove();
     };
-  }, [selected?.id, device, previewMode, pagePath]);
+  }, [selected?.id, device, previewMode, pagePath, selectedIds.length]);
 
   useEffect(() => {
     window.sessionStorage.setItem("malaya-studio-mode", "1");
@@ -1059,7 +1070,8 @@ export function StudioWorkspace() {
       if (event.key === "Escape" && !isTyping) {
         setMobilePanel("none");
         setSelected(null);
-        frameRef.current?.contentDocument?.querySelectorAll(".studio-frame-selected").forEach((item) => item.classList.remove("studio-frame-selected"));
+        setSelectedIds([]);
+        frameRef.current?.contentDocument?.querySelectorAll(".studio-frame-selected,.studio-frame-multi-selected").forEach((item) => item.classList.remove("studio-frame-selected", "studio-frame-multi-selected"));
       }
 
       if (!isTyping && event.key === "/") {
@@ -1344,6 +1356,94 @@ export function StudioWorkspace() {
     notify("Порядок блоков изменён");
   }
 
+  function applyBatchAlignment(mode: "left" | "centerX" | "right" | "top" | "centerY" | "bottom" | "distributeX" | "distributeY") {
+    const ids = selectedIds.length > 1 ? selectedIds : selected ? [selected.id] : [];
+    if (ids.length < 2) return;
+    const doc = frameRef.current?.contentDocument ?? null;
+    if (!doc) return;
+
+    const items = ids.map((id) => {
+      const element = findElement(doc, id);
+      if (!element) return null;
+      const rect = element.getBoundingClientRect();
+      const override = stateRef.current.pages[pagePath]?.[id];
+      const offset = device === "desktop"
+        ? override?.positionOffset ?? { x: 0, y: 0 }
+        : override?.responsivePositionOffset?.[device] ?? override?.positionOffset ?? { x: 0, y: 0 };
+      return { id, element, rect, offset };
+    }).filter((item): item is NonNullable<typeof item> => Boolean(item));
+
+    if (items.length < 2) return;
+
+    const deltas = new Map<string, { x: number; y: number }>();
+    if (mode === "left" || mode === "centerX" || mode === "right") {
+      const target = mode === "left"
+        ? Math.min(...items.map((item) => item.rect.left))
+        : mode === "right"
+          ? Math.max(...items.map((item) => item.rect.right))
+          : (Math.min(...items.map((item) => item.rect.left)) + Math.max(...items.map((item) => item.rect.right))) / 2;
+      items.forEach((item) => {
+        const point = mode === "left" ? item.rect.left : mode === "right" ? item.rect.right : item.rect.left + item.rect.width / 2;
+        deltas.set(item.id, { x: target - point, y: 0 });
+      });
+    } else if (mode === "top" || mode === "centerY" || mode === "bottom") {
+      const target = mode === "top"
+        ? Math.min(...items.map((item) => item.rect.top))
+        : mode === "bottom"
+          ? Math.max(...items.map((item) => item.rect.bottom))
+          : (Math.min(...items.map((item) => item.rect.top)) + Math.max(...items.map((item) => item.rect.bottom))) / 2;
+      items.forEach((item) => {
+        const point = mode === "top" ? item.rect.top : mode === "bottom" ? item.rect.bottom : item.rect.top + item.rect.height / 2;
+        deltas.set(item.id, { x: 0, y: target - point });
+      });
+    } else {
+      const axis = mode === "distributeX" ? "x" : "y";
+      const ordered = [...items].sort((a, b) => axis === "x" ? a.rect.left - b.rect.left : a.rect.top - b.rect.top);
+      const start = axis === "x" ? ordered[0].rect.left : ordered[0].rect.top;
+      const end = axis === "x"
+        ? ordered[ordered.length - 1].rect.right
+        : ordered[ordered.length - 1].rect.bottom;
+      const totalSize = ordered.reduce((sum, item) => sum + (axis === "x" ? item.rect.width : item.rect.height), 0);
+      const gap = (end - start - totalSize) / (ordered.length - 1);
+      let cursor = start;
+      ordered.forEach((item) => {
+        const currentStart = axis === "x" ? item.rect.left : item.rect.top;
+        const delta = cursor - currentStart;
+        deltas.set(item.id, axis === "x" ? { x: delta, y: 0 } : { x: 0, y: delta });
+        cursor += (axis === "x" ? item.rect.width : item.rect.height) + gap;
+      });
+    }
+
+    let next = stateRef.current;
+    const page = { ...(next.pages[pagePath] ?? {}) };
+    items.forEach((item) => {
+      const delta = deltas.get(item.id);
+      if (!delta) return;
+      const offset = item.offset;
+      const newOffset = { x: Math.round(offset.x + delta.x), y: Math.round(offset.y + delta.y) };
+      const current = page[item.id] ?? {};
+      page[item.id] = device === "desktop"
+        ? { ...current, positionOffset: newOffset }
+        : {
+            ...current,
+            responsivePositionOffset: {
+              ...(current.responsivePositionOffset ?? {}),
+              [device]: newOffset,
+            },
+          };
+      item.element.style.translate = newOffset.x + "px " + newOffset.y + "px";
+    });
+
+    const nextState = { ...next, pages: { ...next.pages, [pagePath]: page } };
+    commit(nextState);
+    refreshFrame();
+    notify("Групповое выравнивание применено");
+  }
+
+  function clearMultiSelection() {
+    setSelectedIds(selected ? [selected.id] : []);
+  }
+
   function removeSelected() {
     if (!selected) return;
 
@@ -1416,7 +1516,7 @@ export function StudioWorkspace() {
       const isOpen = search.trim() ? true : expanded[node.id] ?? node.depth < 1;
       return (
         <div key={node.id} className="studio-v2-layer">
-          <div className={selected?.id === node.id ? "studio-v2-layer-row active" : "studio-v2-layer-row"}>
+          <div className={selected?.id === node.id ? "studio-v2-layer-row active" : selectedIds.includes(node.id) ? "studio-v2-layer-row multi-active" : "studio-v2-layer-row"}>
             <button
               type="button"
               className="studio-v2-layer-chevron"
@@ -1429,7 +1529,7 @@ export function StudioWorkspace() {
             <button
               type="button"
               className="studio-v2-layer-select"
-              onClick={() => selectInFrame(node.id)}
+              onClick={(event) => selectInFrame(node.id, event.shiftKey)}
               onKeyDown={(event) => {
                 if (event.key !== "ArrowDown" && event.key !== "ArrowUp") return;
                 event.preventDefault();
