@@ -518,6 +518,7 @@ export function StudioWorkspace() {
   const [toast, setToast] = useState("");
   const [focusMode, setFocusMode] = useState(false);
   const [mobilePanel, setMobilePanel] = useState<"none" | "left" | "right">("none");
+  const [contextMenu, setContextMenu] = useState<{ id: string; x: number; y: number } | null>(null);
   const stateRef = useRef(state);
   const draggedNodeRef = useRef<string | null>(null);
   const selectedIdsRef = useRef(selectedIds);
@@ -1086,7 +1087,30 @@ export function StudioWorkspace() {
         return;
       }
 
+      if (!isTyping && (event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "d") {
+        event.preventDefault();
+        duplicateInserted();
+        return;
+      }
+
+      if (!isTyping && (event.key === "Delete" || event.key === "Backspace")) {
+        event.preventDefault();
+        removeSelected();
+        return;
+      }
+
+      if (!isTyping && ["ArrowLeft", "ArrowRight", "ArrowUp", "ArrowDown"].includes(event.key)) {
+        event.preventDefault();
+        const step = event.shiftKey ? 8 : 1;
+        nudgeSelection(
+          event.key === "ArrowLeft" ? -step : event.key === "ArrowRight" ? step : 0,
+          event.key === "ArrowUp" ? -step : event.key === "ArrowDown" ? step : 0,
+        );
+        return;
+      }
+
       if (event.key === "Escape" && !isTyping) {
+        setContextMenu(null);
         setMobilePanel("none");
         setSelected(null);
         setSelectedIds([]);
@@ -1101,7 +1125,7 @@ export function StudioWorkspace() {
 
     window.addEventListener("keydown", keydown);
     return () => window.removeEventListener("keydown", keydown);
-  }, [notify, state, versionLabel, writeState]);
+  }, [notify, removeSelected, duplicateInserted, nudgeSelection, state, versionLabel, writeState]);
 
   function setOverride(id: string, updater: (current: StudioElementOverride) => StudioElementOverride, editKey?: string) {
     const page = state.pages[pagePath] ?? {};
@@ -1561,6 +1585,35 @@ export function StudioWorkspace() {
     setSelectedIds([groupId]);
     refreshFrame();
     notify("Frame создан");
+  }
+
+  function nudgeSelection(dx: number, dy: number) {
+    const ids = selectedIds.length ? selectedIds : selected ? [selected.id] : [];
+    if (!ids.length) return;
+    const currentState = stateRef.current;
+    const page = currentState.pages[pagePath] ?? {};
+    const nextPage = { ...page };
+    ids.forEach((id) => {
+      const current = nextPage[id] ?? {};
+      if (current.locked) return;
+      const offset = device === "desktop"
+        ? current.positionOffset ?? { x: 0, y: 0 }
+        : current.responsivePositionOffset?.[device] ?? current.positionOffset ?? { x: 0, y: 0 };
+      const nextOffset = { x: offset.x + dx, y: offset.y + dy };
+      nextPage[id] = device === "desktop"
+        ? { ...current, positionOffset: nextOffset }
+        : {
+            ...current,
+            responsivePositionOffset: {
+              ...(current.responsivePositionOffset ?? {}),
+              [device]: nextOffset,
+            },
+          };
+      const element = findElement(frameRef.current?.contentDocument ?? null, id);
+      if (element) element.style.translate = nextOffset.x + "px " + nextOffset.y + "px";
+    });
+    commit({ ...currentState, pages: { ...currentState.pages, [pagePath]: nextPage } });
+    notify(ids.length > 1 ? "Group moved" : "Layer moved");
   }
 
   function removeSelected() {
