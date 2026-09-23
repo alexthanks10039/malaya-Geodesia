@@ -99,9 +99,6 @@ const config: Config<PuckSiteComponents> = {
   components: {
     HeroBlock: {
       label: "Hero",
-      ai: {
-        instructions: "Сохраняй технический геодезический tone of voice. Не добавляй маркетинговый шум.",
-      },
       fields: {
         eyebrow: { type: "text", label: "Eyebrow" },
         title: { type: "text", label: "Заголовок" },
@@ -148,7 +145,6 @@ const config: Config<PuckSiteComponents> = {
         eyebrow: "SECTION",
         title: "Новый раздел",
         theme: "light",
-        content: [],
       },
       render: ({ eyebrow, title, theme, content: Content }) => (
         <section className={"section" + (theme === "dark" ? " section-dark" : theme === "accent" ? " section-accent" : "")}>
@@ -196,7 +192,6 @@ const config: Config<PuckSiteComponents> = {
         text: {
           type: "textarea",
           label: "Текст",
-          contentEditable: true,
         },
       },
       defaultProps: {
@@ -351,12 +346,7 @@ const config: Config<PuckSiteComponents> = {
       },
       render: ({ title, description }) => (
         <div className="puck-geo-index-wrap">
-          <div className="puck-geo-index-copy">
-            <p className="eyebrow">GEOSPATIAL DATA / INDEX</p>
-            <h2>{title}</h2>
-            <p>{description}</p>
-          </div>
-          <GeospatialIndex />
+          <GeospatialIndex title={title} lead={description} />
         </div>
       ),
     },
