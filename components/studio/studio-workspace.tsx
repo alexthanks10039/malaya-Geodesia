@@ -613,6 +613,11 @@ export function StudioWorkspace() {
   const filteredTree = useMemo(() => filterTree(nodes, search), [nodes, search]);
   const activeOverride = selected ? state.pages[pagePath]?.[selected.id] : undefined;
   const activeResponsiveCss = selected && device !== "desktop" ? activeOverride?.responsiveCss?.[device] : undefined;
+  const activeConstraints = selected
+    ? device === "desktop"
+      ? activeOverride?.constraints
+      : activeOverride?.responsiveConstraints?.[device] ?? activeOverride?.constraints
+    : undefined;
   const activePositionOffset = selected
     ? device === "desktop"
       ? activeOverride?.positionOffset
@@ -2405,9 +2410,44 @@ export function StudioWorkspace() {
 
                     {openSections[section] && section === "layout" ? (
                       <div className="studio-v2-section-body">
+                        <div className="studio-v2-auto-layout">
+                          <div className="studio-v2-auto-layout-head"><span>AUTO LAYOUT</span><small>flex / grid</small></div>
+                          <div className="studio-v2-auto-layout-presets">
+                            <button type="button" onClick={() => setAutoLayout("flow")}>Flow</button>
+                            <button type="button" onClick={() => setAutoLayout("row")}>Row</button>
+                            <button type="button" onClick={() => setAutoLayout("column")}>Column</button>
+                            <button type="button" onClick={() => setAutoLayout("grid")}>Grid</button>
+                          </div>
+                          {styleForDevice("display") === "flex" ? (
+                            <div className="studio-v2-field-grid compact">
+                              <label className="studio-v2-field"><span>Direction</span><select value={styleForDevice("flexDirection") || "row"} onChange={(event) => updateStyle("flexDirection", event.target.value)}><option value="row">row</option><option value="column">column</option><option value="row-reverse">row-reverse</option><option value="column-reverse">column-reverse</option></select></label>
+                              <label className="studio-v2-field"><span>Wrap</span><select value={styleForDevice("flexWrap") || "nowrap"} onChange={(event) => updateStyle("flexWrap", event.target.value)}><option value="nowrap">nowrap</option><option value="wrap">wrap</option><option value="wrap-reverse">wrap-reverse</option></select></label>
+                              <label className="studio-v2-field"><span>Justify</span><select value={styleForDevice("justifyContent") || "flex-start"} onChange={(event) => updateStyle("justifyContent", event.target.value)}><option value="flex-start">start</option><option value="center">center</option><option value="flex-end">end</option><option value="space-between">between</option><option value="space-around">around</option><option value="space-evenly">even</option></select></label>
+                              <label className="studio-v2-field"><span>Align</span><select value={styleForDevice("alignItems") || "stretch"} onChange={(event) => updateStyle("alignItems", event.target.value)}><option value="stretch">stretch</option><option value="flex-start">start</option><option value="center">center</option><option value="flex-end">end</option><option value="baseline">baseline</option></select></label>
+                            </div>
+                          ) : null}
+                          {styleForDevice("display") === "grid" ? (
+                            <div className="studio-v2-field-grid compact">
+                              <label className="studio-v2-field wide"><span>Grid columns</span><input value={styleForDevice("gridTemplateColumns") || ""} onChange={(event) => updateStyle("gridTemplateColumns", event.target.value)} placeholder="repeat(2, 1fr)" /></label>
+                              <label className="studio-v2-field wide"><span>Grid rows</span><input value={styleForDevice("gridTemplateRows") || ""} onChange={(event) => updateStyle("gridTemplateRows", event.target.value)} placeholder="auto auto" /></label>
+                            </div>
+                          ) : null}
+                        </div>
+
+                        {selected.inserted ? (
+                          <div className="studio-v2-constraints-panel">
+                            <div className="studio-v2-auto-layout-head"><span>CONSTRAINTS</span><small>{device === "desktop" ? "base" : DEVICE_LABEL[device]}</small></div>
+                            <div className="studio-v2-constraint-row">
+                              <label className="studio-v2-field"><span>Horizontal</span><select value={activeConstraints?.horizontal || "none"} onChange={(event) => updateConstraints({ horizontal: event.target.value as StudioLayoutConstraints["horizontal"], vertical: activeConstraints?.vertical || "none" })}><option value="none">free</option><option value="left">left</option><option value="right">right</option><option value="stretch">stretch</option></select></label>
+                              <label className="studio-v2-field"><span>Vertical</span><select value={activeConstraints?.vertical || "none"} onChange={(event) => updateConstraints({ horizontal: activeConstraints?.horizontal || "none", vertical: event.target.value as StudioLayoutConstraints["vertical"] })}><option value="none">free</option><option value="top">top</option><option value="bottom">bottom</option><option value="stretch">stretch</option></select></label>
+                            </div>
+                            <small className="studio-v2-constraints-help">Pins use absolute positioning inside the current parent.</small>
+                          </div>
+                        ) : null}
+
                         <div className="studio-v2-position-grid">
                           <label className="studio-v2-field">
-                            <span>X / ${device === "desktop" ? "base" : DEVICE_LABEL[device]}</span>
+                            <span>X / {device === "desktop" ? "base" : DEVICE_LABEL[device]}</span>
                             <input
                               type="number"
                               value={Math.round(activePositionOffset?.x ?? 0)}
@@ -2417,7 +2457,7 @@ export function StudioWorkspace() {
                             />
                           </label>
                           <label className="studio-v2-field">
-                            <span>Y / ${device === "desktop" ? "base" : DEVICE_LABEL[device]}</span>
+                            <span>Y / {device === "desktop" ? "base" : DEVICE_LABEL[device]}</span>
                             <input
                               type="number"
                               value={Math.round(activePositionOffset?.y ?? 0)}
