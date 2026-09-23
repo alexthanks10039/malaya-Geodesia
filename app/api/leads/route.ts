@@ -1,6 +1,14 @@
 import { NextResponse } from "next/server";
 import { createLeadRecord } from "@/lib/telegram-leads";
 import { sendOwnerLeadNotification } from "@/lib/telegram";
+import { isDatabaseConfigured } from "@/lib/db";
+import {
+  claimTelegramNotification,
+  enqueueLeadNotification,
+  getTelegramNotification,
+  markTelegramNotificationFailed,
+  markTelegramNotificationSent,
+} from "@/lib/telegram-outbox";
 
 const MAX_TEXT_LENGTH = 160;
 
@@ -62,13 +70,43 @@ export async function POST(request: Request) {
       idempotencyKey,
     });
 
-    let telegram = { ok: false, configured: Boolean(process.env.TG_KEY && process.env.OWNER_ID) };
+    let telegram = {
+      ok: false,
+      configured: Boolean(process.env.TG_KEY && process.env.OWNER_ID),
+      queued: false,
+      delivered: false,
+    };
+
     if (telegram.configured) {
       try {
-        await sendOwnerLeadNotification(lead);
-        telegram = { ok: true, configured: true };
+        if (isDatabaseConfigured()) {
+          const queued = await enqueueLeadNotification(lead.id);
+          const notification = queued ?? await getTelegramNotification(lead.id);
+          telegram.queued = Boolean(notification);
+
+          if (notification?.status === "sent") {
+            telegram.delivered = true;
+            telegram.ok = true;
+          } else if (notification) {
+            const claimed = await claimTelegramNotification(notification.id);
+            if (claimed) {
+              try {
+                const sent = await sendOwnerLeadNotification(lead);
+                await markTelegramNotificationSent(claimed.id, sent.messageId);
+                telegram.delivered = true;
+                telegram.ok = true;
+              } catch (error) {
+                await markTelegramNotificationFailed(claimed.id, error, claimed.attempts);
+                console.error("[lead.telegram_failed]", error);
+              }
+            }
+          }
+        } else {
+          const sent = await sendOwnerLeadNotification(lead);
+          telegram = { ok: true, configured: true, queued: false, delivered: Boolean(sent.messageId || sent.ok) };
+        }
       } catch (error) {
-        console.error("[lead.telegram_failed]", error);
+        console.error("[lead.telegram_outbox_failed]", error);
       }
     }
 
