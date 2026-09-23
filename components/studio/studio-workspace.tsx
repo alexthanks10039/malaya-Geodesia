@@ -706,9 +706,9 @@ export function StudioWorkspace() {
     refreshFrame();
   }, [pagePath]);
   useEffect(() => {
-    if (!hydrated) return;
+    if (!frameRef.current) return;
     refreshFrame();
-  }, [device, hydrated, refreshFrame]);
+  }, [device, refreshFrame]);
 
   useEffect(() => {
     const keydown = (event: KeyboardEvent) => {
