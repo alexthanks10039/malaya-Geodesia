@@ -583,7 +583,9 @@ export function StudioWorkspace() {
     style.id = "malaya-studio-frame-style";
     style.textContent = [
       "[data-studio-node-id]{transition:outline-color .12s ease,box-shadow .12s ease,opacity .12s ease}",
-      "[data-studio-node-id]:hover{outline:1px dashed rgba(217,255,82,.92)!important;outline-offset:2px;cursor:crosshair!important}",
+      previewMode === "select"
+        ? "[data-studio-node-id]:hover{outline:1px dashed rgba(217,255,82,.92)!important;outline-offset:2px;cursor:crosshair!important}"
+        : "[data-studio-node-id]:hover{cursor:default!important}",
       "[data-studio-node-id].studio-frame-selected{outline:2px solid #d9ff52!important;outline-offset:3px;box-shadow:0 0 0 4px rgba(217,255,82,.16)!important}",
       "[data-studio-inserted]{outline-offset:2px}",
     ].join("");
