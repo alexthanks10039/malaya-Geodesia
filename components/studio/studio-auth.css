@@ -11,3 +11,7 @@
 .studio-login-card button{height:42px;border:0;border-radius:8px;background:#d9ff52;color:#10130f;font:900 9px ui-monospace,SFMono-Regular,monospace;cursor:pointer}
 .studio-login-card button:disabled{cursor:not-allowed;opacity:.45}
 .studio-login-error{margin-top:12px;padding:10px 12px;border:1px solid #6a3e36;border-radius:8px;background:#241512;color:#ffb6a8;font-size:10px}
+
+.studio-logout{display:inline-flex;align-items:center;gap:6px;min-height:30px;padding:0 9px;border:1px solid #30372d;border-radius:7px;background:#11150f;color:#839080;font:800 7px ui-monospace,SFMono-Regular,monospace;cursor:pointer}
+.studio-logout:hover{color:#d9ff52;border-color:#5b684f}
+.studio-logout:disabled{opacity:.5;cursor:wait}
