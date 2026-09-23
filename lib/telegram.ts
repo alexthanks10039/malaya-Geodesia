@@ -185,12 +185,12 @@ async function showLeads(chatId: string, messageId: number | undefined, status: 
 export async function sendOwnerLeadNotification(lead: LeadRecord) {
   const id = ownerId();
   if (!id) throw new Error("OWNER_ID is not configured");
-  await sendMessage({
+  const response = await sendMessage({
     chatId: id,
     text: buildLeadMessage(lead),
     replyMarkup: leadKeyboard(lead),
   });
-  return { ok: true, leadId: lead.id };
+  return { ok: true, leadId: lead.id, messageId: Number(response.result?.message_id || 0) || undefined };
 }
 
 export async function handleTelegramUpdate(update: any) {
