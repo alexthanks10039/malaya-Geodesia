@@ -495,6 +495,8 @@ export function StudioWorkspace() {
   const filteredTree = useMemo(() => filterTree(nodes, search), [nodes, search]);
   const activeOverride = selected ? state.pages[pagePath]?.[selected.id] : undefined;
   const pageInfo = studioPages.find((page) => page.path === pagePath) ?? studioPages[0];
+  const selectedIndex = selected ? flatNodes.findIndex((node) => node.id === selected.id) : -1;
+  const selectedPosition = selectedIndex >= 0 ? selectedIndex + 1 : 0;
 
   const notify = useCallback((message: string) => {
     setToast(message);
@@ -566,7 +568,7 @@ export function StudioWorkspace() {
 
       setSelected(nextSelected);
       setTextDraft(nextSelected.textEditable ? directText(element) : "");
-      setActiveTab("layers");
+      if (window.innerWidth <= 700) setMobilePanel("right");
       window.requestAnimationFrame(() => element.scrollIntoView({ block: "center", inline: "nearest", behavior: "smooth" }));
     },
     [],
@@ -1198,6 +1200,7 @@ export function StudioWorkspace() {
                     <Laptop size={22} />
                     <strong>Контентные модели</strong>
                     <span>Калькулятор и кейсы подключаются здесь как специализированные редакторы.</span>
+                    <Link className="studio-v2-data-link" href="/studio/content">Открыть CMS</Link>
                   </div>
                 ) : null}
                 {pagePath === "/calculator" ? <small className="studio-v2-storage-key">{STUDIO_CALCULATOR_KEY}</small> : null}
@@ -1296,6 +1299,7 @@ export function StudioWorkspace() {
                 <div className="studio-v2-selected-chip">
                   <span className="studio-v2-layer-tag">{selected.tag}</span>
                   <b>{selected.label || "(без текста)"}</b>
+                  <small>{"#"+selectedPosition+" / "+flatNodes.length}</small>
                   {selected.inserted ? <em>NEW BLOCK</em> : activeOverride ? <em>OVERRIDE</em> : <i>DEFAULT</i>}
                 </div>
 
