@@ -1619,15 +1619,15 @@ export function StudioWorkspace() {
                       <div className="studio-v2-section-body">
                         <label className="studio-v2-field wide">
                           <span>Transform</span>
-                          <input value={selected.css.transform ?? ""} onFocus={() => { liveEditRef.current = null; }} onChange={(event) => updateStyle("transform", event.target.value)} onBlur={finishLiveEdit} />
+                          <input value={styleForDevice("transform") ?? ""} onFocus={() => { liveEditRef.current = null; }} onChange={(event) => updateStyle("transform", event.target.value)} onBlur={finishLiveEdit} />
                         </label>
                         <label className="studio-v2-field wide">
                           <span>Transition</span>
-                          <input value={selected.css.transition ?? ""} onFocus={() => { liveEditRef.current = null; }} onChange={(event) => updateStyle("transition", event.target.value)} onBlur={finishLiveEdit} />
+                          <input value={styleForDevice("transition") ?? ""} onFocus={() => { liveEditRef.current = null; }} onChange={(event) => updateStyle("transition", event.target.value)} onBlur={finishLiveEdit} />
                         </label>
                         <label className="studio-v2-field wide">
                           <span>Custom CSS</span>
-                          <textarea value={activeOverride?.css?.customCss ?? ""} onFocus={() => { liveEditRef.current = null; }} onChange={(event) => updateStyle("customCss", event.target.value)} onBlur={finishLiveEdit} placeholder="background: linear-gradient(...);" />
+                          <textarea value={styleForDevice("customCss") ?? ""} onFocus={() => { liveEditRef.current = null; }} onChange={(event) => updateStyle("customCss", event.target.value)} onBlur={finishLiveEdit} placeholder="background: linear-gradient(...);" />
                         </label>
                         <div className="studio-v2-selector">
                           <span>STABLE SELECTOR</span>
