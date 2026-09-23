@@ -42,6 +42,18 @@ export async function enqueueLeadNotification(leadId: string) {
   return result.rows[0] ? mapRow(result.rows[0]) : null;
 }
 
+export async function claimTelegramNotification(id: number) {
+  if (!isDatabaseConfigured()) return null;
+  const result = await query<Record<string, any>>(
+    `UPDATE telegram_notifications
+     SET status='processing', attempts=attempts+1
+     WHERE id=$1 AND status IN ('pending','failed') AND next_attempt_at <= now()
+     RETURNING *`,
+    [id],
+  );
+  return result.rows[0] ? mapRow(result.rows[0]) : null;
+}
+
 export async function claimNextTelegramNotification() {
   if (!isDatabaseConfigured()) return null;
   return withTransaction(async (client) => {
