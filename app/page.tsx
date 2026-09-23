@@ -58,8 +58,8 @@ export async function generateMetadata() {
     };
   }
   return {
-    title: data.root.props.pageTitle || "Малая геодезия",
-    description: data.root.props.pageDescription || "Геодезия, 3D и пространственные данные для строительства и проектирования.",
+    title: data.root.props?.pageTitle || "Малая геодезия",
+    description: data.root.props?.pageDescription || "Геодезия, 3D и пространственные данные для строительства и проектирования.",
   };
 }
 
