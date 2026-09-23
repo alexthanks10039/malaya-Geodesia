@@ -180,3 +180,13 @@
 @media(prefers-reduced-motion:reduce){
   .puck-studio-loader-dot{animation:none}
 }
+
+.puck-status-local-conflict{color:#f0d08a}
+.puck-status-local-conflict i{background:#f0d08a;box-shadow:0 0 8px rgba(240,208,138,.5)}
+.puck-studio-reset:focus-visible,.puck-studio-back:focus-visible,.studio-logout:focus-visible{outline:2px solid #d9ff52;outline-offset:2px}
+@media(max-width:520px){
+  .puck-studio-actions{justify-content:stretch}
+  .puck-studio-actions>*{min-width:0}
+  .puck-studio-status{margin-right:auto}
+  .puck-studio-reset,.puck-studio-back,.studio-logout{padding-inline:7px}
+}
