@@ -25,6 +25,7 @@ export type LeadRecord = {
   history?: Array<{ action: string; at: string; by: string }>;
   createdAt: string;
   updatedAt?: string;
+  idempotencyKey?: string | null;
 };
 
 const memory = new Map<string, LeadRecord>();
@@ -48,6 +49,7 @@ function normalize(row: Record<string, any>): LeadRecord {
     history: Array.isArray(row.history) ? row.history : [],
     createdAt: new Date(row.created_at || Date.now()).toISOString(),
     updatedAt: row.updated_at ? new Date(row.updated_at).toISOString() : undefined,
+    idempotencyKey: row.idempotency_key || null,
   };
 }
 
@@ -66,6 +68,13 @@ function fallbackCreate(lead: Omit<LeadRecord, "status"> & { status?: LeadStatus
 
 export async function createLeadRecord(lead: Omit<LeadRecord, "status"> & { status?: LeadStatus }) {
   if (!isDatabaseConfigured()) return fallbackCreate(lead);
+  if (lead.idempotencyKey) {
+    const existing = await query<Record<string, any>>(
+      "SELECT * FROM geo_leads WHERE idempotency_key=$1 LIMIT 1",
+      [lead.idempotencyKey],
+    );
+    if (existing.rows[0]) return normalize(existing.rows[0]);
+  }
   const record: LeadRecord = {
     ...lead,
     id: lead.id || `GEO-${Date.now()}`,
@@ -76,8 +85,8 @@ export async function createLeadRecord(lead: Omit<LeadRecord, "status"> & { stat
   try {
     const result = await query<Record<string, any>>(
       `INSERT INTO geo_leads
-        (id,phone,type,area,complexity,output,urgency,estimate,source,source_page,status,history,created_at)
-       VALUES ($1,$2,$3,$4,$5::jsonb,$6,$7,$8::jsonb,$9,$10,$11,$12::jsonb,$13)
+        (id,phone,type,area,complexity,output,urgency,estimate,source,source_page,status,history,created_at,idempotency_key)
+       VALUES ($1,$2,$3,$4,$5::jsonb,$6,$7,$8::jsonb,$9,$10,$11,$12::jsonb,$13,$14)
        ON CONFLICT (id) DO UPDATE SET
          phone=EXCLUDED.phone,type=EXCLUDED.type,area=EXCLUDED.area,complexity=EXCLUDED.complexity,
          output=EXCLUDED.output,urgency=EXCLUDED.urgency,estimate=EXCLUDED.estimate,
@@ -87,7 +96,7 @@ export async function createLeadRecord(lead: Omit<LeadRecord, "status"> & { stat
         record.id, record.phone, record.type, record.area ?? null,
         JSON.stringify(record.complexity || []), record.output || null, record.urgency || null,
         JSON.stringify(record.estimate || null), record.source || "website", record.sourcePage || null,
-        record.status, JSON.stringify(record.history || []), record.createdAt,
+        record.status, JSON.stringify(record.history || []), record.createdAt, record.idempotencyKey || null,
       ],
     );
     const persisted = result.rows[0] ? normalize(result.rows[0]) : record;
@@ -109,7 +118,7 @@ export async function getLeadById(id: string) {
     return record;
   } catch (error) {
     console.error("[leads.db_get_failed]", error);
-    return memory.get(id) || null;
+    throw error;
   }
 }
 
@@ -129,7 +138,7 @@ export async function getLeadsByStatus(status: LeadStatus) {
     return records;
   } catch (error) {
     console.error("[leads.db_list_failed]", error);
-    return [...memory.values()].filter((lead) => lead.status === status);
+    throw error;
   }
 }
 
