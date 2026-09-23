@@ -130,6 +130,28 @@ export async function getLeadById(id: string) {
   }
 }
 
+export async function listLeads(options: { status?: LeadStatus; limit?: number; offset?: number } = {}) {
+  const limit = Math.min(Math.max(options.limit ?? 50, 1), 100);
+  const offset = Math.max(options.offset ?? 0, 0);
+
+  if (!isDatabaseConfigured()) {
+    let records = [...memory.values()];
+    if (options.status) records = records.filter((lead) => lead.status === options.status);
+    records.sort((a, b) => Date.parse(b.createdAt) - Date.parse(a.createdAt));
+    return records.slice(offset, offset + limit);
+  }
+
+  const result = await query<Record<string, any>>(
+    options.status
+      ? "SELECT * FROM geo_leads WHERE status=$1 ORDER BY created_at DESC LIMIT $2 OFFSET $3"
+      : "SELECT * FROM geo_leads ORDER BY created_at DESC LIMIT $1 OFFSET $2",
+    options.status ? [options.status, limit, offset] : [limit, offset],
+  );
+  const records = result.rows.map(normalize);
+  records.forEach((record) => memory.set(record.id, record));
+  return records;
+}
+
 export async function getLeadsByStatus(status: LeadStatus) {
   if (!isDatabaseConfigured()) {
     return [...memory.values()]
