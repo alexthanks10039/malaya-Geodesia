@@ -93,13 +93,13 @@
 
 ### B1.1 Lead REST API
 - [x] `GET /api/admin/leads`;
-- [x] `GET /api/admin/leads/:id`;
+- [x] `GET /api/admin/leads?id=...`;
 - [x] `PATCH /api/admin/leads` для статуса и assignment;
 - [x] status transitions;
 - [x] assignment;
 - [x] pagination;
 - [x] filtering;
-- [x] sorting;
+- [ ] sorting;
 - [ ] audit.
 
 ### B1.2 Telegram operator workflow
