@@ -1612,7 +1612,8 @@ export function StudioWorkspace() {
     }
     const groupId = stableInsertedId("frame-" + crypto.randomUUID());
     const maxOrder = Math.max(...Object.values(page).map((item) => item.inserted?.order ?? 0), 0);
-    const nextPage = { ...page, [groupId]: { inserted: { parentId, kind: "container", text: "Frame", order: maxOrder + 1, css: { display: "block" } } } };
+    const frame: StudioInsertedBlock = { parentId, kind: "container", text: "Frame", order: maxOrder + 1, css: { display: "block" } };
+    const nextPage: StudioState["pages"][string] = { ...page, [groupId]: { inserted: frame } };
     ids.forEach((id, index) => {
       const override = nextPage[id];
       if (!override?.inserted) return;
