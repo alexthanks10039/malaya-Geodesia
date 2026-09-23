@@ -67,7 +67,7 @@ export function GeospatialIndex({
 
         <h2>Участок читается как массив пространственных данных.</h2>
         <p className="geo-index-lead">
-          Здесь можно быстро переключать слои, искать набор данных и выбирать объект. Архитектура блока уже готова к подключению реального каталога PostGIS.
+          {lead}
         </p>
 
         <div className="geo-index-controls">
