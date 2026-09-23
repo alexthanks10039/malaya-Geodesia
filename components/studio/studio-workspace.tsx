@@ -314,14 +314,10 @@ function applyCss(element: HTMLElement, css?: StudioCssOverrides): void {
   for (const [property, value] of Object.entries(css)) {
     if (!value) continue;
     const cssName = STYLE_MAP[property as keyof StudioCssOverrides];
-    if (cssName) {
-      element.style.setProperty(cssName, value);
-    }
+    if (cssName) element.style.setProperty(cssName, value);
   }
 
-  if (css.customCss) {
-    element.style.cssText += ";" + css.customCss;
-  }
+  if (css.customCss) element.style.cssText += ";" + css.customCss;
 }
 
 function findElement(doc: Document | null, id: string): HTMLElement | null {
@@ -709,6 +705,10 @@ export function StudioWorkspace() {
   useEffect(() => {
     refreshFrame();
   }, [pagePath]);
+  useEffect(() => {
+    if (!hydrated) return;
+    refreshFrame();
+  }, [device, hydrated, refreshFrame]);
 
   useEffect(() => {
     const keydown = (event: KeyboardEvent) => {
@@ -787,8 +787,9 @@ export function StudioWorkspace() {
     const element = findElement(frameRef.current?.contentDocument ?? null, selected.id);
     if (!element) return;
     const cssName = STYLE_MAP[property];
-    if (!cssName) return;
-    element.style.setProperty(cssName, value);
+    if (cssName) element.style.setProperty(cssName, value);
+    else if (property === "customCss" && value) element.style.cssText += ";" + value;
+    else if (!cssName) return;
     setOverride(
       selected.id,
       (current) => ({
@@ -829,6 +830,22 @@ export function StudioWorkspace() {
     const element = findElement(frameRef.current?.contentDocument ?? null, selected.id);
     if (element) element.style.setProperty("display", hidden ? "none" : "");
     setOverride(selected.id, (current) => ({ ...current, hidden }));
+  }
+
+  function resetResponsive() {
+    if (!selected || device === "desktop") return;
+    const page = { ...(state.pages[pagePath] ?? {}) };
+    const current = page[selected.id];
+    if (!current?.responsiveCss?.[device]) return;
+    const responsiveCss = { ...(current.responsiveCss ?? {}) };
+    delete responsiveCss[device];
+    const nextOverride = { ...current };
+    if (Object.keys(responsiveCss).length) nextOverride.responsiveCss = responsiveCss;
+    else delete nextOverride.responsiveCss;
+    page[selected.id] = nextOverride;
+    commit({ ...state, pages: { ...state.pages, [pagePath]: page } });
+    refreshFrame();
+    notify(DEVICE_LABEL[device] + " overrides сброшены");
   }
 
   function resetSelected() {
@@ -1444,6 +1461,9 @@ export function StudioWorkspace() {
                           ))}
                         </div>
                         <div className="studio-v2-selected-actions">
+                          {device !== "desktop" && activeResponsiveCss && Object.keys(activeResponsiveCss).length ? (
+                            <button type="button" onClick={resetResponsive}><RotateCcw size={13} /> Reset {DEVICE_LABEL[device]}</button>
+                          ) : null}
                           <button type="button" onClick={toggleHidden}><EyeOff size={13} /> {activeOverride?.hidden ? "Показать" : "Скрыть"}</button>
                           <button type="button" className="danger" onClick={removeSelected}>{selected.inserted ? <Trash2 size={13} /> : <EyeOff size={13} />} {selected.inserted ? "Удалить блок" : "Скрыть элемент"}</button>
                         </div>
