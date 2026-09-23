@@ -22,6 +22,7 @@ import {
   Monitor,
   MoreHorizontal,
   MousePointer2,
+  GripVertical,
   Plus,
   Redo2,
   RefreshCw,
@@ -365,8 +366,10 @@ function createInsertedElement(doc: Document, block: StudioInsertedBlock, id: st
 }
 
 function insertRuntimeBlocks(doc: Document, page: StudioState["pages"][string], device: StudioResponsiveDevice): void {
-  for (const [id, override] of Object.entries(page || {})) {
-    if (!override.inserted) continue;
+  const inserted = Object.entries(page || {})
+    .filter(([, override]) => Boolean(override.inserted))
+    .sort(([, left], [, right]) => (left.inserted?.order ?? Number.MAX_SAFE_INTEGER) - (right.inserted?.order ?? Number.MAX_SAFE_INTEGER));
+  for (const [id, override] of inserted) {
     const block = override.inserted;
     const parent = findElement(doc, block.parentId);
     if (!parent) continue;
@@ -492,6 +495,8 @@ export function StudioWorkspace() {
   const [toast, setToast] = useState("");
   const [focusMode, setFocusMode] = useState(false);
   const [mobilePanel, setMobilePanel] = useState<"none" | "left" | "right">("none");
+  const stateRef = useRef(state);
+  const draggedNodeRef = useRef<string | null>(null);
 
   const flatNodes = useMemo(() => flatten(nodes), [nodes]);
   const filteredTree = useMemo(() => filterTree(nodes, search), [nodes, search]);
@@ -511,6 +516,7 @@ export function StudioWorkspace() {
   }, []);
 
   const writeState = useCallback((next: StudioState) => {
+    stateRef.current = next;
     writeStudioState(next);
     setState(next);
   }, []);
@@ -682,6 +688,112 @@ export function StudioWorkspace() {
       observer.disconnect();
     };
   }, [pagePath, previewMode, selectInFrame, selected, state]);
+
+  useEffect(() => {
+    const doc = frameRef.current?.contentDocument ?? null;
+    if (!doc?.body || !selected || previewMode !== "select") return;
+    const element = findElement(doc, selected.id);
+    if (!element) return;
+
+    doc.querySelector("#malaya-studio-resize-ui")?.remove();
+    const overlay = doc.createElement("div");
+    overlay.id = "malaya-studio-resize-ui";
+    overlay.className = "studio-v2-resize-ui";
+    overlay.innerHTML = '<span data-resize="right"></span><span data-resize="bottom"></span><span data-resize="corner"></span>';
+    doc.body.appendChild(overlay);
+
+    const position = () => {
+      const rect = element.getBoundingClientRect();
+      overlay.style.left = rect.left + "px";
+      overlay.style.top = rect.top + "px";
+      overlay.style.width = rect.width + "px";
+      overlay.style.height = rect.height + "px";
+    };
+
+    let drag: { kind: "right" | "bottom" | "corner"; startX: number; startY: number; width: number; height: number } | null = null;
+
+    const setLiveDimension = (property: "width" | "height", value: string) => {
+      const currentState = stateRef.current;
+      const page = currentState.pages[pagePath] ?? {};
+      const current = page[selected.id] ?? {};
+      const next = {
+        ...currentState,
+        pages: {
+          ...currentState.pages,
+          [pagePath]: {
+            ...page,
+            [selected.id]: device === "desktop"
+              ? { ...current, css: { ...(current.css ?? {}), [property]: value } }
+              : {
+                  ...current,
+                  responsiveCss: {
+                    ...(current.responsiveCss ?? {}),
+                    [device]: {
+                      ...(current.responsiveCss?.[device] ?? {}),
+                      [property]: value,
+                    },
+                  },
+                },
+          },
+        },
+      };
+      if (liveEditRef.current !== "resize:" + device + ":" + selected.id) {
+        undoRef.current.push(currentState);
+        if (undoRef.current.length > 50) undoRef.current.shift();
+        redoRef.current = [];
+        liveEditRef.current = "resize:" + device + ":" + selected.id;
+      }
+      writeState(next);
+    };
+
+    const pointerDown = (event: PointerEvent) => {
+      const target = event.target instanceof Element ? event.target.closest("[data-resize]") : null;
+      if (!target) return;
+      const kind = target.getAttribute("data-resize");
+      if (kind !== "right" && kind !== "bottom" && kind !== "corner") return;
+      const rect = element.getBoundingClientRect();
+      drag = { kind, startX: event.clientX, startY: event.clientY, width: rect.width, height: rect.height };
+      event.preventDefault();
+      event.stopPropagation();
+      (target as HTMLElement).setPointerCapture?.(event.pointerId);
+    };
+
+    const pointerMove = (event: PointerEvent) => {
+      if (!drag) return;
+      const nextWidth = drag.kind === "bottom" ? drag.width : Math.max(24, drag.width + event.clientX - drag.startX);
+      const nextHeight = drag.kind === "right" ? drag.height : Math.max(24, drag.height + event.clientY - drag.startY);
+      element.style.width = Math.round(nextWidth) + "px";
+      element.style.height = Math.round(nextHeight) + "px";
+      setLiveDimension("width", Math.round(nextWidth) + "px");
+      if (drag.kind !== "right") setLiveDimension("height", Math.round(nextHeight) + "px");
+      position();
+      setSelected((current) => current ? { ...current, css: { ...current.css, width: Math.round(nextWidth) + "px", ...(drag?.kind !== "right" ? { height: Math.round(nextHeight) + "px" } : {}) } } : current);
+    };
+
+    const pointerUp = () => {
+      if (!drag) return;
+      drag = null;
+      liveEditRef.current = null;
+    };
+
+    overlay.addEventListener("pointerdown", pointerDown);
+    overlay.addEventListener("pointermove", pointerMove);
+    overlay.addEventListener("pointerup", pointerUp);
+    overlay.addEventListener("pointercancel", pointerUp);
+    doc.defaultView?.addEventListener("scroll", position, true);
+    doc.defaultView?.addEventListener("resize", position);
+    position();
+
+    return () => {
+      overlay.removeEventListener("pointerdown", pointerDown);
+      overlay.removeEventListener("pointermove", pointerMove);
+      overlay.removeEventListener("pointerup", pointerUp);
+      overlay.removeEventListener("pointercancel", pointerUp);
+      doc.defaultView?.removeEventListener("scroll", position, true);
+      doc.defaultView?.removeEventListener("resize", position);
+      overlay.remove();
+    };
+  }, [selected?.id, device, previewMode, pagePath]);
 
   useEffect(() => {
     window.sessionStorage.setItem("malaya-studio-mode", "1");
@@ -982,13 +1094,45 @@ export function StudioWorkspace() {
         ...state.pages,
         [pagePath]: {
           ...(state.pages[pagePath] ?? {}),
-          [id]: { inserted: block },
+          [id]: { inserted: { ...block, order: Object.values(state.pages[pagePath] ?? {}).filter((item) => item.inserted?.parentId === parentId).length } },
         },
       },
     };
     commit(next);
     window.setTimeout(refreshFrame, 0);
     notify("Блок добавлен");
+  }
+
+  function reorderInserted(sourceId: string, targetId: string) {
+    if (!sourceId || sourceId === targetId) return;
+    const currentState = stateRef.current;
+    const page = currentState.pages[pagePath] ?? {};
+    const source = page[sourceId]?.inserted;
+    const target = page[targetId]?.inserted;
+    if (!source || !target || source.parentId !== target.parentId) return;
+
+    const siblings = Object.entries(page)
+      .filter(([, override]) => override.inserted?.parentId === source.parentId)
+      .sort(([, left], [, right]) => (left.inserted?.order ?? 0) - (right.inserted?.order ?? 0))
+      .map(([id]) => id);
+    const withoutSource = siblings.filter((id) => id !== sourceId);
+    const targetIndex = withoutSource.indexOf(targetId);
+    if (targetIndex < 0) return;
+    withoutSource.splice(targetIndex, 0, sourceId);
+
+    const nextPage = { ...page };
+    withoutSource.forEach((id, index) => {
+      const override = nextPage[id];
+      if (!override?.inserted) return;
+      nextPage[id] = { ...override, inserted: { ...override.inserted, order: index } };
+    });
+
+    writeState({
+      ...currentState,
+      pages: { ...currentState.pages, [pagePath]: nextPage },
+    });
+    refreshFrame();
+    notify("Порядок блоков изменён");
   }
 
   function removeSelected() {
@@ -1092,6 +1236,7 @@ export function StudioWorkspace() {
               }}
               data-studio-layer-id={node.id}
             >
+              {node.inserted ? <GripVertical className="studio-v2-layer-grip" size={12} aria-hidden="true" /> : null}
               <span className="studio-v2-layer-tag">{node.tag}</span>
               <span className="studio-v2-layer-name">
                 <b>{node.label || "(без текста)"}</b>
