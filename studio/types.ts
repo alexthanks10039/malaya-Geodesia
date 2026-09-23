@@ -38,9 +38,12 @@ export type StudioInsertedBlock = {
   css?: StudioCssOverrides;
 };
 
+export type StudioResponsiveDevice = "desktop" | "tablet" | "mobile";
+
 export type StudioElementOverride = {
   text?: string;
   css?: StudioCssOverrides;
+  responsiveCss?: Partial<Record<StudioResponsiveDevice, StudioCssOverrides>>;
   attributes?: {
     href?: string;
     alt?: string;

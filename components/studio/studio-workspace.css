@@ -276,3 +276,11 @@ body:has(.studio-v2) main{margin:0!important;max-width:none!important;padding:0!
 @media(max-width:700px){
   .studio-v2-selected-chip small{display:none}
 }
+
+.studio-v2-responsive-badge{margin-left:auto;color:#d9ff52!important;border:1px solid rgba(217,255,82,.22);border-radius:999px;padding:3px 5px;font:800 6px ui-monospace,SFMono-Regular,monospace!important;white-space:nowrap}
+.studio-v2-selected-actions{display:flex;flex-wrap:wrap}
+.studio-v2-selected-actions button:first-child{flex:1 1 auto}
+@media(max-width:700px){
+  .studio-v2-selected-actions{display:grid}
+  .studio-v2-selected-actions button{width:100%}
+}

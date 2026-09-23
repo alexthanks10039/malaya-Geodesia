@@ -56,6 +56,7 @@ import type {
   StudioElementOverride,
   StudioInsertedBlock,
   StudioState,
+  StudioResponsiveDevice,
 } from "@/studio/types";
 
 const STYLE_MAP: Record<keyof StudioCssOverrides, string> = {
@@ -313,14 +314,10 @@ function applyCss(element: HTMLElement, css?: StudioCssOverrides): void {
   for (const [property, value] of Object.entries(css)) {
     if (!value) continue;
     const cssName = STYLE_MAP[property as keyof StudioCssOverrides];
-    if (cssName) {
-      element.style.setProperty(cssName, value);
-    }
+    if (cssName) element.style.setProperty(cssName, value);
   }
 
-  if (css.customCss) {
-    element.style.cssText += ";" + css.customCss;
-  }
+  if (css.customCss) element.style.cssText += ";" + css.customCss;
 }
 
 function findElement(doc: Document | null, id: string): HTMLElement | null {
@@ -367,7 +364,7 @@ function createInsertedElement(doc: Document, block: StudioInsertedBlock, id: st
   return element;
 }
 
-function insertRuntimeBlocks(doc: Document, page: StudioState["pages"][string]): void {
+function insertRuntimeBlocks(doc: Document, page: StudioState["pages"][string], device: StudioResponsiveDevice): void {
   for (const [id, override] of Object.entries(page || {})) {
     if (!override.inserted) continue;
     const block = override.inserted;
@@ -375,11 +372,15 @@ function insertRuntimeBlocks(doc: Document, page: StudioState["pages"][string]):
     if (!parent) continue;
     if (findElement(doc, id)) continue;
     const element = createInsertedElement(doc, block, id);
-    if (element) parent.appendChild(element);
+    if (element) {
+      const responsive = override.responsiveCss?.[device];
+      if (responsive) applyCss(element, responsive);
+      parent.appendChild(element);
+    }
   }
 }
 
-function applyPageState(doc: Document, state: StudioState, path: string): void {
+function applyPageState(doc: Document, state: StudioState, path: string, device: StudioResponsiveDevice): void {
   const page = state.pages[path] ?? {};
 
   for (const [id, override] of Object.entries(page)) {
@@ -391,6 +392,7 @@ function applyPageState(doc: Document, state: StudioState, path: string): void {
     }
 
     applyCss(element, override.css);
+    if (device !== "desktop") applyCss(element, override.responsiveCss?.[device]);
 
     if (override.hidden) {
       element.style.setProperty("display", "none");
@@ -407,7 +409,7 @@ function applyPageState(doc: Document, state: StudioState, path: string): void {
     }
   }
 
-  insertRuntimeBlocks(doc, page);
+  insertRuntimeBlocks(doc, page, device);
 }
 
 function filterTree(nodes: NodeSummary[], query: string): NodeSummary[] {
@@ -494,6 +496,11 @@ export function StudioWorkspace() {
   const flatNodes = useMemo(() => flatten(nodes), [nodes]);
   const filteredTree = useMemo(() => filterTree(nodes, search), [nodes, search]);
   const activeOverride = selected ? state.pages[pagePath]?.[selected.id] : undefined;
+  const activeResponsiveCss = selected && device !== "desktop" ? activeOverride?.responsiveCss?.[device] : undefined;
+  const styleForDevice = (property: keyof StudioCssOverrides) =>
+    device === "desktop"
+      ? selected?.css[property]
+      : activeResponsiveCss?.[property] ?? selected?.css[property];
   const pageInfo = studioPages.find((page) => page.path === pagePath) ?? studioPages[0];
   const selectedIndex = selected ? flatNodes.findIndex((node) => node.id === selected.id) : -1;
   const selectedPosition = selectedIndex >= 0 ? selectedIndex + 1 : 0;
@@ -597,7 +604,7 @@ export function StudioWorkspace() {
 
     const page = state.pages[pagePath] ?? {};
     const beforeNodes = collectTree(doc);
-    applyPageState(doc, state, pagePath);
+    applyPageState(doc, state, pagePath, device);
     const nextNodes = collectTree(doc);
     setNodes(nextNodes);
 
@@ -698,6 +705,10 @@ export function StudioWorkspace() {
   useEffect(() => {
     refreshFrame();
   }, [pagePath]);
+  useEffect(() => {
+    if (!frameRef.current) return;
+    refreshFrame();
+  }, [device, refreshFrame]);
 
   useEffect(() => {
     const keydown = (event: KeyboardEvent) => {
@@ -776,15 +787,26 @@ export function StudioWorkspace() {
     const element = findElement(frameRef.current?.contentDocument ?? null, selected.id);
     if (!element) return;
     const cssName = STYLE_MAP[property];
-    if (!cssName) return;
-    element.style.setProperty(cssName, value);
+    if (cssName) element.style.setProperty(cssName, value);
+    else if (property === "customCss" && value) element.style.cssText += ";" + value;
+    else if (!cssName) return;
     setOverride(
       selected.id,
       (current) => ({
         ...current,
-        css: { ...(current.css ?? {}), [property]: value },
+        ...(device === "desktop"
+          ? { css: { ...(current.css ?? {}), [property]: value } }
+          : {
+              responsiveCss: {
+                ...(current.responsiveCss ?? {}),
+                [device]: {
+                  ...(current.responsiveCss?.[device] ?? {}),
+                  [property]: value,
+                },
+              },
+            }),
       }),
-      "css:" + selected.id + ":" + property,
+      "css:" + device + ":" + selected.id + ":" + property,
     );
     setSelected((current) => current ? { ...current, css: { ...current.css, [property]: value } } : current);
   }
@@ -808,6 +830,22 @@ export function StudioWorkspace() {
     const element = findElement(frameRef.current?.contentDocument ?? null, selected.id);
     if (element) element.style.setProperty("display", hidden ? "none" : "");
     setOverride(selected.id, (current) => ({ ...current, hidden }));
+  }
+
+  function resetResponsive() {
+    if (!selected || device === "desktop") return;
+    const page = { ...(state.pages[pagePath] ?? {}) };
+    const current = page[selected.id];
+    if (!current?.responsiveCss?.[device]) return;
+    const responsiveCss = { ...(current.responsiveCss ?? {}) };
+    delete responsiveCss[device];
+    const nextOverride = { ...current };
+    if (Object.keys(responsiveCss).length) nextOverride.responsiveCss = responsiveCss;
+    else delete nextOverride.responsiveCss;
+    page[selected.id] = nextOverride;
+    commit({ ...state, pages: { ...state.pages, [pagePath]: page } });
+    refreshFrame();
+    notify(DEVICE_LABEL[device] + " overrides сброшены");
   }
 
   function resetSelected() {
@@ -1322,6 +1360,7 @@ export function StudioWorkspace() {
                   <span className="studio-v2-layer-tag">{selected.tag}</span>
                   <b>{selected.label || "(без текста)"}</b>
                   <small>{"#"+selectedPosition+" / "+flatNodes.length}</small>
+                  {device !== "desktop" && <em className="studio-v2-responsive-badge">{DEVICE_LABEL[device]} only</em>}
                   {selected.inserted ? <em>NEW BLOCK</em> : activeOverride ? <em>OVERRIDE</em> : <i>DEFAULT</i>}
                 </div>
 
@@ -1375,7 +1414,7 @@ export function StudioWorkspace() {
                           {(["fontSize", "lineHeight", "fontWeight", "letterSpacing"] as const).map((property) => (
                             <label className="studio-v2-field" key={property}>
                               <span>{STYLE_LABELS[property]}</span>
-                              <input value={selected.css[property] ?? ""} onFocus={() => { liveEditRef.current = null; }} onChange={(event) => updateStyle(property, event.target.value)} onBlur={finishLiveEdit} />
+                              <input value={styleForDevice(property) ?? ""} onFocus={() => { liveEditRef.current = null; }} onChange={(event) => updateStyle(property, event.target.value)} onBlur={finishLiveEdit} />
                             </label>
                           ))}
                         </div>
@@ -1396,7 +1435,7 @@ export function StudioWorkspace() {
                           {(["display", "width", "maxWidth", "height", "gap", "position", "zIndex"] as const).map((property) => (
                             <label className="studio-v2-field" key={property}>
                               <span>{STYLE_LABELS[property]}</span>
-                              <input value={selected.css[property] ?? ""} onFocus={() => { liveEditRef.current = null; }} onChange={(event) => updateStyle(property, event.target.value)} onBlur={finishLiveEdit} />
+                              <input value={styleForDevice(property) ?? ""} onFocus={() => { liveEditRef.current = null; }} onChange={(event) => updateStyle(property, event.target.value)} onBlur={finishLiveEdit} />
                             </label>
                           ))}
                         </div>
@@ -1417,11 +1456,14 @@ export function StudioWorkspace() {
                           {(["color", "background", "border", "borderRadius", "boxShadow", "opacity"] as const).map((property) => (
                             <label className="studio-v2-field" key={property}>
                               <span>{STYLE_LABELS[property]}</span>
-                              <input value={selected.css[property] ?? ""} onFocus={() => { liveEditRef.current = null; }} onChange={(event) => updateStyle(property, event.target.value)} onBlur={finishLiveEdit} />
+                              <input value={styleForDevice(property) ?? ""} onFocus={() => { liveEditRef.current = null; }} onChange={(event) => updateStyle(property, event.target.value)} onBlur={finishLiveEdit} />
                             </label>
                           ))}
                         </div>
                         <div className="studio-v2-selected-actions">
+                          {device !== "desktop" && activeResponsiveCss && Object.keys(activeResponsiveCss).length ? (
+                            <button type="button" onClick={resetResponsive}><RotateCcw size={13} /> Reset {DEVICE_LABEL[device]}</button>
+                          ) : null}
                           <button type="button" onClick={toggleHidden}><EyeOff size={13} /> {activeOverride?.hidden ? "Показать" : "Скрыть"}</button>
                           <button type="button" className="danger" onClick={removeSelected}>{selected.inserted ? <Trash2 size={13} /> : <EyeOff size={13} />} {selected.inserted ? "Удалить блок" : "Скрыть элемент"}</button>
                         </div>
