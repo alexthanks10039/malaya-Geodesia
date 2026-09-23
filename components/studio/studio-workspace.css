@@ -39,7 +39,7 @@ body:has(.studio-v2) main{margin:0!important;max-width:none!important;padding:0!
 .studio-v2-tabs em{display:grid;place-items:center;min-width:15px;height:15px;padding:0 4px;border-radius:999px;background:#d9ff52;color:#121710;font-style:normal;font-size:7px}
 .studio-v2-toolbar-center{display:flex;justify-self:center;padding:3px;border:1px solid #2d342a;border-radius:9px;background:#0d100c}
 .studio-v2-mobile-toggle{display:none!important}
-.studio-v2-mobile-page-select{display:none!important;height:31px;max-width:120px;padding:0 8px;border:1px solid #30372d;border-radius:7px;background:#0f120e;color:#a9b2a5;outline:0;font:800 8px ui-monospace,SFMono-Regular,monospace}
+.studio-v2-mobile-page-select{display:none!important;height:31px;min-width:0;max-width:120px;padding:0 8px;border:1px solid #30372d;border-radius:7px;background:#0f120e;color:#a9b2a5;outline:0;font:800 8px ui-monospace,SFMono-Regular,monospace}
 .studio-v2-toolbar-right{display:flex;justify-self:end;align-items:center;gap:4px;min-width:0}
 .studio-v2-device{display:flex;border:1px solid #2d342a;border-radius:8px;overflow:hidden;margin-left:4px}
 .studio-v2-device button{display:grid;place-items:center;width:30px;height:30px;border:0;border-right:1px solid #2d342a;background:#10130f;color:#697565}
@@ -227,7 +227,13 @@ body:has(.studio-v2) main{margin:0!important;max-width:none!important;padding:0!
 @media(max-width:700px){
   .studio-v2{grid-template-rows:auto 44px minmax(0,1fr) 28px;height:100dvh}
   .studio-v2-mobile-toggle{display:inline-flex!important}
-  .studio-v2-mobile-page-select{display:inline-flex!important;min-width:90px;max-width:120px}
+  .studio-v2-mobile-page-select{display:inline-flex!important;width:86px;min-width:86px;max-width:86px}
+  .studio-v2-toolbar-center{min-width:0;max-width:100%;overflow-x:auto;scrollbar-width:none;justify-content:flex-start}
+  .studio-v2-toolbar-center::-webkit-scrollbar{display:none}
+  .studio-v2-toolbar-center button{flex:none;width:31px;padding:0;font-size:0;gap:0}
+  .studio-v2-toolbar-center button svg{width:14px;height:14px}
+  .studio-v2-mobile-page-select{font-size:7px}
+  .studio-v2-hide-mobile{display:none!important}
   .studio-v2.studio-v2-mobile-left .studio-v2-left{transform:translateX(0)}
   .studio-v2.studio-v2-mobile-right .studio-v2-right{transform:translateX(0)}
   .studio-v2.studio-v2-mobile-left .studio-v2-right{transform:translateX(102%);pointer-events:none}
