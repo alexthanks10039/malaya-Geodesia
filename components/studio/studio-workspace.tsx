@@ -531,41 +531,6 @@ export function StudioWorkspace() {
   const pageInfo = studioPages.find((page) => page.path === pagePath) ?? studioPages[0];
   const selectedIndex = selected ? flatNodes.findIndex((node) => node.id === selected.id) : -1;
   const selectedPosition = selectedIndex >= 0 ? selectedIndex + 1 : 0;
-  const updatePositionOffset = useCallback((id: string, offset: StudioPositionOffset, editKey?: string) => {
-    const currentState = stateRef.current;
-    const page = currentState.pages[pagePath] ?? {};
-    const current = page[id] ?? {};
-    const next = {
-      ...currentState,
-      pages: {
-        ...currentState.pages,
-        [pagePath]: {
-          ...page,
-          [id]: device === "desktop"
-            ? { ...current, positionOffset: { x: Math.round(offset.x), y: Math.round(offset.y) } }
-            : {
-                ...current,
-                responsivePositionOffset: {
-                  ...(current.responsivePositionOffset ?? {}),
-                  [device]: { x: Math.round(offset.x), y: Math.round(offset.y) },
-                },
-              },
-        },
-      },
-    };
-    if (editKey) {
-      if (liveEditRef.current !== editKey) {
-        undoRef.current.push(currentState);
-        if (undoRef.current.length > 50) undoRef.current.shift();
-        redoRef.current = [];
-        liveEditRef.current = editKey;
-      }
-      writeState(next);
-    } else {
-      commit(next);
-    }
-  }, [commit, device, pagePath, writeState]);
-
   const notify = useCallback((message: string) => {
     setToast(message);
     window.setTimeout(() => setToast(""), 1500);
@@ -606,6 +571,41 @@ export function StudioWorkspace() {
   const finishLiveEdit = useCallback(() => {
     liveEditRef.current = null;
   }, []);
+
+  const updatePositionOffset = useCallback((id: string, offset: StudioPositionOffset, editKey?: string) => {
+    const currentState = stateRef.current;
+    const page = currentState.pages[pagePath] ?? {};
+    const current = page[id] ?? {};
+    const next = {
+      ...currentState,
+      pages: {
+        ...currentState.pages,
+        [pagePath]: {
+          ...page,
+          [id]: device === "desktop"
+            ? { ...current, positionOffset: { x: Math.round(offset.x), y: Math.round(offset.y) } }
+            : {
+                ...current,
+                responsivePositionOffset: {
+                  ...(current.responsivePositionOffset ?? {}),
+                  [device]: { x: Math.round(offset.x), y: Math.round(offset.y) },
+                },
+              },
+        },
+      },
+    };
+    if (editKey) {
+      if (liveEditRef.current !== editKey) {
+        undoRef.current.push(currentState);
+        if (undoRef.current.length > 50) undoRef.current.shift();
+        redoRef.current = [];
+        liveEditRef.current = editKey;
+      }
+      writeState(next);
+    } else {
+      commit(next);
+    }
+  }, [commit, device, pagePath, writeState]);
 
   const refreshFrame = useCallback(() => {
     frameRef.current?.contentWindow?.location.reload();
