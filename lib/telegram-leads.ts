@@ -103,6 +103,14 @@ export async function createLeadRecord(lead: Omit<LeadRecord, "status"> & { stat
     memory.set(persisted.id, persisted);
     return persisted;
   } catch (error) {
+    const code = error && typeof error === "object" && "code" in error ? String((error as { code?: unknown }).code) : "";
+    if (code === "23505" && record.idempotencyKey) {
+      const existing = await query<Record<string, any>>(
+        "SELECT * FROM geo_leads WHERE idempotency_key=$1 LIMIT 1",
+        [record.idempotencyKey],
+      );
+      if (existing.rows[0]) return normalize(existing.rows[0]);
+    }
     console.error("[leads.db_create_failed]", error);
     throw error;
   }
