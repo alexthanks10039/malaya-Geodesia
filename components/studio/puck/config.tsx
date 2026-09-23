@@ -1,4 +1,4 @@
-import type { Config, Slot } from "@puckeditor/core";
+import type { Config, Data, Slot } from "@puckeditor/core";
 import { ArrowRight, Boxes, Crosshair, Database, Ruler, ScanLine } from "lucide-react";
 import { Hero } from "@/components/hero";
 import { GeospatialIndex } from "@/components/geospatial-index";
@@ -20,7 +20,7 @@ export type PuckSiteComponents = {
     eyebrow: string;
     title: string;
     theme: "light" | "dark" | "accent";
-    content: Slot;
+    content?: Slot;
   };
   HeadingBlock: {
     eyebrow: string;
@@ -62,7 +62,7 @@ export type PuckSiteComponents = {
   };
 };
 
-const config: Config<PuckSiteComponents> = {
+export type PuckSiteRootProps = {\n  pageTitle: string;\n  pageDescription: string;\n};\n\nconst config: Config<PuckSiteComponents, PuckSiteRootProps> = {
   root: {
     fields: {
       pageTitle: {
@@ -154,7 +154,7 @@ const config: Config<PuckSiteComponents> = {
               <h2>{title}</h2>
             </div>
           </div>
-          <Content className="puck-section-slot" />
+          {Content ? <Content className="puck-section-slot" /> : null}
         </section>
       ),
     },
@@ -389,7 +389,7 @@ const config: Config<PuckSiteComponents> = {
   },
 };
 
-export const initialPuckData = {
+export const initialPuckData: Data<PuckSiteComponents, PuckSiteRootProps> = {
   content: [
     {
       type: "HeroBlock",
