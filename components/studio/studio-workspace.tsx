@@ -1087,9 +1087,9 @@ export function StudioWorkspace() {
             }} disabled={!redoRef.current.length} title="Redo · Shift+Ctrl/Cmd+Z"><Redo2 size={15} /></button>
           </div>
           <span className="studio-v2-draft-status"><i /> LOCAL DRAFT</span>
-          <button type="button" className="studio-v2-button ghost" onClick={exportDraft}><Download size={14} /> Export</button>
+          <button type="button" className="studio-v2-button ghost studio-v2-hide-mobile" onClick={exportDraft}><Download size={14} /> Export</button>
           <button type="button" className="studio-v2-button acid" onClick={() => saveVersion(versionLabel || "Quick save")}><Save size={14} /> Save</button>
-          <Link className="studio-v2-button ghost" href={pagePath} target="_blank" rel="noreferrer"><ExternalLink size={14} /> Open</Link>
+          <Link className="studio-v2-button ghost studio-v2-hide-mobile" href={pagePath} target="_blank" rel="noreferrer"><ExternalLink size={14} /> Open</Link>
           <StudioLogout />\n          <Link className="studio-v2-button ghost" href="/studio?engine=puck"><Code2 size={14} /> Puck</Link>
         </div>
       </header>
