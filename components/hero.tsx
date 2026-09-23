@@ -4,7 +4,27 @@ import { motion } from "motion/react";
 import { ArrowRight, ArrowDownRight, Crosshair, ScanLine } from "lucide-react";
 import { GeoScanScene } from "@/components/geo-scan-scene";
 
-export function Hero() {
+export type HeroProps = {
+  eyebrow?: string;
+  title?: string;
+  accentTitle?: string;
+  lead?: string;
+  primaryLabel?: string;
+  primaryHref?: string;
+  secondaryLabel?: string;
+  secondaryHref?: string;
+};
+
+export function Hero({
+  eyebrow = "{eyebrow}",
+  title = "Точная геодезия",
+  accentTitle = "для реальных задач.",
+  lead = "{lead}",
+  primaryLabel = "Рассчитать стоимость",
+  primaryHref = "/calculator",
+  secondaryLabel = "Все услуги",
+  secondaryHref = "/services",
+}: HeroProps = {}) {
   return (
     <section className="hero">
       <div className="hero-copy">
@@ -16,14 +36,14 @@ export function Hero() {
           animate={{ opacity: 1, y: 0, filter: "blur(0px)" }}
           transition={{ duration: .85, ease: [0.22, 1, .36, 1], delay: .06 }}
         >
-          Точная геодезия<br /><span>для реальных задач.</span>
+          {title}<br /><span>{accentTitle}</span>
         </motion.h1>
         <motion.p className="hero-lead" initial={{ opacity: 0, y: 18 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: .65, delay: .18 }}>
           Съёмка, 3D, LiDAR, GNSS и готовые данные для строительства, проектирования и контроля.
         </motion.p>
         <motion.div className="hero-actions" initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: .6, delay: .28 }}>
-          <Link className="button button-dark" href="/calculator">Рассчитать стоимость <ArrowRight size={18} /></Link>
-          <Link className="button button-ghost" href="/services">Все услуги <ArrowDownRight size={18} /></Link>
+          <Link className="button button-dark" href={primaryHref}>{primaryLabel} <ArrowRight size={18} /></Link>
+          <Link className="button button-ghost" href={secondaryHref}>{secondaryLabel} <ArrowDownRight size={18} /></Link>
         </motion.div>
         <motion.div className="hero-meta" initial={{ opacity: 0, y: 18 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: .7, delay: .4 }} aria-label="Ключевые характеристики">
           <div><strong>GNSS · RTK</strong><span>Координаты и высотная привязка</span></div>
