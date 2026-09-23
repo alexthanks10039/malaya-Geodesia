@@ -114,7 +114,7 @@ Studio:
 - db.ts — PostgreSQL pool/query/transaction
 - data.ts — static seed/fallback
 - partners.ts — partner fallback
-- telegram.ts — Telegram API + operator UI
+- telegram.ts — Telegram API + operator UI + operator roster/reassignment
 - telegram-leads.ts — in-memory lead state
 - admin-auth.ts — Studio/admin auth
 
@@ -338,6 +338,7 @@ TG_KEY
 OWNER_ID
 TG_WEBHOOK_SECRET
 CRON_SECRET
+TG_OPERATORS — JSON-массив операторов `[{"id":"telegram_user_id","name":"Имя"}]`; OWNER_ID автоматически добавляется в roster как владелец.
 
 Поток:
 
@@ -347,12 +348,16 @@ POST /api/leads
 → OWNER_ID
 
 Операторский интерфейс поддерживает:
-- новые заявки;
-- заявки в работе;
+- новые заявки с пагинацией;
+- заявки в работе с пагинацией;
 - статистику;
-- открытие заявки;
-- взять в работу;
+- список операторов;
+- открытие заявки и обновление карточки;
+- взять в работу с назначением текущего оператора;
+- передачу заявки другому оператору из roster;
 - изменение статуса;
+- stale callback handling: повторное действие по уже изменённому статусу не мутирует данные;
+- уведомление назначенного оператора об изменении статуса/назначения;
 - главное меню.
 
 Статусы:
