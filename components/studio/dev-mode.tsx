@@ -386,7 +386,7 @@ export function StudioDevMode(){
           <section className="studio-dev-block">
             <div className="studio-dev-block-title"><h4>Внешний вид</h4><span>style</span></div>
             <div className="studio-dev-grid">
-              {(["color","background","borderRadius","letterSpacing","gap","opacity","display"] as const).map((key)=><InspectorField key={key} label={STYLE_LABELS[key]} value={selected.css[key]??""} onChange={(value)=>updateStyle(key,value)}/>)}
+              {(["color","background","borderRadius","letterSpacing","gap","opacity","display"] as const).map((key)=><InspectorField key={key} label={STYLE_LABELS[key]??key} value={selected.css[key]??""} onChange={(value)=>updateStyle(key,value)}/>)}
             </div>
           </section>
 
