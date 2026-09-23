@@ -193,3 +193,24 @@
   .puck-studio-status{margin-right:auto}
   .puck-studio-reset,.puck-studio-back,.studio-logout{padding-inline:7px}
 }
+
+.puck-studio-tool{height:30px;padding:0 9px;border:1px solid #30372d;border-radius:7px;background:#11150f;color:#9ba797;font:800 7px ui-monospace,SFMono-Regular,monospace;cursor:pointer}
+.puck-studio-tool:hover{border-color:#59654f;color:#d9ff52}
+.puck-studio-tool:disabled{opacity:.4;cursor:not-allowed}
+.puck-studio-modal-backdrop{position:fixed;inset:0;z-index:1000;display:flex;align-items:stretch;justify-content:flex-end;padding:18px;background:rgba(0,0,0,.62);backdrop-filter:blur(5px)}
+.puck-studio-history{width:min(430px,100%);overflow:hidden;border:1px solid #30372d;border-radius:12px;background:#0c100c;color:#dce4d8;box-shadow:0 24px 100px rgba(0,0,0,.5)}
+.puck-studio-history-head,.puck-studio-preview header{display:flex;align-items:center;justify-content:space-between;padding:16px 18px;border-bottom:1px solid #252c23}
+.puck-studio-history-head div,.puck-studio-preview header div{display:grid;gap:4px}.puck-studio-history-head strong,.puck-studio-preview header strong{font-size:12px}.puck-studio-history-head small,.puck-studio-preview header small{font-size:8px;color:#75806f}
+.puck-studio-history-head button,.puck-studio-preview header button{border:0;background:none;color:#899584;font-size:22px;cursor:pointer}
+.puck-studio-history-list{max-height:calc(100dvh - 100px);overflow:auto;padding:8px}
+.puck-studio-history-item{display:grid;grid-template-columns:1fr auto;gap:5px 10px;padding:12px;border-bottom:1px solid #20271e}
+.puck-studio-history-item>div{display:flex;gap:8px;align-items:center}.puck-studio-history-item strong{font:900 11px ui-monospace,SFMono-Regular,monospace}.puck-studio-history-item span,.puck-studio-history-item small{color:#788472;font-size:8px}
+.puck-studio-history-item button{grid-column:1/-1;width:max-content;padding:6px 8px;border:1px solid #35402f;border-radius:6px;background:#151b13;color:#aab6a2;font:800 7px ui-monospace,SFMono-Regular,monospace;cursor:pointer}
+.puck-studio-history-item button:hover{color:#d9ff52;border-color:#68775b}.puck-studio-history-item button:disabled{opacity:.4;cursor:not-allowed}
+.puck-studio-empty{padding:28px 16px;color:#7c8776;font-size:10px;line-height:1.5}
+.puck-studio-preview{width:min(1280px,100%);height:calc(100dvh - 36px);overflow:hidden;border:1px solid #30372d;border-radius:12px;background:#fff;box-shadow:0 24px 100px rgba(0,0,0,.5)}
+.puck-studio-preview header{background:#0c100c;color:#dce4d8}.puck-studio-preview-frame{height:calc(100% - 58px);overflow:auto;background:#fff}
+@media(max-width:760px){.puck-studio-modal-backdrop{padding:8px}.puck-studio-history,.puck-studio-preview{width:100%;height:calc(100dvh - 16px)}}
+
+.puck-history-panel{position:absolute;z-index:30;top:0;right:0;width:330px;max-width:calc(100vw - 24px);height:100%;overflow:auto;background:#0d110d;border-left:1px solid #2a3226;color:#dce5d7;box-shadow:-18px 0 50px rgba(0,0,0,.25)}.puck-history-head{position:sticky;top:0;display:flex;justify-content:space-between;padding:14px;border-bottom:1px solid #252d22;background:#0d110d}.puck-history-head strong{font:900 10px ui-monospace,SFMono-Regular,monospace}.puck-history-head span{color:#d9ff52;font:900 9px ui-monospace,SFMono-Regular,monospace}.puck-history-row{display:flex;justify-content:space-between;gap:10px;padding:11px 14px;border-bottom:1px solid #1d231b}.puck-history-row.current{background:#151b12}.puck-history-row>div{display:grid;gap:3px;min-width:0}.puck-history-row b{color:#d9ff52;font:900 9px ui-monospace,SFMono-Regular,monospace}.puck-history-row span{text-transform:uppercase;color:#7e8b79;font:800 8px ui-monospace,SFMono-Regular,monospace}.puck-history-row small{color:#667260;font-size:8px}.puck-history-row button{align-self:center;border:1px solid #343d31;border-radius:6px;background:#121711;color:#b7c1b3;padding:6px 7px;font:800 7px ui-monospace,SFMono-Regular,monospace;cursor:pointer}.puck-history-row button:hover{border-color:#d9ff52;color:#d9ff52}
+.puck-studio-editor{position:relative}

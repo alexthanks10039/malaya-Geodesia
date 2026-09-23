@@ -1,6 +1,6 @@
 "use client";
 
-import { Puck, type Data } from "@puckeditor/core";
+import { Puck, Render, type Data } from "@puckeditor/core";
 import { useEffect, useRef, useState } from "react";
 import config, { initialPuckData, type PuckSiteComponents, type PuckSiteRootProps } from "@/components/studio/puck/config";
 import { StudioLogout } from "@/components/studio/studio-logout";
@@ -31,6 +31,8 @@ type PuckCmsData = {
 };
 
 type SaveStatus = "LOADING" | "SYNCED" | "SAVING" | "DRAFT SAVED" | "PUBLISHED" | "OFFLINE DRAFT" | "LOCAL CONFLICT" | "ERROR";
+type CmsVersion = { id:number; version:number; action:string; slug:string; path:string; status:"draft"|"published"|"changes"; data:Record<string,unknown>; publishedData:Record<string,unknown>|null; createdAt:string };
+type PreviewMode = "draft"|"published";
 
 function readLocalDraft(): Data<PuckSiteComponents, PuckSiteRootProps> | null {
   if (typeof window === "undefined") return null;
@@ -85,7 +87,10 @@ export function PuckStudio() {
   const [hydrated, setHydrated] = useState(false);
   const [status, setStatus] = useState<SaveStatus>("LOADING");
   const [remote, setRemote] = useState<CmsPage | null>(null);
-  const [version, setVersion] = useState(0);
+  const [versions, setVersions] = useState<CmsVersion[]>([]);
+  const [preview, setPreview] = useState<PreviewMode | null>(null);
+  const [historyOpen, setHistoryOpen] = useState(false);
+  const [historyBusy, setHistoryBusy] = useState(false);
   const saveTimerRef = useRef<number | null>(null);
   const remoteRef = useRef<CmsPage | null>(null);
   const savingRef = useRef(Promise.resolve());
@@ -230,6 +235,57 @@ export function PuckStudio() {
     }
   };
 
+  const loadHistory = async () => {
+    const page = remoteRef.current;
+    if (!page) return;
+    setHistoryBusy(true);
+    try {
+      const response = await fetch(API_BASE + "/" + page.id + "/versions", { cache: "no-store" });
+      const payload = await response.json() as { ok?: boolean; items?: CmsVersion[]; message?: string };
+      if (!response.ok || !payload.ok) throw new Error(payload.message || "Не удалось загрузить историю");
+      setVersions(payload.items ?? []);
+      setHistoryOpen(true);
+    } catch {
+      setStatus("ERROR");
+    } finally {
+      setHistoryBusy(false);
+    }
+  };
+
+  const rollback = async (targetVersion: number) => {
+    const page = remoteRef.current;
+    if (!page) return;
+    setHistoryBusy(true);
+    try {
+      const response = await fetch(API_BASE + "/" + page.id + "/versions", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ version: targetVersion, expectedVersion: page.version }),
+      });
+      const payload = await response.json() as { ok?: boolean; item?: CmsPage; message?: string };
+      if (!response.ok || !payload.ok || !payload.item) throw new Error(payload.message || "Не удалось откатить");
+      remoteRef.current = payload.item;
+      setRemote(payload.item);
+      setVersion(payload.item.version);
+      const restored = puckFromCms(payload.item.data);
+      if (restored) {
+        setData(restored);
+        window.localStorage.setItem(STORAGE_KEY, JSON.stringify(restored));
+      }
+      setStatus("DRAFT SAVED");
+      setHistoryOpen(false);
+    } catch {
+      setStatus("ERROR");
+    } finally {
+      setHistoryBusy(false);
+    }
+  };
+
+  const previewData = preview === "published"
+    ? (remote?.publishedData ? puckFromCms(remote.publishedData) : null)
+    : data;
+  const previewLabel = preview === "published" ? "Опубликованная версия" : "Текущий draft";
+
   const resetDraft = async () => {
     if (saveTimerRef.current) window.clearTimeout(saveTimerRef.current);
     try {
@@ -274,9 +330,39 @@ export function PuckStudio() {
             <button type="button" className="puck-studio-reset" onClick={() => void resetDraft()}>
               {status === "LOCAL CONFLICT" ? "Взять серверный draft" : "Сбросить draft"}
             </button>
-            <a className="puck-studio-back" href="/studio">← Native Studio</a><StudioLogout />
+            <button type="button" className="puck-studio-tool" onClick={() => void loadHistory()} disabled={!remote || historyBusy}>История</button>
+            <button type="button" className="puck-studio-tool" onClick={() => setPreview("draft")}>Preview draft</button>
+            <button type="button" className="puck-studio-tool" onClick={() => setPreview("published")} disabled={!remote?.publishedData}>Preview published</button>
+            <a className="puck-studio-back" href="/studio/preview?mode=draft" target="_blank" rel="noreferrer">Draft preview ↗</a><a className="puck-studio-back" href="/studio/preview?mode=published" target="_blank" rel="noreferrer">Published ↗</a><a className="puck-studio-back" href="/studio">← Native Studio</a><StudioLogout />
           </div>
         </div>
+
+{historyOpen && (
+          <div className="puck-studio-modal-backdrop" onMouseDown={() => !historyBusy && setHistoryOpen(false)}>
+            <aside className="puck-studio-history" onMouseDown={(event) => event.stopPropagation()}>
+              <div className="puck-studio-history-head"><div><strong>История версий</strong><small>{versions.length} сохранений</small></div><button type="button" onClick={() => setHistoryOpen(false)}>×</button></div>
+              <div className="puck-studio-history-list">
+                {versions.length === 0 && <div className="puck-studio-empty">История начнёт накапливаться после миграции и новых сохранений.</div>}
+                {versions.map((item) => (
+                  <div className="puck-studio-history-item" key={item.id}>
+                    <div><strong>v{item.version}</strong><span>{item.action}</span></div>
+                    <small>{new Date(item.createdAt).toLocaleString("ru-RU")}</small>
+                    <button type="button" disabled={historyBusy || item.version === remote?.version} onClick={() => void rollback(item.version)}>Откатить сюда</button>
+                  </div>
+                ))}
+              </div>
+            </aside>
+          </div>
+        )}
+
+        {preview && previewData && (
+          <div className="puck-studio-modal-backdrop" onMouseDown={() => setPreview(null)}>
+            <section className="puck-studio-preview" onMouseDown={(event) => event.stopPropagation()}>
+              <header><div><strong>{previewLabel}</strong><small>{preview === "published" ? "CMS published_data" : "Puck draft"}</small></div><button type="button" onClick={() => setPreview(null)}>×</button></header>
+              <div className="puck-studio-preview-frame"><Render config={config} data={previewData} /></div>
+            </section>
+          </div>
+        )}
 
         <div className="puck-studio-editor">
           <Puck
