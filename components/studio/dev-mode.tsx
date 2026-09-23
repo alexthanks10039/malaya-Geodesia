@@ -218,6 +218,11 @@ export function StudioDevMode(){
   };
 
   useEffect(()=>{
+    const studioPreview=new URLSearchParams(window.location.search).get("studioPreview")==="1";
+    if(studioPreview){
+      setEnabled(false);
+      return;
+    }
     const saved=localStorage.getItem(DEV_ENABLED_KEY)==="1";
     const queryEnabled=new URLSearchParams(window.location.search).get("dev")==="1";
     setEnabled(saved||queryEnabled);
