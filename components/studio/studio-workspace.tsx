@@ -346,6 +346,49 @@ function readCss(element: Element): StudioCssOverrides {
   };
 }
 
+function applyConstraints(element: HTMLElement, constraints?: StudioLayoutConstraints): void {
+  if (!constraints) return;
+  const parent = element.parentElement;
+  if (constraints.horizontal || constraints.vertical) {
+    element.style.position = "absolute";
+    if (parent && window.getComputedStyle(parent).position === "static") {
+      (parent as HTMLElement).style.position = "relative";
+    }
+  }
+
+  const horizontal = constraints.horizontal ?? "none";
+  if (horizontal === "left") {
+    element.style.left = "0";
+    element.style.right = "auto";
+  } else if (horizontal === "right") {
+    element.style.left = "auto";
+    element.style.right = "0";
+  } else if (horizontal === "stretch") {
+    element.style.left = "0";
+    element.style.right = "0";
+    element.style.width = "auto";
+  } else {
+    element.style.left = "auto";
+    element.style.right = "auto";
+  }
+
+  const vertical = constraints.vertical ?? "none";
+  if (vertical === "top") {
+    element.style.top = "0";
+    element.style.bottom = "auto";
+  } else if (vertical === "bottom") {
+    element.style.top = "auto";
+    element.style.bottom = "0";
+  } else if (vertical === "stretch") {
+    element.style.top = "0";
+    element.style.bottom = "0";
+    element.style.height = "auto";
+  } else {
+    element.style.top = "auto";
+    element.style.bottom = "auto";
+  }
+}
+
 function applyPositionOffset(element: HTMLElement, offset?: StudioPositionOffset): void {
   if (!offset) {
     element.style.translate = "";
@@ -427,6 +470,10 @@ function insertRuntimeBlocks(doc: Document, page: StudioState["pages"][string], 
         ? override.positionOffset
         : override.responsivePositionOffset?.[device] ?? override.positionOffset;
       applyPositionOffset(element, offset);
+      const constraints = device === "desktop"
+        ? override.constraints
+        : override.responsiveConstraints?.[device] ?? override.constraints;
+      applyConstraints(element, constraints);
       parent.appendChild(element);
     }
   }
@@ -449,6 +496,10 @@ function applyPageState(doc: Document, state: StudioState, path: string, device:
       ? override.positionOffset
       : override.responsivePositionOffset?.[device] ?? override.positionOffset;
     applyPositionOffset(element, offset);
+    const constraints = device === "desktop"
+      ? override.constraints
+      : override.responsiveConstraints?.[device] ?? override.constraints;
+    applyConstraints(element, constraints);
 
     if (override.hidden) {
       element.style.setProperty("display", "none");
