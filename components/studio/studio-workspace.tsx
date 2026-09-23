@@ -55,6 +55,7 @@ import type {
   StudioComment,
   StudioCssOverrides,
   StudioElementOverride,
+  StudioPositionOffset,
   StudioInsertedBlock,
   StudioState,
   StudioResponsiveDevice,
@@ -309,6 +310,14 @@ function readCss(element: Element): StudioCssOverrides {
   };
 }
 
+function applyPositionOffset(element: HTMLElement, offset?: StudioPositionOffset): void {
+  if (!offset) {
+    element.style.translate = "";
+    return;
+  }
+  element.style.translate = Math.round(offset.x) + "px " + Math.round(offset.y) + "px";
+}
+
 function applyCss(element: HTMLElement, css?: StudioCssOverrides): void {
   if (!css) return;
 
@@ -378,6 +387,10 @@ function insertRuntimeBlocks(doc: Document, page: StudioState["pages"][string], 
     if (element) {
       const responsive = override.responsiveCss?.[device];
       if (responsive) applyCss(element, responsive);
+      const offset = device === "desktop"
+        ? override.positionOffset
+        : override.responsivePositionOffset?.[device] ?? override.positionOffset;
+      applyPositionOffset(element, offset);
       parent.appendChild(element);
     }
   }
@@ -396,6 +409,10 @@ function applyPageState(doc: Document, state: StudioState, path: string, device:
 
     applyCss(element, override.css);
     if (device !== "desktop") applyCss(element, override.responsiveCss?.[device]);
+    const offset = device === "desktop"
+      ? override.positionOffset
+      : override.responsivePositionOffset?.[device] ?? override.positionOffset;
+    applyPositionOffset(element, offset);
 
     if (override.hidden) {
       element.style.setProperty("display", "none");
@@ -502,6 +519,11 @@ export function StudioWorkspace() {
   const filteredTree = useMemo(() => filterTree(nodes, search), [nodes, search]);
   const activeOverride = selected ? state.pages[pagePath]?.[selected.id] : undefined;
   const activeResponsiveCss = selected && device !== "desktop" ? activeOverride?.responsiveCss?.[device] : undefined;
+  const activePositionOffset = selected
+    ? device === "desktop"
+      ? activeOverride?.positionOffset
+      : activeOverride?.responsivePositionOffset?.[device] ?? activeOverride?.positionOffset
+    : undefined;
   const styleForDevice = (property: keyof StudioCssOverrides) =>
     device === "desktop"
       ? selected?.css[property]
@@ -509,7 +531,6 @@ export function StudioWorkspace() {
   const pageInfo = studioPages.find((page) => page.path === pagePath) ?? studioPages[0];
   const selectedIndex = selected ? flatNodes.findIndex((node) => node.id === selected.id) : -1;
   const selectedPosition = selectedIndex >= 0 ? selectedIndex + 1 : 0;
-
   const notify = useCallback((message: string) => {
     setToast(message);
     window.setTimeout(() => setToast(""), 1500);
@@ -550,6 +571,41 @@ export function StudioWorkspace() {
   const finishLiveEdit = useCallback(() => {
     liveEditRef.current = null;
   }, []);
+
+  const updatePositionOffset = useCallback((id: string, offset: StudioPositionOffset, editKey?: string) => {
+    const currentState = stateRef.current;
+    const page = currentState.pages[pagePath] ?? {};
+    const current = page[id] ?? {};
+    const next = {
+      ...currentState,
+      pages: {
+        ...currentState.pages,
+        [pagePath]: {
+          ...page,
+          [id]: device === "desktop"
+            ? { ...current, positionOffset: { x: Math.round(offset.x), y: Math.round(offset.y) } }
+            : {
+                ...current,
+                responsivePositionOffset: {
+                  ...(current.responsivePositionOffset ?? {}),
+                  [device]: { x: Math.round(offset.x), y: Math.round(offset.y) },
+                },
+              },
+        },
+      },
+    };
+    if (editKey) {
+      if (liveEditRef.current !== editKey) {
+        undoRef.current.push(currentState);
+        if (undoRef.current.length > 50) undoRef.current.shift();
+        redoRef.current = [];
+        liveEditRef.current = editKey;
+      }
+      writeState(next);
+    } else {
+      commit(next);
+    }
+  }, [commit, device, pagePath, writeState]);
 
   const refreshFrame = useCallback(() => {
     frameRef.current?.contentWindow?.location.reload();
@@ -688,6 +744,155 @@ export function StudioWorkspace() {
       observer.disconnect();
     };
   }, [pagePath, previewMode, selectInFrame, selected, state]);
+
+  useEffect(() => {
+    const doc = frameRef.current?.contentDocument ?? null;
+    if (!doc?.body || !selected || previewMode !== "select") return;
+    const element = findElement(doc, selected.id);
+    if (!element) return;
+
+    const guideHost = doc.createElement("div");
+    guideHost.id = "malaya-studio-guides";
+    guideHost.innerHTML = '<span data-guide="vertical"></span><span data-guide="horizontal"></span>';
+    doc.body.appendChild(guideHost);
+    const verticalGuide = guideHost.querySelector('[data-guide="vertical"]');
+    const horizontalGuide = guideHost.querySelector('[data-guide="horizontal"]');
+    if (!(verticalGuide instanceof HTMLElement) || !(horizontalGuide instanceof HTMLElement)) {
+      guideHost.remove();
+      return;
+    }
+
+    const currentState = stateRef.current;
+    const override = currentState.pages[pagePath]?.[selected.id];
+    const startOffset = device === "desktop"
+      ? override?.positionOffset ?? { x: 0, y: 0 }
+      : override?.responsivePositionOffset?.[device] ?? override?.positionOffset ?? { x: 0, y: 0 };
+    const startRect = element.getBoundingClientRect();
+    const parent = element.parentElement;
+    const candidatesX: number[] = [];
+    const candidatesY: number[] = [];
+
+    if (parent) {
+      const rect = parent.getBoundingClientRect();
+      candidatesX.push(rect.left, rect.left + rect.width / 2, rect.right);
+      candidatesY.push(rect.top, rect.top + rect.height / 2, rect.bottom);
+      parent.querySelectorAll("[data-studio-node-id]").forEach((node) => {
+        if (!(node instanceof HTMLElement) || node === element) return;
+        const rect = node.getBoundingClientRect();
+        candidatesX.push(rect.left, rect.left + rect.width / 2, rect.right);
+        candidatesY.push(rect.top, rect.top + rect.height / 2, rect.bottom);
+      });
+    }
+
+    let drag: { startX: number; startY: number } | null = null;
+
+    const calculateSnap = (rawX: number, rawY: number) => {
+      const grid = 8;
+      let nextX = Math.round(rawX / grid) * grid;
+      let nextY = Math.round(rawY / grid) * grid;
+      let xGuide: number | null = null;
+      let yGuide: number | null = null;
+
+      const proposedLeft = startRect.left + (nextX - startOffset.x);
+      const proposedTop = startRect.top + (nextY - startOffset.y);
+      const sourceX = [proposedLeft, proposedLeft + startRect.width / 2, proposedLeft + startRect.width];
+      const sourceY = [proposedTop, proposedTop + startRect.height / 2, proposedTop + startRect.height];
+
+      let bestX = 7;
+      for (const candidate of candidatesX) {
+        for (const point of sourceX) {
+          const distance = Math.abs(candidate - point);
+          if (distance < bestX) {
+            bestX = distance;
+            nextX += candidate - point;
+            xGuide = candidate;
+          }
+        }
+      }
+
+      const adjustedTop = startRect.top + (nextY - startOffset.y);
+      const adjustedBottomPoints = [adjustedTop, adjustedTop + startRect.height / 2, adjustedTop + startRect.height];
+      let bestY = 7;
+      for (const candidate of candidatesY) {
+        for (const point of adjustedBottomPoints) {
+          const distance = Math.abs(candidate - point);
+          if (distance < bestY) {
+            bestY = distance;
+            nextY += candidate - point;
+            yGuide = candidate;
+          }
+        }
+      }
+
+      return { x: Math.round(nextX), y: Math.round(nextY), xGuide, yGuide };
+    };
+
+    const updateGuideUi = (result: { x: number; y: number; xGuide: number | null; yGuide: number | null }) => {
+      element.style.translate = result.x + "px " + result.y + "px";
+      if (result.xGuide === null) {
+        verticalGuide.style.opacity = "0";
+      } else {
+        verticalGuide.style.left = Math.round(result.xGuide) + "px";
+        verticalGuide.style.opacity = "1";
+      }
+      if (result.yGuide === null) {
+        horizontalGuide.style.opacity = "0";
+      } else {
+        horizontalGuide.style.top = Math.round(result.yGuide) + "px";
+        horizontalGuide.style.opacity = "1";
+      }
+      const resizeUi = doc.getElementById("malaya-studio-resize-ui");
+      if (resizeUi instanceof HTMLElement) {
+        const rect = element.getBoundingClientRect();
+        resizeUi.style.left = rect.left + "px";
+        resizeUi.style.top = rect.top + "px";
+      }
+    };
+
+    const pointerDown = (event: PointerEvent) => {
+      if (event.button !== 0) return;
+      if (event.target instanceof Element && event.target.closest("[data-resize]")) return;
+      if (event.target instanceof Element && event.target.closest("[data-studio-dev-ui]")) return;
+      drag = { startX: event.clientX, startY: event.clientY };
+      element.setPointerCapture?.(event.pointerId);
+      element.style.cursor = "move";
+    };
+
+    const pointerMove = (event: PointerEvent) => {
+      if (!drag) return;
+      event.preventDefault();
+      event.stopPropagation();
+      const result = calculateSnap(
+        startOffset.x + event.clientX - drag.startX,
+        startOffset.y + event.clientY - drag.startY,
+      );
+      updateGuideUi(result);
+      updatePositionOffset(selected.id, { x: result.x, y: result.y }, "move:" + device + ":" + selected.id);
+    };
+
+    const pointerUp = () => {
+      if (!drag) return;
+      drag = null;
+      element.style.cursor = "";
+      verticalGuide.style.opacity = "0";
+      horizontalGuide.style.opacity = "0";
+      liveEditRef.current = null;
+    };
+
+    element.addEventListener("pointerdown", pointerDown);
+    doc.addEventListener("pointermove", pointerMove, true);
+    doc.addEventListener("pointerup", pointerUp, true);
+    doc.addEventListener("pointercancel", pointerUp, true);
+
+    return () => {
+      element.removeEventListener("pointerdown", pointerDown);
+      doc.removeEventListener("pointermove", pointerMove, true);
+      doc.removeEventListener("pointerup", pointerUp, true);
+      doc.removeEventListener("pointercancel", pointerUp, true);
+      guideHost.remove();
+      element.style.cursor = "";
+    };
+  }, [device, pagePath, previewMode, selected, updatePositionOffset]);
 
   useEffect(() => {
     const doc = frameRef.current?.contentDocument ?? null;
@@ -951,9 +1156,13 @@ export function StudioWorkspace() {
     if (!current?.responsiveCss?.[device]) return;
     const responsiveCss = { ...(current.responsiveCss ?? {}) };
     delete responsiveCss[device];
+    const responsivePositionOffset = { ...(current.responsivePositionOffset ?? {}) };
+    delete responsivePositionOffset[device];
     const nextOverride = { ...current };
     if (Object.keys(responsiveCss).length) nextOverride.responsiveCss = responsiveCss;
     else delete nextOverride.responsiveCss;
+    if (Object.keys(responsivePositionOffset).length) nextOverride.responsivePositionOffset = responsivePositionOffset;
+    else delete nextOverride.responsivePositionOffset;
     page[selected.id] = nextOverride;
     commit({ ...state, pages: { ...state.pages, [pagePath]: page } });
     refreshFrame();
@@ -1323,7 +1532,7 @@ export function StudioWorkspace() {
         </div>
 
         <div className="studio-v2-toolbar-right">
-          <button type="button" className={showGrid ? "active" : ""} onClick={() => setShowGrid((value) => !value)}><Grid3X3 size={14} /> Grid</button>
+          <button type="button" className={showGrid ? "active" : ""} onClick={() => setShowGrid((value) => !value)}><Grid3X3 size={14} /> Grid / Snap</button>
           <div className="studio-v2-device">
             <button type="button" className={device === "desktop" ? "active" : ""} onClick={() => setDevice("desktop")} title="Desktop"><Monitor size={14} /></button>
             <button type="button" className={device === "tablet" ? "active" : ""} onClick={() => setDevice("tablet")} title="Tablet"><Tablet size={14} /></button>
@@ -1576,6 +1785,33 @@ export function StudioWorkspace() {
 
                     {openSections[section] && section === "layout" ? (
                       <div className="studio-v2-section-body">
+                        <div className="studio-v2-position-grid">
+                          <label className="studio-v2-field">
+                            <span>X / ${device === "desktop" ? "base" : DEVICE_LABEL[device]}</span>
+                            <input
+                              type="number"
+                              value={Math.round(activePositionOffset?.x ?? 0)}
+                              onFocus={() => { liveEditRef.current = null; }}
+                              onChange={(event) => updatePositionOffset(selected.id, { x: Number(event.target.value) || 0, y: activePositionOffset?.y ?? 0 }, "position:" + device + ":" + selected.id)}
+                              onBlur={finishLiveEdit}
+                            />
+                          </label>
+                          <label className="studio-v2-field">
+                            <span>Y / ${device === "desktop" ? "base" : DEVICE_LABEL[device]}</span>
+                            <input
+                              type="number"
+                              value={Math.round(activePositionOffset?.y ?? 0)}
+                              onFocus={() => { liveEditRef.current = null; }}
+                              onChange={(event) => updatePositionOffset(selected.id, { x: activePositionOffset?.x ?? 0, y: Number(event.target.value) || 0 }, "position:" + device + ":" + selected.id)}
+                              onBlur={finishLiveEdit}
+                            />
+                          </label>
+                          <button type="button" className="studio-v2-position-reset" onClick={() => {
+                            updatePositionOffset(selected.id, { x: 0, y: 0 });
+                            notify("Позиция сброшена");
+                          }}><RotateCcw size={12} /> Reset offset</button>
+                        </div>
+
                         <div className="studio-v2-field-grid">
                           {(["display", "width", "maxWidth", "height", "gap", "position", "zIndex"] as const).map((property) => (
                             <label className="studio-v2-field" key={property}>
