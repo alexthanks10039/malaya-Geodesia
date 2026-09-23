@@ -781,7 +781,7 @@ export function StudioWorkspace() {
 
   useEffect(() => {
     const doc = frameRef.current?.contentDocument ?? null;
-    if (!doc?.body || !selected || selectedIds.length > 1 || previewMode !== "select") return;
+    if (!doc?.body || !selected || previewMode !== "select") return;
     const element = findElement(doc, selected.id);
     if (!element) return;
 
@@ -802,6 +802,11 @@ export function StudioWorkspace() {
       ? override?.positionOffset ?? { x: 0, y: 0 }
       : override?.responsivePositionOffset?.[device] ?? override?.positionOffset ?? { x: 0, y: 0 };
     const startRect = element.getBoundingClientRect();
+    const isGroup = selectedIds.length > 1;
+    const groupElements = (isGroup ? selectedIds : [selected.id])
+      .map((id) => findElement(doc, id))
+      .filter((item): item is HTMLElement => Boolean(item));
+    const groupStartRects = groupElements.map((item) => ({ element: item, rect: item.getBoundingClientRect() }));
     const parent = element.parentElement;
     const candidatesX: number[] = [];
     const candidatesY: number[] = [];
@@ -887,15 +892,45 @@ export function StudioWorkspace() {
       if (event.button !== 0) return;
       if (event.target instanceof Element && event.target.closest("[data-resize]")) return;
       if (event.target instanceof Element && event.target.closest("[data-studio-dev-ui]")) return;
+      const current = stateRef.current.pages[pagePath]?.[selected.id];
+      if (current?.locked) return;
       drag = { startX: event.clientX, startY: event.clientY };
       element.setPointerCapture?.(event.pointerId);
-      element.style.cursor = "move";
+      groupElements.forEach((item) => { item.style.cursor = "move"; item.dataset.studioGroupLast = "0,0"; });
     };
 
     const pointerMove = (event: PointerEvent) => {
       if (!drag) return;
       event.preventDefault();
       event.stopPropagation();
+      if (isGroup) {
+        const dx = Math.round((event.clientX - drag.startX) / 8) * 8;
+        const dy = Math.round((event.clientY - drag.startY) / 8) * 8;
+        groupStartRects.forEach(({ element: item, rect }, index) => {
+          void rect;
+          const id = selectedIds[index];
+          const current = stateRef.current.pages[pagePath]?.[id];
+          if (current?.locked) return;
+          const offset = device === "desktop"
+            ? current?.positionOffset ?? { x: 0, y: 0 }
+            : current?.responsivePositionOffset?.[device] ?? current?.positionOffset ?? { x: 0, y: 0 };
+          item.style.translate = Math.round(offset.x) + "px " + Math.round(offset.y) + "px";
+        });
+        moveSelectionBy(dx - (dx === 0 ? 0 : Math.round((event.clientX - drag.startX - dx) * 0)), dy - (dy === 0 ? 0 : Math.round((event.clientY - drag.startY - dy) * 0)), "move-group:" + device + ":" + selectedIds.join(","));
+        return;
+      }
+      if (isGroup) {
+        const dx = Math.round((event.clientX - drag.startX) / 8) * 8;
+        const dy = Math.round((event.clientY - drag.startY) / 8) * 8;
+        const lastKey = "group-drag:" + device + ":" + selectedIds.join(",");
+        const previous = (groupElements as HTMLElement[]).map((item) => item.dataset.studioGroupLast || "0,0");
+        const previousDelta = previous[0].split(",").map(Number);
+        const deltaX = dx - (previousDelta[0] || 0);
+        const deltaY = dy - (previousDelta[1] || 0);
+        groupElements.forEach((item) => { item.dataset.studioGroupLast = dx + "," + dy; });
+        moveSelectionBy(deltaX, deltaY, lastKey);
+        return;
+      }
       const result = calculateSnap(
         startOffset.x + event.clientX - drag.startX,
         startOffset.y + event.clientY - drag.startY,
@@ -907,7 +942,7 @@ export function StudioWorkspace() {
     const pointerUp = () => {
       if (!drag) return;
       drag = null;
-      element.style.cursor = "";
+      groupElements.forEach((item) => { item.style.cursor = ""; delete item.dataset.studioGroupLast; });
       verticalGuide.style.opacity = "0";
       horizontalGuide.style.opacity = "0";
       liveEditRef.current = null;
@@ -924,9 +959,9 @@ export function StudioWorkspace() {
       doc.removeEventListener("pointerup", pointerUp, true);
       doc.removeEventListener("pointercancel", pointerUp, true);
       guideHost.remove();
-      element.style.cursor = "";
+      groupElements.forEach((item) => { item.style.cursor = ""; delete item.dataset.studioGroupLast; });
     };
-  }, [device, pagePath, previewMode, selected, selectedIds.length, updatePositionOffset]);
+  }, [device, pagePath, previewMode, selected, selectedIds, moveSelectionBy, updatePositionOffset]);
 
   useEffect(() => {
     const doc = frameRef.current?.contentDocument ?? null;
@@ -1587,6 +1622,54 @@ export function StudioWorkspace() {
     refreshFrame();
     window.setTimeout(() => selectInFrame(groupId), 0);
     notify("Frame создан");
+  }
+
+  function moveSelectionBy(dx: number, dy: number, editKey?: string) {
+    const ids = selectedIdsRef.current.length > 1
+      ? selectedIdsRef.current
+      : selected?.id
+        ? [selected.id]
+        : [];
+    if (!ids.length) return;
+
+    const currentState = stateRef.current;
+    const page = currentState.pages[pagePath] ?? {};
+    const nextPage = { ...page };
+    const currentOffsets: Record<string, StudioPositionOffset> = {};
+
+    ids.forEach((id) => {
+      const current = nextPage[id] ?? {};
+      if (current.locked) return;
+      const offset = device === "desktop"
+        ? current.positionOffset ?? { x: 0, y: 0 }
+        : current.responsivePositionOffset?.[device] ?? current.positionOffset ?? { x: 0, y: 0 };
+      currentOffsets[id] = offset;
+      const nextOffset = { x: Math.round(offset.x + dx), y: Math.round(offset.y + dy) };
+      nextPage[id] = device === "desktop"
+        ? { ...current, positionOffset: nextOffset }
+        : {
+            ...current,
+            responsivePositionOffset: {
+              ...(current.responsivePositionOffset ?? {}),
+              [device]: nextOffset,
+            },
+          };
+      const element = findElement(frameRef.current?.contentDocument ?? null, id);
+      if (element) element.style.translate = nextOffset.x + "px " + nextOffset.y + "px";
+    });
+
+    const nextState = { ...currentState, pages: { ...currentState.pages, [pagePath]: nextPage } };
+    if (editKey) {
+      if (liveEditRef.current !== editKey) {
+        undoRef.current.push(currentState);
+        if (undoRef.current.length > 50) undoRef.current.shift();
+        redoRef.current = [];
+        liveEditRef.current = editKey;
+      }
+      writeState(nextState);
+    } else {
+      commit(nextState);
+    }
   }
 
   function nudgeSelection(dx: number, dy: number) {
