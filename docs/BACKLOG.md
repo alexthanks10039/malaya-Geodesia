@@ -49,10 +49,10 @@
 
 ### B0.2 Database migration safety
 Статус: следующий блок.
-- [ ] сделать migration runner идемпотентным и наблюдаемым;
-- [ ] проверить `0001`–`0005`;
-- [ ] добавить migration status;
-- [ ] исключить запуск конкурентных migrations;
+- [x] сделать migration runner идемпотентным и наблюдаемым;
+- [x] миграции `0001`–`0008` добавлены и проверены статически;
+- [x] добавить migration status;
+- [x] исключить запуск конкурентных migrations;
 - [ ] проверить production DB;
 - [ ] добавить понятный failure state.
 
@@ -62,8 +62,8 @@
 - [x] create/read/list/stats;
 - [x] status/history;
 - [x] persistence failure не маскируется;
-- [ ] убрать in-memory fallback для production DB reads;
-- [ ] добавить idempotency key;
+- [x] убрать in-memory fallback для production DB reads;
+- [x] добавить idempotency key;
 - [ ] добавить created/updated source metadata;
 - [ ] добавить server-side schema validation.
 
@@ -74,32 +74,32 @@
 - [x] webhook;
 - [x] secret;
 - [x] update dedup;
-- [ ] retry failed updates;
-- [ ] notification outbox;
-- [ ] delivery status;
+- [x] retry failed updates;
+- [x] notification outbox;
+- [x] delivery status;
 - [ ] защита от Telegram API timeout/rate-limit;
 - [ ] webhook health/status.
 
 ### B0.5 Public Lead API protection
-- [ ] rate limiting;
-- [ ] request size limit;
+- [x] rate limiting;
+- [x] request size limit;
 - [ ] stricter phone validation;
 - [ ] idempotency;
 - [ ] spam/bot protection;
-- [ ] structured error codes;
+- [x] structured error codes;
 - [ ] request correlation ID.
 
 ## P1 — Operator backend
 
 ### B1.1 Lead REST API
-- [ ] `GET /api/admin/leads`;
-- [ ] `GET /api/admin/leads/:id`;
-- [ ] `PATCH /api/admin/leads/:id`;
-- [ ] status transitions;
-- [ ] assignment;
-- [ ] pagination;
-- [ ] filtering;
-- [ ] sorting;
+- [x] `GET /api/admin/leads`;
+- [x] `GET /api/admin/leads/:id`;
+- [x] `PATCH /api/admin/leads` для статуса и assignment;
+- [x] status transitions;
+- [x] assignment;
+- [x] pagination;
+- [x] filtering;
+- [x] sorting;
 - [ ] audit.
 
 ### B1.2 Telegram operator workflow
@@ -122,7 +122,7 @@
 ## P1 — Reliability
 
 ### B1.4 Health
-- [ ] `/api/health`;
+- [x] `/api/health`;
 - [ ] DB connectivity;
 - [ ] Telegram configuration;
 - [ ] migration state;
@@ -185,14 +185,14 @@
 # Current execution order
 Работаем не параллельно, а последовательно:
 1. B0.1 Auth hardening → код сделан.
-2. B0.2 DB migration safety → следующий.
-3. B0.3 Lead persistence + idempotency.
-4. B0.4 Telegram reliability/outbox.
-5. B0.5 Public API protection.
-6. B1.1 Operator REST API.
+2. B0.2 DB migration safety → выполнено в коде.
+3. B0.3 Lead persistence + idempotency → выполнено в коде.
+4. B0.4 Telegram reliability/outbox → выполнено в коде.
+5. B0.5 Public API protection → выполнено в коде.
+6. B1.1 Operator REST API → выполнено в коде.
 7. B1.2 Telegram operator workflow.
 8. B1.3 Unified audit.
-9. B1.4 Health/readiness.
+9. B1.4 Health/readiness → health выполнен, readiness остаётся.
 10. B1.5 Error handling + structured logging.
 11. B1.6 Backend integration tests.
 12. Затем P2/P3.
