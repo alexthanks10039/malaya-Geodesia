@@ -73,3 +73,6 @@ LIVE PREVIEW: https://....trycloudflare.com
 Все три режима работают поверх текущего `malaya-Geodesia`. Отдельного фронтенда, отдельного API или отдельного репозитория не создаётся.
 
 <!-- deployment-heartbeat: 2026-09-23 -->
+## Документация
+
+Полная техническая документация проекта: [docs/PROJECT-DOCUMENTATION.md](docs/PROJECT-DOCUMENTATION.md)
