@@ -35,6 +35,7 @@ export type StudioInsertedBlock = {
   kind: "text" | "button" | "divider" | "container";
   text: string;
   href?: string;
+  order?: number;
   css?: StudioCssOverrides;
 };
 
