@@ -367,8 +367,8 @@ function createInsertedElement(doc: Document, block: StudioInsertedBlock, id: st
 
 function insertRuntimeBlocks(doc: Document, page: StudioState["pages"][string], device: StudioResponsiveDevice): void {
   const inserted = Object.entries(page || {})
-    .filter(([, override]) => Boolean(override.inserted))
-    .sort(([, left], [, right]) => (left.inserted?.order ?? Number.MAX_SAFE_INTEGER) - (right.inserted?.order ?? Number.MAX_SAFE_INTEGER));
+    .filter((entry): entry is [string, StudioElementOverride & { inserted: StudioInsertedBlock }] => Boolean(entry[1].inserted))
+    .sort(([, left], [, right]) => (left.inserted.order ?? Number.MAX_SAFE_INTEGER) - (right.inserted.order ?? Number.MAX_SAFE_INTEGER));
   for (const [id, override] of inserted) {
     const block = override.inserted;
     const parent = findElement(doc, block.parentId);
