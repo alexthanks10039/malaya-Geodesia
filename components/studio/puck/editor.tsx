@@ -137,12 +137,12 @@ export function PuckStudio() {
         ? fetch(API_BASE + "/" + currentRemote.id, {
             method: "PATCH",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ slug: "home", data: cmsData }),
+            body: JSON.stringify({ slug: "home", data: cmsData, expectedVersion: currentRemote?.version }),
           })
         : fetch(API_BASE, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ slug: "home", data: cmsData }),
+            body: JSON.stringify({ slug: "home", data: cmsData, expectedVersion: page?.version }),
           });
 
       const response = await request;
@@ -201,7 +201,7 @@ export function PuckStudio() {
       const publishResponse = await fetch(API_BASE + "/" + page.id, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ action: "publish" }),
+        body: JSON.stringify({ action: "publish", expectedVersion: page.version }),
       });
       const publishPayload = await publishResponse.json() as { ok?: boolean; item?: CmsPage; message?: string };
       if (!publishResponse.ok || !publishPayload.ok || !publishPayload.item) {
