@@ -29,7 +29,13 @@ const filters = [
   { key: "scan", label: "SCAN", icon: ScanLine },
 ] as const;
 
-export function GeospatialIndex() {
+export function GeospatialIndex({
+  title = "Участок читается как массив пространственных данных.",
+  lead = "Здесь можно быстро переключать слои, искать набор данных и выбирать объект. Архитектура блока уже готова к подключению реального каталога PostGIS.",
+}: {
+  title?: string;
+  lead?: string;
+} = {}) {
   const [query, setQuery] = useState("");
   const [selectedId, setSelectedId] = useState(records[0].id);
   const [layers, setLayers] = useState({ points: true, grid: true, scan: true });
