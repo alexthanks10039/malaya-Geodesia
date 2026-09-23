@@ -1,10 +1,10 @@
-import { StudioPageEditor } from "@/components/studio/page-editor";
+import { StudioWorkspace } from "@/components/studio/studio-workspace";
 
 export const metadata = {
   title: "Malaya Studio",
-  description: "Внутренний визуальный редактор проекта.",
+  description: "Внутренний визуальный редактор и проектировщик сайта.",
 };
 
 export default function StudioPage() {
-  return <StudioPageEditor />;
+  return <StudioWorkspace />;
 }
