@@ -313,3 +313,18 @@ body:has(.studio-v2) main{margin:0!important;max-width:none!important;padding:0!
   .studio-v2-position-grid{grid-template-columns:1fr 1fr}
   .studio-v2-position-reset{grid-column:1/-1;width:100%}
 }
+
+.studio-v2-layer-row.multi-active{border-color:#495440;background:#181e16}
+.studio-v2-multi-badge{margin-left:auto;color:#d9ff52!important;border:1px solid rgba(217,255,82,.25);border-radius:999px;padding:3px 5px;font:800 6px ui-monospace,SFMono-Regular,monospace!important;white-space:nowrap}
+.studio-v2-batch-panel{display:grid;gap:8px;padding:9px;border:1px solid #35402f;border-radius:8px;background:#12170f}
+.studio-v2-batch-title{display:flex;align-items:baseline;justify-content:space-between;gap:8px}
+.studio-v2-batch-title span{color:#d9ff52;font:800 6px ui-monospace,SFMono-Regular,monospace;letter-spacing:.08em}
+.studio-v2-batch-title b{color:#b7c0b1;font:800 7px ui-monospace,SFMono-Regular,monospace}
+.studio-v2-batch-actions{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:4px}
+.studio-v2-batch-actions button,.studio-v2-clear-selection{display:inline-flex;align-items:center;justify-content:center;gap:4px;min-height:29px;border:1px solid #303a2c;border-radius:6px;background:#0f130d;color:#84917d;font:800 6px ui-monospace,SFMono-Regular,monospace}
+.studio-v2-batch-actions button:hover,.studio-v2-clear-selection:hover{color:#d9ff52;border-color:#5a694f;background:#182018}
+.studio-v2-clear-selection{width:100%;color:#697668}
+@media(max-width:700px){
+  .studio-v2-multi-badge{display:none}
+  .studio-v2-batch-actions{grid-template-columns:1fr 1fr}
+}

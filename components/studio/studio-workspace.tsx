@@ -489,6 +489,7 @@ export function StudioWorkspace() {
   const [pagePath, setPagePath] = useState("/");
   const [nodes, setNodes] = useState<NodeSummary[]>([]);
   const [selected, setSelected] = useState<SelectedElement | null>(null);
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [state, setState] = useState<StudioState>(() => readStudioState());
   const [initialState] = useState<StudioState>(() => readStudioState());
   const [search, setSearch] = useState("");
@@ -514,6 +515,8 @@ export function StudioWorkspace() {
   const [mobilePanel, setMobilePanel] = useState<"none" | "left" | "right">("none");
   const stateRef = useRef(state);
   const draggedNodeRef = useRef<string | null>(null);
+  const selectedIdsRef = useRef(selectedIds);
+  useEffect(() => { selectedIdsRef.current = selectedIds; }, [selectedIds]);
 
   const flatNodes = useMemo(() => flatten(nodes), [nodes]);
   const filteredTree = useMemo(() => filterTree(nodes, search), [nodes, search]);
@@ -614,13 +617,25 @@ export function StudioWorkspace() {
   }, []);
 
   const selectInFrame = useCallback(
-    (id: string) => {
+    (id: string, additive = false) => {
       const doc = frameRef.current?.contentDocument ?? null;
       const element = findElement(doc, id);
       if (!element) return;
 
-      doc?.querySelectorAll(".studio-frame-selected").forEach((item) => item.classList.remove("studio-frame-selected"));
-      element.classList.add("studio-frame-selected");
+      const currentSelection = selectedIdsRef.current;
+      const nextSelection = additive
+        ? (currentSelection.includes(id) && currentSelection.length === 1
+            ? currentSelection
+            : currentSelection.includes(id)
+              ? currentSelection.filter((item) => item !== id)
+              : [...currentSelection, id])
+        : [id];
+      if (!nextSelection.length) return;
+      doc?.querySelectorAll(".studio-frame-selected,.studio-frame-multi-selected").forEach((item) => item.classList.remove("studio-frame-selected", "studio-frame-multi-selected"));
+      nextSelection.forEach((itemId) => {
+        const target = findElement(doc, itemId);
+        target?.classList.add(itemId === id ? "studio-frame-selected" : "studio-frame-multi-selected");
+      });
 
       const nextSelected: SelectedElement = {
         id,
@@ -636,6 +651,7 @@ export function StudioWorkspace() {
       };
 
       setSelected(nextSelected);
+      setSelectedIds(nextSelection);
       setTextDraft(nextSelected.textEditable ? directText(element) : "");
       if (window.innerWidth <= 700) setMobilePanel("right");
       window.requestAnimationFrame(() => element.scrollIntoView({ block: "center", inline: "nearest", behavior: "smooth" }));
@@ -656,6 +672,7 @@ export function StudioWorkspace() {
         ? "[data-studio-node-id]:hover{outline:1px dashed rgba(217,255,82,.92)!important;outline-offset:2px;cursor:crosshair!important}"
         : "[data-studio-node-id]:hover{cursor:default!important}",
       "[data-studio-node-id].studio-frame-selected{outline:2px solid #d9ff52!important;outline-offset:3px;box-shadow:0 0 0 4px rgba(217,255,82,.16)!important}",
+      "[data-studio-node-id].studio-frame-multi-selected{outline:1px solid rgba(217,255,82,.75)!important;outline-offset:2px;box-shadow:0 0 0 2px rgba(217,255,82,.08)!important}",
       "[data-studio-inserted]{outline-offset:2px}",
     ].join("");
 
@@ -670,6 +687,12 @@ export function StudioWorkspace() {
     const nextNodes = collectTree(doc);
     setNodes(nextNodes);
 
+    if (selectedIds.length) {
+      doc.querySelectorAll(".studio-frame-selected,.studio-frame-multi-selected").forEach((item) => {
+        item.classList.remove("studio-frame-selected", "studio-frame-multi-selected");
+      });
+      selectedIds.forEach((id) => findElement(doc, id)?.classList.add(id === selected?.id ? "studio-frame-selected" : "studio-frame-multi-selected"));
+    }
     if (selected?.id) {
       const selectedNow = findElement(doc, selected.id);
       if (selectedNow) {
@@ -699,7 +722,7 @@ export function StudioWorkspace() {
       if (!(element instanceof HTMLElement)) return;
       event.preventDefault();
       event.stopPropagation();
-      selectInFrame(element.getAttribute("data-studio-node-id") ?? "");
+      selectInFrame(element.getAttribute("data-studio-node-id") ?? "", event.shiftKey);
     };
 
     doc.addEventListener("click", clickHandler, true);
@@ -743,11 +766,11 @@ export function StudioWorkspace() {
       doc.removeEventListener("click", interactClickHandler, true);
       observer.disconnect();
     };
-  }, [pagePath, previewMode, selectInFrame, selected, state]);
+  }, [pagePath, previewMode, selectInFrame, selected, selectedIds, state]);
 
   useEffect(() => {
     const doc = frameRef.current?.contentDocument ?? null;
-    if (!doc?.body || !selected || previewMode !== "select") return;
+    if (!doc?.body || !selected || selectedIds.length > 1 || previewMode !== "select") return;
     const element = findElement(doc, selected.id);
     if (!element) return;
 
@@ -892,7 +915,7 @@ export function StudioWorkspace() {
       guideHost.remove();
       element.style.cursor = "";
     };
-  }, [device, pagePath, previewMode, selected, updatePositionOffset]);
+  }, [device, pagePath, previewMode, selected, selectedIds.length, updatePositionOffset]);
 
   useEffect(() => {
     const doc = frameRef.current?.contentDocument ?? null;
@@ -998,7 +1021,7 @@ export function StudioWorkspace() {
       doc.defaultView?.removeEventListener("resize", position);
       overlay.remove();
     };
-  }, [selected?.id, device, previewMode, pagePath]);
+  }, [selected?.id, device, previewMode, pagePath, selectedIds.length]);
 
   useEffect(() => {
     window.sessionStorage.setItem("malaya-studio-mode", "1");
@@ -1059,7 +1082,8 @@ export function StudioWorkspace() {
       if (event.key === "Escape" && !isTyping) {
         setMobilePanel("none");
         setSelected(null);
-        frameRef.current?.contentDocument?.querySelectorAll(".studio-frame-selected").forEach((item) => item.classList.remove("studio-frame-selected"));
+        setSelectedIds([]);
+        frameRef.current?.contentDocument?.querySelectorAll(".studio-frame-selected,.studio-frame-multi-selected").forEach((item) => item.classList.remove("studio-frame-selected", "studio-frame-multi-selected"));
       }
 
       if (!isTyping && event.key === "/") {
@@ -1176,6 +1200,7 @@ export function StudioWorkspace() {
     const next = { ...state, pages: { ...state.pages, [pagePath]: page } };
     commit(next);
     setSelected(null);
+    setSelectedIds([]);
     refreshFrame();
     notify("Элемент сброшен");
   }
@@ -1186,6 +1211,7 @@ export function StudioWorkspace() {
     delete pages[pagePath];
     commit({ ...state, pages });
     setSelected(null);
+    setSelectedIds([]);
     refreshFrame();
     notify("Страница сброшена");
   }
@@ -1198,6 +1224,7 @@ export function StudioWorkspace() {
     redoRef.current = [];
     writeState(next);
     setSelected(null);
+    setSelectedIds([]);
     refreshFrame();
     notify("Studio очищен");
   }
@@ -1344,6 +1371,94 @@ export function StudioWorkspace() {
     notify("Порядок блоков изменён");
   }
 
+  function applyBatchAlignment(mode: "left" | "centerX" | "right" | "top" | "centerY" | "bottom" | "distributeX" | "distributeY") {
+    const ids = selectedIds.length > 1 ? selectedIds : selected ? [selected.id] : [];
+    if (ids.length < 2) return;
+    const doc = frameRef.current?.contentDocument ?? null;
+    if (!doc) return;
+
+    const items = ids.map((id) => {
+      const element = findElement(doc, id);
+      if (!element) return null;
+      const rect = element.getBoundingClientRect();
+      const override = stateRef.current.pages[pagePath]?.[id];
+      const offset = device === "desktop"
+        ? override?.positionOffset ?? { x: 0, y: 0 }
+        : override?.responsivePositionOffset?.[device] ?? override?.positionOffset ?? { x: 0, y: 0 };
+      return { id, element, rect, offset };
+    }).filter((item): item is NonNullable<typeof item> => Boolean(item));
+
+    if (items.length < 2) return;
+
+    const deltas = new Map<string, { x: number; y: number }>();
+    if (mode === "left" || mode === "centerX" || mode === "right") {
+      const target = mode === "left"
+        ? Math.min(...items.map((item) => item.rect.left))
+        : mode === "right"
+          ? Math.max(...items.map((item) => item.rect.right))
+          : (Math.min(...items.map((item) => item.rect.left)) + Math.max(...items.map((item) => item.rect.right))) / 2;
+      items.forEach((item) => {
+        const point = mode === "left" ? item.rect.left : mode === "right" ? item.rect.right : item.rect.left + item.rect.width / 2;
+        deltas.set(item.id, { x: target - point, y: 0 });
+      });
+    } else if (mode === "top" || mode === "centerY" || mode === "bottom") {
+      const target = mode === "top"
+        ? Math.min(...items.map((item) => item.rect.top))
+        : mode === "bottom"
+          ? Math.max(...items.map((item) => item.rect.bottom))
+          : (Math.min(...items.map((item) => item.rect.top)) + Math.max(...items.map((item) => item.rect.bottom))) / 2;
+      items.forEach((item) => {
+        const point = mode === "top" ? item.rect.top : mode === "bottom" ? item.rect.bottom : item.rect.top + item.rect.height / 2;
+        deltas.set(item.id, { x: 0, y: target - point });
+      });
+    } else {
+      const axis = mode === "distributeX" ? "x" : "y";
+      const ordered = [...items].sort((a, b) => axis === "x" ? a.rect.left - b.rect.left : a.rect.top - b.rect.top);
+      const start = axis === "x" ? ordered[0].rect.left : ordered[0].rect.top;
+      const end = axis === "x"
+        ? ordered[ordered.length - 1].rect.right
+        : ordered[ordered.length - 1].rect.bottom;
+      const totalSize = ordered.reduce((sum, item) => sum + (axis === "x" ? item.rect.width : item.rect.height), 0);
+      const gap = (end - start - totalSize) / (ordered.length - 1);
+      let cursor = start;
+      ordered.forEach((item) => {
+        const currentStart = axis === "x" ? item.rect.left : item.rect.top;
+        const delta = cursor - currentStart;
+        deltas.set(item.id, axis === "x" ? { x: delta, y: 0 } : { x: 0, y: delta });
+        cursor += (axis === "x" ? item.rect.width : item.rect.height) + gap;
+      });
+    }
+
+    let next = stateRef.current;
+    const page = { ...(next.pages[pagePath] ?? {}) };
+    items.forEach((item) => {
+      const delta = deltas.get(item.id);
+      if (!delta) return;
+      const offset = item.offset;
+      const newOffset = { x: Math.round(offset.x + delta.x), y: Math.round(offset.y + delta.y) };
+      const current = page[item.id] ?? {};
+      page[item.id] = device === "desktop"
+        ? { ...current, positionOffset: newOffset }
+        : {
+            ...current,
+            responsivePositionOffset: {
+              ...(current.responsivePositionOffset ?? {}),
+              [device]: newOffset,
+            },
+          };
+      item.element.style.translate = newOffset.x + "px " + newOffset.y + "px";
+    });
+
+    const nextState = { ...next, pages: { ...next.pages, [pagePath]: page } };
+    commit(nextState);
+    refreshFrame();
+    notify("Групповое выравнивание применено");
+  }
+
+  function clearMultiSelection() {
+    setSelectedIds(selected ? [selected.id] : []);
+  }
+
   function removeSelected() {
     if (!selected) return;
 
@@ -1416,7 +1531,7 @@ export function StudioWorkspace() {
       const isOpen = search.trim() ? true : expanded[node.id] ?? node.depth < 1;
       return (
         <div key={node.id} className="studio-v2-layer">
-          <div className={selected?.id === node.id ? "studio-v2-layer-row active" : "studio-v2-layer-row"}>
+          <div className={selected?.id === node.id ? "studio-v2-layer-row active" : selectedIds.includes(node.id) ? "studio-v2-layer-row multi-active" : "studio-v2-layer-row"}>
             <button
               type="button"
               className="studio-v2-layer-chevron"
@@ -1429,7 +1544,7 @@ export function StudioWorkspace() {
             <button
               type="button"
               className="studio-v2-layer-select"
-              onClick={() => selectInFrame(node.id)}
+              onClick={(event) => selectInFrame(node.id, event.shiftKey)}
               onKeyDown={(event) => {
                 if (event.key !== "ArrowDown" && event.key !== "ArrowUp") return;
                 event.preventDefault();
@@ -1714,7 +1829,8 @@ export function StudioWorkspace() {
                   <span className="studio-v2-layer-tag">{selected.tag}</span>
                   <b>{selected.label || "(без текста)"}</b>
                   <small>{"#"+selectedPosition+" / "+flatNodes.length}</small>
-                  {device !== "desktop" && <em className="studio-v2-responsive-badge">{DEVICE_LABEL[device]} only</em>}
+                  {selectedIds.length > 1 ? <em className="studio-v2-multi-badge">{selectedIds.length} SELECTED</em> : null}
+                                    {device !== "desktop" && <em className="studio-v2-responsive-badge">{DEVICE_LABEL[device]} only</em>}
                   {selected.inserted ? <em>NEW BLOCK</em> : activeOverride ? <em>OVERRIDE</em> : <i>DEFAULT</i>}
                 </div>
 
@@ -1727,6 +1843,23 @@ export function StudioWorkspace() {
 
                     {openSections[section] && section === "content" ? (
                       <div className="studio-v2-section-body">
+                        {selectedIds.length > 1 ? (
+                          <div className="studio-v2-batch-panel">
+                            <div className="studio-v2-batch-title"><span>GROUP</span><b>{selectedIds.length} layers selected</b></div>
+                            <div className="studio-v2-batch-actions">
+                              <button type="button" onClick={() => applyBatchAlignment("left")}><AlignLeft size={12} /> Left</button>
+                              <button type="button" onClick={() => applyBatchAlignment("centerX")}><AlignCenter size={12} /> Center</button>
+                              <button type="button" onClick={() => applyBatchAlignment("right")}><AlignRight size={12} /> Right</button>
+                              <button type="button" onClick={() => applyBatchAlignment("top")}>↑ Top</button>
+                              <button type="button" onClick={() => applyBatchAlignment("centerY")}>↕ Middle</button>
+                              <button type="button" onClick={() => applyBatchAlignment("bottom")}>↓ Bottom</button>
+                              <button type="button" onClick={() => applyBatchAlignment("distributeX")}>↔ Distribute X</button>
+                              <button type="button" onClick={() => applyBatchAlignment("distributeY")}>↕ Distribute Y</button>
+                            </div>
+                            <button type="button" className="studio-v2-clear-selection" onClick={clearMultiSelection}>Leave multi-select</button>
+                          </div>
+                        ) : null}
+
                         {selected.textEditable ? (
                           <label className="studio-v2-field wide">
                             <span>Текст</span>
