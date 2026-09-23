@@ -17,6 +17,7 @@ export async function POST(request: Request) {
     }
 
     const payload = body as Record<string, unknown>;
+    const idempotencyKey = request.headers.get("idempotency-key")?.trim().slice(0, 128) || undefined;
     const phone = text(payload.phone, 32);
     const type = text(payload.type);
     const output = text(payload.output, 80);
@@ -58,6 +59,7 @@ export async function POST(request: Request) {
       source: "website",
       sourcePage: typeof payload.sourcePage === "string" ? payload.sourcePage.slice(0, 200) : "/calculator",
       createdAt: new Date().toISOString(),
+      idempotencyKey,
     });
 
     let telegram = { ok: false, configured: Boolean(process.env.TG_KEY && process.env.OWNER_ID) };
