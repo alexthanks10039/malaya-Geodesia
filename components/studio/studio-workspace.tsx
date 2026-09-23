@@ -631,6 +631,30 @@ export function StudioWorkspace() {
 
     doc.addEventListener("click", clickHandler, true);
 
+    const interactClickHandler = (event: MouseEvent) => {
+      if (previewMode !== "interact") return;
+      const target = event.target;
+      if (!(target instanceof Element) || target.closest("[data-studio-dev-ui]")) return;
+      const anchor = target.closest("a");
+      if (!(anchor instanceof HTMLAnchorElement)) return;
+      if (anchor.target && anchor.target !== "_self") return;
+      const href = anchor.getAttribute("href");
+      if (!href || href.startsWith("#") || href.startsWith("mailto:") || href.startsWith("tel:")) return;
+
+      try {
+        const url = new URL(href, doc.location.href);
+        if (url.origin !== doc.location.origin) return;
+        url.searchParams.set("studioPreview", "1");
+        event.preventDefault();
+        event.stopPropagation();
+        doc.defaultView?.location.assign(url.toString());
+      } catch {
+        // Leave non-standard links to the browser.
+      }
+    };
+
+    doc.addEventListener("click", interactClickHandler, true);
+
     const observer = new MutationObserver(() => {
       window.requestAnimationFrame(() => {
         if (frameRef.current?.contentDocument === doc) {
@@ -643,6 +667,7 @@ export function StudioWorkspace() {
 
     return () => {
       doc.removeEventListener("click", clickHandler, true);
+      doc.removeEventListener("click", interactClickHandler, true);
       observer.disconnect();
     };
   }, [pagePath, previewMode, selectInFrame, selected, state]);
@@ -983,10 +1008,10 @@ export function StudioWorkspace() {
   const previewWidth = DEVICE_WIDTH[device];
   const canvasStyle =
     previewWidth === "fluid"
-      ? { width: "100%", transform: "scale(" + zoom / 100 + ")" }
+      ? { width: "100%", zoom: zoom / 100 }
       : {
           width: previewWidth + "px",
-          transform: "scale(" + zoom / 100 + ")",
+          zoom: zoom / 100,
         };
 
   const renderTree = (items: NodeSummary[]) =>
