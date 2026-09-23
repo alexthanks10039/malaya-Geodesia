@@ -8,6 +8,9 @@ import {
   Check,
   ChevronDown,
   ChevronRight,
+  ChevronLeft,
+  ChevronsUp,
+  ChevronsDown,
   Code2,
   Copy,
   Download,
@@ -61,6 +64,7 @@ import type {
   StudioCssOverrides,
   StudioElementOverride,
   StudioPositionOffset,
+  StudioLayoutConstraints,
   StudioInsertedBlock,
   StudioState,
   StudioResponsiveDevice,
@@ -84,6 +88,16 @@ const STYLE_MAP: Record<keyof StudioCssOverrides, string> = {
   height: "height",
   gap: "gap",
   display: "display",
+  flexDirection: "flex-direction",
+  flexWrap: "flex-wrap",
+  justifyContent: "justify-content",
+  alignItems: "align-items",
+  alignSelf: "align-self",
+  gridTemplateColumns: "grid-template-columns",
+  gridTemplateRows: "grid-template-rows",
+  overflow: "overflow",
+  minWidth: "min-width",
+  minHeight: "min-height",
   opacity: "opacity",
   position: "position",
   zIndex: "z-index",
@@ -110,6 +124,16 @@ const STYLE_LABELS: Record<keyof StudioCssOverrides, string> = {
   height: "Высота",
   gap: "Расстояние",
   display: "Display",
+  flexDirection: "Flex direction",
+  flexWrap: "Flex wrap",
+  justifyContent: "Justify",
+  alignItems: "Align",
+  alignSelf: "Align self",
+  gridTemplateColumns: "Grid columns",
+  gridTemplateRows: "Grid rows",
+  overflow: "Overflow",
+  minWidth: "Мин. ширина",
+  minHeight: "Мин. высота",
   opacity: "Прозрачность",
   position: "Position",
   zIndex: "Z-index",
@@ -307,12 +331,65 @@ function readCss(element: Element): StudioCssOverrides {
     height: style.height,
     gap: style.gap,
     display: style.display,
+    flexDirection: style.flexDirection,
+    flexWrap: style.flexWrap,
+    justifyContent: style.justifyContent,
+    alignItems: style.alignItems,
+    alignSelf: style.alignSelf,
+    gridTemplateColumns: style.gridTemplateColumns,
+    gridTemplateRows: style.gridTemplateRows,
+    overflow: style.overflow,
+    minWidth: style.minWidth,
+    minHeight: style.minHeight,
     opacity: style.opacity,
     position: style.position,
     zIndex: style.zIndex,
     transform: style.transform === "none" ? "" : style.transform,
     transition: style.transition,
   };
+}
+
+function applyConstraints(element: HTMLElement, constraints?: StudioLayoutConstraints): void {
+  if (!constraints) return;
+  const parent = element.parentElement;
+  if (constraints.horizontal || constraints.vertical) {
+    element.style.position = "absolute";
+    if (parent && window.getComputedStyle(parent).position === "static") {
+      (parent as HTMLElement).style.position = "relative";
+    }
+  }
+
+  const horizontal = constraints.horizontal ?? "none";
+  if (horizontal === "left") {
+    element.style.left = "0";
+    element.style.right = "auto";
+  } else if (horizontal === "right") {
+    element.style.left = "auto";
+    element.style.right = "0";
+  } else if (horizontal === "stretch") {
+    element.style.left = "0";
+    element.style.right = "0";
+    element.style.width = "auto";
+  } else {
+    element.style.left = "auto";
+    element.style.right = "auto";
+  }
+
+  const vertical = constraints.vertical ?? "none";
+  if (vertical === "top") {
+    element.style.top = "0";
+    element.style.bottom = "auto";
+  } else if (vertical === "bottom") {
+    element.style.top = "auto";
+    element.style.bottom = "0";
+  } else if (vertical === "stretch") {
+    element.style.top = "0";
+    element.style.bottom = "0";
+    element.style.height = "auto";
+  } else {
+    element.style.top = "auto";
+    element.style.bottom = "auto";
+  }
 }
 
 function applyPositionOffset(element: HTMLElement, offset?: StudioPositionOffset): void {
@@ -396,6 +473,10 @@ function insertRuntimeBlocks(doc: Document, page: StudioState["pages"][string], 
         ? override.positionOffset
         : override.responsivePositionOffset?.[device] ?? override.positionOffset;
       applyPositionOffset(element, offset);
+      const constraints = device === "desktop"
+        ? override.constraints
+        : override.responsiveConstraints?.[device] ?? override.constraints;
+      applyConstraints(element, constraints);
       parent.appendChild(element);
     }
   }
@@ -418,6 +499,10 @@ function applyPageState(doc: Document, state: StudioState, path: string, device:
       ? override.positionOffset
       : override.responsivePositionOffset?.[device] ?? override.positionOffset;
     applyPositionOffset(element, offset);
+    const constraints = device === "desktop"
+      ? override.constraints
+      : override.responsiveConstraints?.[device] ?? override.constraints;
+    applyConstraints(element, constraints);
 
     if (override.hidden) {
       element.style.setProperty("display", "none");
@@ -531,6 +616,11 @@ export function StudioWorkspace() {
   const filteredTree = useMemo(() => filterTree(nodes, search), [nodes, search]);
   const activeOverride = selected ? state.pages[pagePath]?.[selected.id] : undefined;
   const activeResponsiveCss = selected && device !== "desktop" ? activeOverride?.responsiveCss?.[device] : undefined;
+  const activeConstraints = selected
+    ? device === "desktop"
+      ? activeOverride?.constraints
+      : activeOverride?.responsiveConstraints?.[device] ?? activeOverride?.constraints
+    : undefined;
   const activePositionOffset = selected
     ? device === "desktop"
       ? activeOverride?.positionOffset
@@ -1121,6 +1211,18 @@ export function StudioWorkspace() {
         return;
       }
 
+      if (!isTyping && (event.key === "]" || event.key === "}")) {
+        event.preventDefault();
+        moveLayerOrder(event.shiftKey ? "front" : "forward");
+        return;
+      }
+
+      if (!isTyping && (event.key === "[" || event.key === "{")) {
+        event.preventDefault();
+        moveLayerOrder(event.shiftKey ? "back" : "backward");
+        return;
+      }
+
       if (!isTyping && (event.key === "Delete" || event.key === "Backspace")) {
         event.preventDefault();
         removeSelected();
@@ -1182,6 +1284,42 @@ export function StudioWorkspace() {
     setSelected((current) => current ? { ...current, label: value, css: readCss(element) } : current);
   }
 
+  function updateStylesBatch(updates: Partial<StudioCssOverrides>, editKey = "batch-style") {
+    if (!selected) return;
+    const element = findElement(frameRef.current?.contentDocument ?? null, selected.id);
+    if (!element) return;
+
+    Object.entries(updates).forEach(([property, value]) => {
+      if (value === undefined) return;
+      const cssName = STYLE_MAP[property as keyof StudioCssOverrides];
+      if (cssName) element.style.setProperty(cssName, value);
+    });
+
+    const apply = (current: StudioElementOverride) =>
+      device === "desktop"
+        ? { ...current, css: { ...(current.css ?? {}), ...updates } }
+        : {
+            ...current,
+            responsiveCss: {
+              ...(current.responsiveCss ?? {}),
+              [device]: {
+                ...(current.responsiveCss?.[device] ?? {}),
+                ...updates,
+              },
+            },
+          };
+
+    const currentState = stateRef.current;
+    const page = currentState.pages[pagePath] ?? {};
+    const current = page[selected.id] ?? {};
+    const next = {
+      ...currentState,
+      pages: { ...currentState.pages, [pagePath]: { ...page, [selected.id]: apply(current) } },
+    };
+    liveCommit(next, editKey + ":" + device + ":" + selected.id);
+    setSelected((currentSelected) => currentSelected ? { ...currentSelected, css: { ...currentSelected.css, ...updates } } : currentSelected);
+  }
+
   function updateStyle(property: keyof StudioCssOverrides, value: string) {
     if (!selected) return;
     const element = findElement(frameRef.current?.contentDocument ?? null, selected.id);
@@ -1209,6 +1347,128 @@ export function StudioWorkspace() {
       "css:" + device + ":" + selected.id + ":" + property,
     );
     setSelected((current) => current ? { ...current, css: { ...current.css, [property]: value } } : current);
+  }
+
+  function setAutoLayout(mode: "flow" | "row" | "column" | "grid") {
+    if (!selected) return;
+    if (mode === "flow") {
+      updateStylesBatch({ display: "block", flexDirection: "", flexWrap: "", justifyContent: "", alignItems: "", gridTemplateColumns: "", gridTemplateRows: "" }, "auto-layout");
+    } else if (mode === "row") {
+      updateStylesBatch({ display: "flex", flexDirection: "row", flexWrap: "wrap", justifyContent: "flex-start", alignItems: "center" }, "auto-layout");
+    } else if (mode === "column") {
+      updateStylesBatch({ display: "flex", flexDirection: "column", flexWrap: "nowrap", justifyContent: "flex-start", alignItems: "stretch" }, "auto-layout");
+    } else {
+      updateStylesBatch({ display: "grid", gridTemplateColumns: "repeat(2, minmax(0, 1fr))", gridTemplateRows: "", gap: styleForDevice("gap") || "16px" }, "auto-layout");
+    }
+    notify("Auto Layout updated");
+  }
+
+  function updateConstraints(nextConstraints: StudioLayoutConstraints) {
+    if (!selected || !selected.inserted) {
+      notify("Constraints доступны для Studio-блоков");
+      return;
+    }
+    const currentState = stateRef.current;
+    const page = currentState.pages[pagePath] ?? {};
+    const current = page[selected.id] ?? {};
+    const active = device === "desktop" ? current.constraints : current.responsiveConstraints?.[device];
+    const hasConstraint = nextConstraints.horizontal !== "none" || nextConstraints.vertical !== "none";
+    const nextOverride = device === "desktop"
+      ? {
+          ...current,
+          constraints: hasConstraint ? nextConstraints : undefined,
+          css: {
+            ...(current.css ?? {}),
+            position: hasConstraint ? "absolute" : "",
+          },
+        }
+      : {
+          ...current,
+          responsiveConstraints: {
+            ...(current.responsiveConstraints ?? {}),
+            ...(hasConstraint ? { [device]: nextConstraints } : {}),
+          },
+          responsiveCss: {
+            ...(current.responsiveCss ?? {}),
+            [device]: {
+              ...(current.responsiveCss?.[device] ?? {}),
+              position: hasConstraint ? "absolute" : "",
+            },
+          },
+        };
+    const nextPage = { ...page, [selected.id]: nextOverride };
+    const parentId = current.inserted?.parentId;
+    if (hasConstraint && parentId) {
+      const parentOverride = nextPage[parentId] ?? {};
+      nextPage[parentId] = {
+        ...parentOverride,
+        css: { ...(parentOverride.css ?? {}), position: "relative" },
+      };
+      const parentElement = findElement(frameRef.current?.contentDocument ?? null, parentId);
+      if (parentElement && getComputedStyle(parentElement).position === "static") {
+        parentElement.style.position = "relative";
+      }
+    }
+    if (device !== "desktop" && !Object.keys(nextOverride.responsiveConstraints ?? {}).length) {
+      delete nextOverride.responsiveConstraints;
+    }
+    commit({ ...currentState, pages: { ...currentState.pages, [pagePath]: nextPage } });
+    refreshFrame();
+    notify(active ? DEVICE_LABEL[device] + " constraints updated" : "Constraints added");
+  }
+
+  function moveLayerOrder(direction: "forward" | "backward" | "front" | "back", id = selected?.id) {
+    if (!id) return;
+    const currentState = stateRef.current;
+    const page = currentState.pages[pagePath] ?? {};
+    const current = page[id] ?? {};
+
+    if (!current.inserted) {
+      const element = findElement(frameRef.current?.contentDocument ?? null, id);
+      const currentZ = Number.parseInt(getComputedStyle(element ?? document.body).zIndex, 10);
+      const zIndex = Number.isFinite(currentZ) ? currentZ : 0;
+      const delta = direction === "forward" ? 1 : direction === "backward" ? -1 : direction === "front" ? 1000 : -1000;
+      const nextPage = {
+        ...page,
+        [id]: {
+          ...current,
+          css: {
+            ...(current.css ?? {}),
+            zIndex: String(zIndex + delta),
+          },
+        },
+      };
+      commit({ ...currentState, pages: { ...currentState.pages, [pagePath]: nextPage } });
+      if (element) element.style.zIndex = String(zIndex + delta);
+      notify("Layer order updated");
+      return;
+    }
+
+    const parentId = current.inserted.parentId;
+    const siblings = Object.entries(page)
+      .filter(([, override]) => override.inserted?.parentId === parentId)
+      .sort(([, left], [, right]) => (left.inserted?.order ?? 0) - (right.inserted?.order ?? 0))
+      .map(([id]) => id);
+    const index = siblings.indexOf(id);
+    if (index < 0) return;
+    let targetIndex = index;
+    if (direction === "forward") targetIndex = Math.min(siblings.length - 1, index + 1);
+    if (direction === "backward") targetIndex = Math.max(0, index - 1);
+    if (direction === "front") targetIndex = siblings.length - 1;
+    if (direction === "back") targetIndex = 0;
+    if (targetIndex === index) return;
+
+    const reordered = siblings.filter((itemId) => itemId !== id);
+    reordered.splice(targetIndex, 0, id);
+    const nextPage = { ...page };
+    reordered.forEach((id, order) => {
+      const override = nextPage[id];
+      if (!override?.inserted) return;
+      nextPage[id] = { ...override, inserted: { ...override.inserted, order } };
+    });
+    commit({ ...currentState, pages: { ...currentState.pages, [pagePath]: nextPage } });
+    refreshFrame();
+    notify("Layer order updated");
   }
 
   function updateAttribute(name: "href" | "alt" | "title", value: string) {
@@ -2177,9 +2437,44 @@ export function StudioWorkspace() {
 
                     {openSections[section] && section === "layout" ? (
                       <div className="studio-v2-section-body">
+                        <div className="studio-v2-auto-layout">
+                          <div className="studio-v2-auto-layout-head"><span>AUTO LAYOUT</span><small>flex / grid</small></div>
+                          <div className="studio-v2-auto-layout-presets">
+                            <button type="button" onClick={() => setAutoLayout("flow")}>Flow</button>
+                            <button type="button" onClick={() => setAutoLayout("row")}>Row</button>
+                            <button type="button" onClick={() => setAutoLayout("column")}>Column</button>
+                            <button type="button" onClick={() => setAutoLayout("grid")}>Grid</button>
+                          </div>
+                          {styleForDevice("display") === "flex" ? (
+                            <div className="studio-v2-field-grid compact">
+                              <label className="studio-v2-field"><span>Direction</span><select value={styleForDevice("flexDirection") || "row"} onChange={(event) => updateStyle("flexDirection", event.target.value)}><option value="row">row</option><option value="column">column</option><option value="row-reverse">row-reverse</option><option value="column-reverse">column-reverse</option></select></label>
+                              <label className="studio-v2-field"><span>Wrap</span><select value={styleForDevice("flexWrap") || "nowrap"} onChange={(event) => updateStyle("flexWrap", event.target.value)}><option value="nowrap">nowrap</option><option value="wrap">wrap</option><option value="wrap-reverse">wrap-reverse</option></select></label>
+                              <label className="studio-v2-field"><span>Justify</span><select value={styleForDevice("justifyContent") || "flex-start"} onChange={(event) => updateStyle("justifyContent", event.target.value)}><option value="flex-start">start</option><option value="center">center</option><option value="flex-end">end</option><option value="space-between">between</option><option value="space-around">around</option><option value="space-evenly">even</option></select></label>
+                              <label className="studio-v2-field"><span>Align</span><select value={styleForDevice("alignItems") || "stretch"} onChange={(event) => updateStyle("alignItems", event.target.value)}><option value="stretch">stretch</option><option value="flex-start">start</option><option value="center">center</option><option value="flex-end">end</option><option value="baseline">baseline</option></select></label>
+                            </div>
+                          ) : null}
+                          {styleForDevice("display") === "grid" ? (
+                            <div className="studio-v2-field-grid compact">
+                              <label className="studio-v2-field wide"><span>Grid columns</span><input value={styleForDevice("gridTemplateColumns") || ""} onChange={(event) => updateStyle("gridTemplateColumns", event.target.value)} placeholder="repeat(2, 1fr)" /></label>
+                              <label className="studio-v2-field wide"><span>Grid rows</span><input value={styleForDevice("gridTemplateRows") || ""} onChange={(event) => updateStyle("gridTemplateRows", event.target.value)} placeholder="auto auto" /></label>
+                            </div>
+                          ) : null}
+                        </div>
+
+                        {selected.inserted ? (
+                          <div className="studio-v2-constraints-panel">
+                            <div className="studio-v2-auto-layout-head"><span>CONSTRAINTS</span><small>{device === "desktop" ? "base" : DEVICE_LABEL[device]}</small></div>
+                            <div className="studio-v2-constraint-row">
+                              <label className="studio-v2-field"><span>Horizontal</span><select value={activeConstraints?.horizontal || "none"} onChange={(event) => updateConstraints({ horizontal: event.target.value as StudioLayoutConstraints["horizontal"], vertical: activeConstraints?.vertical || "none" })}><option value="none">free</option><option value="left">left</option><option value="right">right</option><option value="stretch">stretch</option></select></label>
+                              <label className="studio-v2-field"><span>Vertical</span><select value={activeConstraints?.vertical || "none"} onChange={(event) => updateConstraints({ horizontal: activeConstraints?.horizontal || "none", vertical: event.target.value as StudioLayoutConstraints["vertical"] })}><option value="none">free</option><option value="top">top</option><option value="bottom">bottom</option><option value="stretch">stretch</option></select></label>
+                            </div>
+                            <small className="studio-v2-constraints-help">Pins use absolute positioning inside the current parent.</small>
+                          </div>
+                        ) : null}
+
                         <div className="studio-v2-position-grid">
                           <label className="studio-v2-field">
-                            <span>X / ${device === "desktop" ? "base" : DEVICE_LABEL[device]}</span>
+                            <span>X / {device === "desktop" ? "base" : DEVICE_LABEL[device]}</span>
                             <input
                               type="number"
                               value={Math.round(activePositionOffset?.x ?? 0)}
@@ -2189,7 +2484,7 @@ export function StudioWorkspace() {
                             />
                           </label>
                           <label className="studio-v2-field">
-                            <span>Y / ${device === "desktop" ? "base" : DEVICE_LABEL[device]}</span>
+                            <span>Y / {device === "desktop" ? "base" : DEVICE_LABEL[device]}</span>
                             <input
                               type="number"
                               value={Math.round(activePositionOffset?.y ?? 0)}
@@ -2237,6 +2532,9 @@ export function StudioWorkspace() {
                           {device !== "desktop" && activeResponsiveCss && Object.keys(activeResponsiveCss).length ? (
                             <button type="button" onClick={resetResponsive}><RotateCcw size={13} /> Reset {DEVICE_LABEL[device]}</button>
                           ) : null}
+                          <button type="button" onClick={() => toggleLocked()}>{activeOverride?.locked ? <Unlock size={13} /> : <Lock size={13} />} {activeOverride?.locked ? "Unlock" : "Lock"}</button>
+                          <button type="button" onClick={() => moveLayerOrder("forward")}><ChevronRight size={13} /> Forward</button>
+                          <button type="button" onClick={() => moveLayerOrder("backward")}><ChevronLeft size={13} /> Back</button>
                           <button type="button" onClick={toggleHidden}><EyeOff size={13} /> {activeOverride?.hidden ? "Показать" : "Скрыть"}</button>
                           <button type="button" className="danger" onClick={removeSelected}>{selected.inserted ? <Trash2 size={13} /> : <EyeOff size={13} />} {selected.inserted ? "Удалить блок" : "Скрыть элемент"}</button>
                         </div>
@@ -2310,6 +2608,11 @@ export function StudioWorkspace() {
           {state.pages[pagePath]?.[contextMenu.id]?.inserted ? (
             <button type="button" onClick={() => { duplicateInserted([contextMenu.id]); setContextMenu(null); }}><CopyPlus size={13} /> Duplicate</button>
           ) : null}
+          <div className="studio-v2-context-separator" />
+          <button type="button" onClick={() => { setContextMenu(null); moveLayerOrder("forward", contextMenu.id); }}><ChevronRight size={13} /> Bring forward</button>
+          <button type="button" onClick={() => { setContextMenu(null); moveLayerOrder("backward", contextMenu.id); }}><ChevronLeft size={13} /> Send backward</button>
+          <button type="button" onClick={() => { setContextMenu(null); moveLayerOrder("front", contextMenu.id); }}><ChevronsUp size={13} /> Bring to front</button>
+          <button type="button" onClick={() => { setContextMenu(null); moveLayerOrder("back", contextMenu.id); }}><ChevronsDown size={13} /> Send to back</button>
           {selectedIds.length > 1 && selectedIds.every((id) => Boolean(state.pages[pagePath]?.[id]?.inserted)) ? (
             <button type="button" onClick={() => { groupInsertedSelection(); setContextMenu(null); }}><Group size={13} /> Group / Frame</button>
           ) : null}
