@@ -1085,7 +1085,7 @@ export function StudioWorkspace() {
           </select>
           <button type="button" className="studio-v2-mobile-toggle" onClick={() => setMobilePanel((value) => value === "left" ? "none" : "left")} title="Layers / Design panel"><Layers3 size={14} /> Layers</button>
           <button type="button" className="studio-v2-mobile-toggle" onClick={() => setMobilePanel((value) => value === "right" ? "none" : "right")} title="Inspector panel"><Code2 size={14} /> Inspector</button>
-          <button type="button" className="studio-v2-mobile-toggle studio-v2-mobile-focus" onClick={() => setMobilePanel("none") || setFocusMode((value) => !value)} title="Focus mode"><MoreHorizontal size={14} /> Focus</button>
+          <button type="button" className="studio-v2-mobile-toggle studio-v2-mobile-focus" onClick={() => { setMobilePanel("none"); setFocusMode((value) => !value); }} title="Focus mode"><MoreHorizontal size={14} /> Focus</button>
           <button type="button" className={previewMode === "select" ? "active" : ""} onClick={() => setPreviewMode("select")} title="Select mode"><MousePointer2 size={14} /> Select</button>
           <button type="button" className={previewMode === "interact" ? "active" : ""} onClick={() => setPreviewMode("interact")} title="Interact mode"><Eye size={14} /> Interact</button>
         </div>
