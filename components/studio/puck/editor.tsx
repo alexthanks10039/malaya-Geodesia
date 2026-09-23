@@ -2,16 +2,16 @@
 
 import { Puck, type Data } from "@puckeditor/core";
 import { useEffect, useState } from "react";
-import config, { initialPuckData } from "@/components/studio/puck/config";
+import config, { initialPuckData, type PuckSiteComponents, type PuckSiteRootProps } from "@/components/studio/puck/config";
 
 const STORAGE_KEY = "malaya-studio-puck-draft";
 
-function readDraft(): Data | null {
+function readDraft(): Data<PuckSiteComponents, PuckSiteRootProps> | null {
   if (typeof window === "undefined") return null;
   try {
     const raw = window.localStorage.getItem(STORAGE_KEY);
     if (!raw) return null;
-    const parsed = JSON.parse(raw) as Data;
+    const parsed = JSON.parse(raw) as Data<PuckSiteComponents, PuckSiteRootProps>;
     if (!parsed || !Array.isArray(parsed.content) || typeof parsed.root !== "object") return null;
     return parsed;
   } catch {
@@ -20,7 +20,7 @@ function readDraft(): Data | null {
 }
 
 export function PuckStudio() {
-  const [data, setData] = useState<Data>(initialPuckData);
+  const [data, setData] = useState<Data<PuckSiteComponents, PuckSiteRootProps>>(initialPuckData);
   const [hydrated, setHydrated] = useState(false);
   const [status, setStatus] = useState("LOCAL DRAFT");
 
