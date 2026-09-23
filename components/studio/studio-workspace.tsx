@@ -454,7 +454,7 @@ function sameState(a: StudioState, b: StudioState): boolean {
   return JSON.stringify(a) === JSON.stringify(b);
 }
 
-export function StudioPageEditor() {
+export function StudioWorkspace() {
   const frameRef = useRef<HTMLIFrameElement>(null);
   const importRef = useRef<HTMLInputElement>(null);
   const undoRef = useRef<StudioState[]>([]);
