@@ -1069,7 +1069,7 @@ export function StudioWorkspace() {
     const setLiveDimension = (property: "width" | "height", value: string) => {
       const currentState = stateRef.current;
       const page = currentState.pages[pagePath] ?? {};
-      const current = page[selected.id] ?? {};
+      const current = page[id] ?? {};
       const next = {
         ...currentState,
         pages: {
@@ -1417,14 +1417,14 @@ export function StudioWorkspace() {
     notify(active ? DEVICE_LABEL[device] + " constraints updated" : "Constraints added");
   }
 
-  function moveLayerOrder(direction: "forward" | "backward" | "front" | "back") {
-    if (!selected) return;
+  function moveLayerOrder(direction: "forward" | "backward" | "front" | "back", id = selected?.id) {
+    if (!id) return;
     const currentState = stateRef.current;
     const page = currentState.pages[pagePath] ?? {};
     const current = page[selected.id] ?? {};
 
     if (!current.inserted) {
-      const element = findElement(frameRef.current?.contentDocument ?? null, selected.id);
+      const element = findElement(frameRef.current?.contentDocument ?? null, id);
       const currentZ = Number.parseInt(getComputedStyle(element ?? document.body).zIndex, 10);
       const zIndex = Number.isFinite(currentZ) ? currentZ : 0;
       const delta = direction === "forward" ? 1 : direction === "backward" ? -1 : direction === "front" ? 1000 : -1000;
@@ -1437,7 +1437,7 @@ export function StudioWorkspace() {
       .filter(([, override]) => override.inserted?.parentId === parentId)
       .sort(([, left], [, right]) => (left.inserted?.order ?? 0) - (right.inserted?.order ?? 0))
       .map(([id]) => id);
-    const index = siblings.indexOf(selected.id);
+    const index = siblings.indexOf(id);
     if (index < 0) return;
     let targetIndex = index;
     if (direction === "forward") targetIndex = Math.min(siblings.length - 1, index + 1);
@@ -1446,8 +1446,8 @@ export function StudioWorkspace() {
     if (direction === "back") targetIndex = 0;
     if (targetIndex === index) return;
 
-    const reordered = siblings.filter((id) => id !== selected.id);
-    reordered.splice(targetIndex, 0, selected.id);
+    const reordered = siblings.filter((itemId) => itemId !== id);
+    reordered.splice(targetIndex, 0, id);
     const nextPage = { ...page };
     reordered.forEach((id, order) => {
       const override = nextPage[id];
@@ -2597,10 +2597,10 @@ export function StudioWorkspace() {
             <button type="button" onClick={() => { duplicateInserted([contextMenu.id]); setContextMenu(null); }}><CopyPlus size={13} /> Duplicate</button>
           ) : null}
           <div className="studio-v2-context-separator" />
-          <button type="button" onClick={() => { setSelected(contextMenu.id, true); setContextMenu(null); moveLayerOrder("forward"); }}><ChevronRight size={13} /> Bring forward</button>
-          <button type="button" onClick={() => { setSelected(contextMenu.id, true); setContextMenu(null); moveLayerOrder("backward"); }}><ChevronLeft size={13} /> Send backward</button>
-          <button type="button" onClick={() => { setSelected(contextMenu.id, true); setContextMenu(null); moveLayerOrder("front"); }}><ChevronsUp size={13} /> Bring to front</button>
-          <button type="button" onClick={() => { setSelected(contextMenu.id, true); setContextMenu(null); moveLayerOrder("back"); }}><ChevronsDown size={13} /> Send to back</button>
+          <button type="button" onClick={() => { setContextMenu(null); moveLayerOrder("forward", contextMenu.id); }}><ChevronRight size={13} /> Bring forward</button>
+          <button type="button" onClick={() => { setContextMenu(null); moveLayerOrder("backward", contextMenu.id); }}><ChevronLeft size={13} /> Send backward</button>
+          <button type="button" onClick={() => { setContextMenu(null); moveLayerOrder("front", contextMenu.id); }}><ChevronsUp size={13} /> Bring to front</button>
+          <button type="button" onClick={() => { setContextMenu(null); moveLayerOrder("back", contextMenu.id); }}><ChevronsDown size={13} /> Send to back</button>
           {selectedIds.length > 1 && selectedIds.every((id) => Boolean(state.pages[pagePath]?.[id]?.inserted)) ? (
             <button type="button" onClick={() => { groupInsertedSelection(); setContextMenu(null); }}><Group size={13} /> Group / Frame</button>
           ) : null}
