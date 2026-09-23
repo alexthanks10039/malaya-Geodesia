@@ -337,12 +337,15 @@ export async function handleTelegramUpdate(update: any) {
             return safeEditOrSend(chatId, messageId, buildLeadMessage(lead), leadKeyboard(lead));
           }
           const operator = getOperator(userId)!;
+          let assigned = lead;
+          if (lead.assignedTo?.id !== userId) {
+            assigned = await reassignLead({ leadId: id, employeeId: operator.id, employeeName: operator.name, by: `telegram:${userId}` }) || lead;
+          }
           const updated = await updateLeadStatus({ leadId: id, status: LEAD_STATUSES.IN_WORK, by: `telegram:${userId}` });
           if (!updated) return;
-          const assigned = updated.assignedTo?.id === userId ? updated : await reassignLead({ leadId: id, employeeId: operator.id, employeeName: operator.name, by: `telegram:${userId}` });
           await answerCallbackQuery({ callbackQueryId: String(callback.id), text: "Заявка взята в работу" });
-          await notifyAssignedOperator(assigned!, "взята в работу");
-          return safeEditOrSend(chatId, messageId, buildLeadMessage(assigned!), leadKeyboard(assigned!));
+          await notifyAssignedOperator(updated, "взята в работу");
+          return safeEditOrSend(chatId, messageId, buildLeadMessage(updated), leadKeyboard(updated));
         }
 
         if (action === "status_menu") {
