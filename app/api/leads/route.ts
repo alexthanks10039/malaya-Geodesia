@@ -1,7 +1,9 @@
 import { NextResponse } from "next/server";
+import { randomUUID } from "node:crypto";
 import { createLeadRecord } from "@/lib/telegram-leads";
 import { sendOwnerLeadNotification } from "@/lib/telegram";
 import { isDatabaseConfigured } from "@/lib/db";
+import { checkRateLimit } from "@/lib/rate-limit";
 import {
   claimTelegramNotification,
   enqueueLeadNotification,
@@ -17,11 +19,27 @@ function text(value: unknown, max = MAX_TEXT_LENGTH): string {
 }
 
 export async function POST(request: Request) {
+  const requestId = request.headers.get("x-request-id")?.trim().slice(0, 100) || randomUUID();
   try {
+    const contentLength = Number(request.headers.get("content-length") || 0);
+    if (contentLength > 64 * 1024) {
+      return NextResponse.json({ ok: false, code: "PAYLOAD_TOO_LARGE", message: "Слишком большой запрос", requestId }, { status: 413 });
+    }
+
+    const forwarded = request.headers.get("x-forwarded-for")?.split(",")[0]?.trim();
+    const clientKey = forwarded || request.headers.get("x-real-ip")?.trim() || "unknown";
+    const rate = await checkRateLimit(`leads:${clientKey}`);
+    if (!rate.allowed) {
+      return NextResponse.json(
+        { ok: false, code: "RATE_LIMITED", message: "Слишком много заявок. Попробуйте позже.", requestId },
+        { status: 429, headers: { "Retry-After": String(Math.max(1, Math.ceil((rate.resetAt - Date.now()) / 1000))) } },
+      );
+    }
+
     const body: unknown = await request.json();
 
     if (!body || typeof body !== "object") {
-      return NextResponse.json({ ok: false, message: "Некорректный запрос" }, { status: 400 });
+      return NextResponse.json({ ok: false, code: "INVALID_REQUEST", message: "Некорректный запрос", requestId }, { status: 400 });
     }
 
     const payload = body as Record<string, unknown>;
@@ -116,9 +134,10 @@ export async function POST(request: Request) {
       message: "Заявка принята",
       telegram,
       persisted: Boolean(process.env.DATABASE_URL),
+      requestId,
     });
   } catch (error) {
     console.error("[lead.create_failed]", error);
-    return NextResponse.json({ ok: false, message: "Не удалось принять заявку" }, { status: 500 });
+    return NextResponse.json({ ok: false, code: "LEAD_CREATE_FAILED", message: "Не удалось принять заявку", requestId }, { status: 500 });
   }
 }
