@@ -16,10 +16,10 @@ export type HeroProps = {
 };
 
 export function Hero({
-  eyebrow = "{eyebrow}",
+  eyebrow = "GEOSPATIAL / ENGINEERING / 2026",
   title = "Точная геодезия",
   accentTitle = "для реальных задач.",
-  lead = "{lead}",
+  lead = "Съёмка, 3D, LiDAR, GNSS и готовые данные для строительства, проектирования и контроля.",
   primaryLabel = "Рассчитать стоимость",
   primaryHref = "/calculator",
   secondaryLabel = "Все услуги",
@@ -29,7 +29,7 @@ export function Hero({
     <section className="hero">
       <div className="hero-copy">
         <motion.p className="eyebrow" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: .5 }}>
-          GEOSPATIAL / ENGINEERING / 2026
+          {eyebrow}
         </motion.p>
         <motion.h1
           initial={{ opacity: 0, y: 34, filter: "blur(10px)" }}
@@ -39,7 +39,7 @@ export function Hero({
           {title}<br /><span>{accentTitle}</span>
         </motion.h1>
         <motion.p className="hero-lead" initial={{ opacity: 0, y: 18 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: .65, delay: .18 }}>
-          Съёмка, 3D, LiDAR, GNSS и готовые данные для строительства, проектирования и контроля.
+          {lead}
         </motion.p>
         <motion.div className="hero-actions" initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: .6, delay: .28 }}>
           <Link className="button button-dark" href={primaryHref}>{primaryLabel} <ArrowRight size={18} /></Link>
