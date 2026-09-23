@@ -1074,7 +1074,7 @@ export function StudioWorkspace() {
           <span className="studio-v2-draft-status"><i /> LOCAL DRAFT</span>
           <button type="button" className="studio-v2-button ghost" onClick={exportDraft}><Download size={14} /> Export</button>
           <button type="button" className="studio-v2-button acid" onClick={() => saveVersion(versionLabel || "Quick save")}><Save size={14} /> Save</button>
-          <Link className="studio-v2-button ghost" href={pagePath} target="_blank" rel="noreferrer"><ExternalLink size={14} /> Open</Link>
+          <Link className="studio-v2-button ghost" href={pagePath} target="_blank" rel="noreferrer"><ExternalLink size={14} /> Open</Link>\n          <Link className="studio-v2-button ghost" href="/studio?engine=puck"><Code2 size={14} /> Puck</Link>
         </div>
       </header>
 

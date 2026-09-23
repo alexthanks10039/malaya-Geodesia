@@ -23,7 +23,8 @@
     "pg": "^8.16.3",
     "react": "^19.1.0",
     "react-dom": "^19.1.0",
-    "three": "^0.186.0"
+    "three": "^0.186.0",
+    "@puckeditor/core": "0.23.0"
   },
   "devDependencies": {
     "@types/node": "^22.0.0",

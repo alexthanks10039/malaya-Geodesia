@@ -1,3 +1,4 @@
+import { PuckStudio } from "@/components/studio/puck/editor";
 import { StudioWorkspace } from "@/components/studio/studio-workspace";
 
 export const metadata = {
@@ -5,6 +6,11 @@ export const metadata = {
   description: "Внутренний визуальный редактор и проектировщик сайта.",
 };
 
-export default function StudioPage() {
-  return <StudioWorkspace />;
+export default async function StudioPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ engine?: string }>;
+}) {
+  const params = await searchParams;
+  return params.engine === "puck" ? <PuckStudio /> : <StudioWorkspace />;
 }
