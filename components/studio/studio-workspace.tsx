@@ -631,17 +631,6 @@ export function StudioWorkspace() {
 
     doc.addEventListener("click", clickHandler, true);
 
-    const pointerHandler = (event: MouseEvent) => {
-      if (previewMode !== "select") return;
-      const target = event.target;
-      if (!(target instanceof Element) || target.closest("[data-studio-dev-ui]")) return;
-      const element = target.closest("[data-studio-node-id]");
-      if (element instanceof HTMLElement) {
-        element.style.cursor = "crosshair";
-      }
-    };
-    doc.addEventListener("mousemove", pointerHandler, true);
-
     const observer = new MutationObserver(() => {
       window.requestAnimationFrame(() => {
         if (frameRef.current?.contentDocument === doc) {
@@ -654,7 +643,6 @@ export function StudioWorkspace() {
 
     return () => {
       doc.removeEventListener("click", clickHandler, true);
-      doc.removeEventListener("mousemove", pointerHandler, true);
       observer.disconnect();
     };
   }, [pagePath, previewMode, selectInFrame, selected, state]);
@@ -712,6 +700,7 @@ export function StudioWorkspace() {
       }
 
       if (event.key === "Escape" && !isTyping) {
+        setMobilePanel("none");
         setSelected(null);
         frameRef.current?.contentDocument?.querySelectorAll(".studio-frame-selected").forEach((item) => item.classList.remove("studio-frame-selected"));
       }
@@ -1089,8 +1078,14 @@ export function StudioWorkspace() {
         </div>
 
         <div className="studio-v2-toolbar-center">
+          <select className="studio-v2-mobile-page-select" value={pagePath} onChange={(event) => { setMobilePanel("none"); setPagePath(event.target.value); }} aria-label="Страница">
+            {studioPages.map((page) => (
+              <option value={page.path} key={page.path}>{page.label}</option>
+            ))}
+          </select>
           <button type="button" className="studio-v2-mobile-toggle" onClick={() => setMobilePanel((value) => value === "left" ? "none" : "left")} title="Layers / Design panel"><Layers3 size={14} /> Layers</button>
           <button type="button" className="studio-v2-mobile-toggle" onClick={() => setMobilePanel((value) => value === "right" ? "none" : "right")} title="Inspector panel"><Code2 size={14} /> Inspector</button>
+          <button type="button" className="studio-v2-mobile-toggle studio-v2-mobile-focus" onClick={() => setMobilePanel("none") || setFocusMode((value) => !value)} title="Focus mode"><MoreHorizontal size={14} /> Focus</button>
           <button type="button" className={previewMode === "select" ? "active" : ""} onClick={() => setPreviewMode("select")} title="Select mode"><MousePointer2 size={14} /> Select</button>
           <button type="button" className={previewMode === "interact" ? "active" : ""} onClick={() => setPreviewMode("interact")} title="Interact mode"><Eye size={14} /> Interact</button>
         </div>
@@ -1108,6 +1103,15 @@ export function StudioWorkspace() {
           <button type="button" onClick={() => setFocusMode((value) => !value)} title="Focus mode"><MoreHorizontal size={15} /></button>
         </div>
       </div>
+
+      {mobilePanel !== "none" && !focusMode ? (
+        <button
+          type="button"
+          className="studio-v2-mobile-scrim"
+          aria-label="Закрыть боковую панель"
+          onClick={() => setMobilePanel("none")}
+        />
+      ) : null}
 
       <div className="studio-v2-workspace">
         {!focusMode && (
