@@ -66,7 +66,13 @@ function fallbackCreate(lead: Omit<LeadRecord, "status"> & { status?: LeadStatus
 
 export async function createLeadRecord(lead: Omit<LeadRecord, "status"> & { status?: LeadStatus }) {
   if (!isDatabaseConfigured()) return fallbackCreate(lead);
-  const record = fallbackCreate(lead);
+  const record: LeadRecord = {
+    ...lead,
+    id: lead.id || `GEO-${Date.now()}`,
+    status: lead.status || LEAD_STATUSES.NEW,
+    history: [{ action: "created", at: lead.createdAt || new Date().toISOString(), by: "website" }],
+    createdAt: lead.createdAt || new Date().toISOString(),
+  };
   try {
     const result = await query<Record<string, any>>(
       `INSERT INTO geo_leads
@@ -89,7 +95,7 @@ export async function createLeadRecord(lead: Omit<LeadRecord, "status"> & { stat
     return persisted;
   } catch (error) {
     console.error("[leads.db_create_failed]", error);
-    return record;
+    throw error;
   }
 }
 
