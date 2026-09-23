@@ -1,9 +1,9 @@
 import type { Config, Data, Slot } from "@puckeditor/core";
-import { ArrowRight, Boxes, Crosshair, Database, Ruler, ScanLine } from "lucide-react";
+import { ArrowRight, Boxes, Crosshair, Database, ScanLine } from "lucide-react";
 import { Hero } from "@/components/hero";
 import { GeospatialIndex } from "@/components/geospatial-index";
 import { ServiceCard } from "@/components/service-card";
-import { services, cases, technologies } from "@/lib/data";
+import { services, cases } from "@/lib/data";
 
 export type PuckSiteComponents = {
   HeroBlock: {
