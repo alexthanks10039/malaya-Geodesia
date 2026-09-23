@@ -30,7 +30,7 @@
 - Нет полноценного operator REST API для лидов.
 - Нет retry/outbox для Telegram notifications.
 - Нет rate limiting / abuse protection для публичного Lead API.
-- Telegram operator state требует дальнейшего hardening.
+- Telegram operator workflow реализован; production webhook/Telegram delivery всё ещё не подтверждены.
 - Нет health/readiness endpoint.
 - Нет автоматических backend integration tests.
 
