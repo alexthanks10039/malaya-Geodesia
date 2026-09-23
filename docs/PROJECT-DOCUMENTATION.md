@@ -321,11 +321,11 @@ complexity — массив строк, максимум 20 элементов.
 
 Lead ID формируется как GEO- + timestamp.
 
-Критическое ограничение: текущий /api/leads не сохраняет lead в PostgreSQL. Он формирует объект lead и при наличии TG_KEY и OWNER_ID передаёт его в Telegram.
+Lead flow сейчас durable:
 
-Целевой durable flow:
+Calculator → validation → PostgreSQL geo_leads → Telegram outbox → notification → operator.
 
-Calculator → validation → Lead DB → notification → operator.
+Поддерживаются idempotency-key, DB-backed rate limit, correlation/request ID и retry outbox. При отсутствии DATABASE_URL используется только dev fallback в памяти; production persistence должна работать с PostgreSQL.
 
 ## 11. Telegram
 
@@ -336,6 +336,8 @@ POST /api/telegram/webhook
 ENV:
 TG_KEY
 OWNER_ID
+TG_WEBHOOK_SECRET
+CRON_SECRET
 
 Поток:
 
@@ -360,7 +362,7 @@ reassigned
 done
 cancelled
 
-Ограничение: lib/telegram-leads.ts использует in-memory Map. После рестарта serverless/runtime state сбрасывается.
+Основное состояние лидов хранится в PostgreSQL. In-memory Map используется только как локальный cache/dev fallback и не является источником истины при настроенной БД.
 
 ## 12. CMS
 
@@ -966,9 +968,8 @@ Synthetic:
 
 ## 44. Known gaps
 
-1. Lead persistence отсутствует.
-2. Telegram state не durable.
-3. CMS ↔ все public pages связаны не везде одинаково.
+1. Production DB/Telegram deployment still requires operational verification.
+2. CMS ↔ все public pages связаны не везде одинаково.
 4. Browser drafts и CMS published data существуют как отдельные lifecycle layers.
 5. Calculator Studio не persistent.
 6. Case Studio и CMS Case editor дублируют редакционные функции.
@@ -978,7 +979,7 @@ Synthetic:
 
 ## 45. Рекомендуемый порядок разработки
 
-1. Lead → PostgreSQL → notifications → Telegram status persistence.
+1. Lead → PostgreSQL → notification outbox → Telegram status persistence.
 2. Единая CMS model для public entities.
 3. Единый Studio draft/publish lifecycle.
 4. File Space как единый media layer.
