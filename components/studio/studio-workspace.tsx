@@ -422,6 +422,9 @@ function applyPageState(doc: Document, state: StudioState, path: string, device:
     if (override.hidden) {
       element.style.setProperty("display", "none");
     }
+    if (override.locked) {
+      element.setAttribute("data-studio-locked", "true");
+    }
 
     if (override.attributes?.href !== undefined && "href" in element) {
       element.setAttribute("href", override.attributes.href);
@@ -1516,7 +1519,6 @@ export function StudioWorkspace() {
     }
 
     const used = new Set(Object.keys(page));
-    const idMap = new Map<string, string>();
     let counter = 1;
     const newPage = { ...page };
 
@@ -1531,7 +1533,6 @@ export function StudioWorkspace() {
       const source = page[sourceId]?.inserted;
       if (!source) return;
       const nextId = makeId();
-      idMap.set(sourceId + ":" + parentId, nextId);
       newPage[nextId] = {
         ...page[sourceId],
         inserted: {
@@ -1581,9 +1582,10 @@ export function StudioWorkspace() {
       nextPage[id] = { ...override, inserted: { ...override.inserted, parentId: groupId, order: index } };
     });
     commit({ ...stateRef.current, pages: { ...stateRef.current.pages, [pagePath]: nextPage } });
-    setSelected(groupId, true);
+    setSelected(null);
     setSelectedIds([groupId]);
     refreshFrame();
+    window.setTimeout(() => selectInFrame(groupId), 0);
     notify("Frame создан");
   }
 
