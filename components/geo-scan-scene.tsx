@@ -8,6 +8,9 @@ function seeded(seed: number) {
   return x - Math.floor(x);
 }
 
+// LEGACY CODE: terrain hero animation (Animation 1).
+// Kept intentionally as a point-only DTM-style visualization. Do not extend
+// this legacy scene with decorative grid/contour/scan layers.
 export function GeoScanScene({ variant = "terrain", layers }: { variant?: "terrain" | "index"; layers?: { points?: boolean; grid?: boolean; scan?: boolean } }) {
   const hostRef = useRef<HTMLDivElement>(null);
   const layerPoints = layers?.points ?? true;
@@ -44,27 +47,27 @@ export function GeoScanScene({ variant = "terrain", layers }: { variant?: "terra
     const count = gridSize * gridSize;
     const positions = new Float32Array(count * 3);
     const colors = new Float32Array(count * 3);
-    const cyan = new THREE.Color("#d9ff52");
-    const mint = new THREE.Color("#a4c5b0");
-    const deep = new THREE.Color("#294036");
+    const high = new THREE.Color("#d6e2d2");
+    const mid = new THREE.Color("#718777");
+    const low = new THREE.Color("#26372e");
 
     let cursor = 0;
     for (let z = 0; z < gridSize; z += 1) {
       for (let x = 0; x < gridSize; x += 1) {
         const nx = x / (gridSize - 1) - 0.5;
         const nz = z / (gridSize - 1) - 0.5;
-        const wave = Math.sin(nx * 9.5) * 0.52 + Math.cos(nz * 10.5) * 0.42;
-        const ridge = Math.sin((nx + nz) * 15) * 0.2;
-        const mound = Math.exp(-((nx * nx) * 9 + (nz * nz) * 12)) * 1.85;
-        const noise = (seeded(x * gridSize + z) - 0.5) * 0.14;
-        const y = wave * 0.23 + ridge * 0.22 + mound + noise;
+        const ridgeA = Math.exp(-(((nx + 0.08) ** 2) * 16 + ((nz + 0.02) ** 2) * 6)) * 2.2;
+        const ridgeB = Math.exp(-(((nx - 0.2) ** 2) * 35 + ((nz - 0.05) ** 2) * 18)) * 0.7;
+        const saddle = Math.sin((nx - nz) * 8) * 0.08 * Math.exp(-(nx * nx + nz * nz) * 3);
+        const noise = (seeded(x * gridSize + z) - 0.5) * 0.08;
+        const y = ridgeA + ridgeB + saddle + noise - 0.72;
 
         positions[cursor * 3] = nx * 8.2;
         positions[cursor * 3 + 1] = y - 0.65;
         positions[cursor * 3 + 2] = nz * 6.8;
 
-        const t = THREE.MathUtils.clamp((y + 1.8) / 3.6, 0, 1);
-        const c = deep.clone().lerp(mint, t).lerp(cyan, Math.max(0, t - 0.63) / 0.37);
+        const t = THREE.MathUtils.clamp((y + 0.72) / 2.65, 0, 1);
+        const c = low.clone().lerp(mid, t).lerp(high, Math.max(0, t - 0.62) / 0.38);
         colors[cursor * 3] = c.r;
         colors[cursor * 3 + 1] = c.g;
         colors[cursor * 3 + 2] = c.b;
@@ -77,25 +80,26 @@ export function GeoScanScene({ variant = "terrain", layers }: { variant?: "terra
     pointGeometry.setAttribute("color", new THREE.BufferAttribute(colors, 3));
 
     const pointMaterial = new THREE.PointsMaterial({
-      size: 0.055,
+      size: variant === "terrain" ? 0.043 : 0.055,
       vertexColors: true,
       transparent: true,
-      opacity: 0.86,
+      opacity: variant === "terrain" ? 0.9 : 0.86,
       depthWrite: false,
-      blending: THREE.AdditiveBlending,
+      blending: THREE.NormalBlending,
     });
 
     const points = new THREE.Points(pointGeometry, pointMaterial);
-    points.rotation.x = -0.32;
-    points.rotation.y = 0.08;
+    points.rotation.x = variant === "terrain" ? -0.58 : -0.32;
+    points.rotation.y = variant === "terrain" ? 0.02 : 0.08;
     terrainGroup.add(points);
-    points.visible = layerPoints;
+    // Animation 1 / LEGACY CODE: points are the only visible layer.
+    points.visible = variant === "terrain" ? true : layerPoints;
 
     const photogrammetryGrid = new THREE.Group();
     photogrammetryGrid.rotation.x = -0.38;
     photogrammetryGrid.rotation.y = 0.08;
     terrainGroup.add(photogrammetryGrid);
-    photogrammetryGrid.visible = layerGrid;
+    photogrammetryGrid.visible = variant === "index" && layerGrid;
 
     for (let line = 0; line < 13; line += 1) {
       const geometry = new THREE.BufferGeometry();
@@ -119,7 +123,7 @@ export function GeoScanScene({ variant = "terrain", layers }: { variant?: "terra
     }
 
     const contourGroup = new THREE.Group();
-    if (variant === "index") contourGroup.visible = false;
+    contourGroup.visible = false;
     contourGroup.rotation.x = -0.32;
     contourGroup.rotation.y = 0.08;
     terrainGroup.add(contourGroup);
@@ -151,12 +155,11 @@ export function GeoScanScene({ variant = "terrain", layers }: { variant?: "terra
     }
 
     const grid = new THREE.GridHelper(13, 26, 0x66786a, 0x223128);
-    if (variant === "index") grid.visible = false;
+    grid.visible = false;
     grid.position.y = -1.38;
     grid.material.transparent = true;
     grid.material.opacity = 0.28;
     scene.add(grid);
-    grid.visible = variant === "index" ? layerGrid : layerGrid;
 
     const scanPlane = new THREE.Mesh(
       new THREE.PlaneGeometry(11.5, 8.3),
@@ -185,8 +188,8 @@ export function GeoScanScene({ variant = "terrain", layers }: { variant?: "terra
     scanLine.rotation.y = -0.04;
     scanLine.position.set(0, 0.78, -1.7);
     scene.add(scanLine);
-    scanLine.visible = layerScan;
-    scanPlane.visible = layerScan;
+    scanLine.visible = variant === "index" && layerScan;
+    scanPlane.visible = variant === "index" && layerScan;
 
     const pointer = { x: 0, y: 0 };
     let targetX = 0;
@@ -228,18 +231,22 @@ export function GeoScanScene({ variant = "terrain", layers }: { variant?: "terra
       pointer.x += (targetX - pointer.x) * 0.035;
       pointer.y += (targetY - pointer.y) * 0.035;
 
-      terrainGroup.rotation.y = 0.08 + pointer.x * 0.18;
-      terrainGroup.rotation.x = pointer.y * 0.08;
-      const baseCameraX = variant === "index" ? 0.1 : 7.2;
-      const baseCameraY = variant === "index" ? 9.8 : 5.2;
+      terrainGroup.rotation.y = (variant === "terrain" ? 0.02 : 0.08) + pointer.x * (variant === "terrain" ? 0.08 : 0.18);
+      terrainGroup.rotation.x = (variant === "terrain" ? -0.02 : 0) + pointer.y * (variant === "terrain" ? 0.04 : 0.08);
+      const baseCameraX = variant === "index" ? 0.1 : 6.4;
+      const baseCameraY = variant === "index" ? 9.8 : 7.4;
       camera.position.x += (baseCameraX + (variant === "index" ? pointer.x * 0.7 : pointer.x * 1.9) - camera.position.x) * 0.02;
       camera.position.y += (baseCameraY - pointer.y * (variant === "index" ? 0.7 : 1.5) - camera.position.y) * 0.02;
       camera.lookAt(0, 0.2, 0);
 
-      points.rotation.z = variant === "index" ? 0 : elapsed * 0.018;
-      pointMaterial.opacity = 0.78 + Math.sin(elapsed * 1.4) * 0.08;
-      photogrammetryGrid.rotation.z = elapsed * 0.012;
-      contourGroup.rotation.z = elapsed * 0.018;
+      points.rotation.z = 0;
+      pointMaterial.opacity = variant === "terrain"
+        ? 0.86 + Math.sin(elapsed * 0.9) * 0.045
+        : 0.78 + Math.sin(elapsed * 1.4) * 0.08;
+      if (variant === "index") {
+        photogrammetryGrid.rotation.z = elapsed * 0.012;
+        contourGroup.rotation.z = elapsed * 0.018;
+      }
 
       const scanY = -2.35 + ((elapsed * 0.7) % 4.8);
       scanLine.position.y = scanY;
