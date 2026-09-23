@@ -824,6 +824,8 @@ export function StudioWorkspace() {
     }
 
     let drag: { startX: number; startY: number } | null = null;
+    let groupLastX = 0;
+    let groupLastY = 0;
 
     const calculateSnap = (rawX: number, rawY: number) => {
       const grid = 8;
@@ -895,42 +897,30 @@ export function StudioWorkspace() {
       const current = stateRef.current.pages[pagePath]?.[selected.id];
       if (current?.locked) return;
       drag = { startX: event.clientX, startY: event.clientY };
+      groupLastX = 0;
+      groupLastY = 0;
       element.setPointerCapture?.(event.pointerId);
-      groupElements.forEach((item) => { item.style.cursor = "move"; item.dataset.studioGroupLast = "0,0"; });
+      groupElements.forEach((item) => { item.style.cursor = "move"; });
     };
 
     const pointerMove = (event: PointerEvent) => {
       if (!drag) return;
       event.preventDefault();
       event.stopPropagation();
+
       if (isGroup) {
-        const dx = Math.round((event.clientX - drag.startX) / 8) * 8;
-        const dy = Math.round((event.clientY - drag.startY) / 8) * 8;
-        groupStartRects.forEach(({ element: item, rect }, index) => {
-          void rect;
-          const id = selectedIds[index];
-          const current = stateRef.current.pages[pagePath]?.[id];
-          if (current?.locked) return;
-          const offset = device === "desktop"
-            ? current?.positionOffset ?? { x: 0, y: 0 }
-            : current?.responsivePositionOffset?.[device] ?? current?.positionOffset ?? { x: 0, y: 0 };
-          item.style.translate = Math.round(offset.x) + "px " + Math.round(offset.y) + "px";
-        });
-        moveSelectionBy(dx - (dx === 0 ? 0 : Math.round((event.clientX - drag.startX - dx) * 0)), dy - (dy === 0 ? 0 : Math.round((event.clientY - drag.startY - dy) * 0)), "move-group:" + device + ":" + selectedIds.join(","));
+        const nextGroupX = Math.round((event.clientX - drag.startX) / 8) * 8;
+        const nextGroupY = Math.round((event.clientY - drag.startY) / 8) * 8;
+        const deltaX = nextGroupX - groupLastX;
+        const deltaY = nextGroupY - groupLastY;
+        if (deltaX || deltaY) {
+          moveSelectionBy(deltaX, deltaY, "group-drag:" + device + ":" + selectedIds.join(","));
+          groupLastX = nextGroupX;
+          groupLastY = nextGroupY;
+        }
         return;
       }
-      if (isGroup) {
-        const dx = Math.round((event.clientX - drag.startX) / 8) * 8;
-        const dy = Math.round((event.clientY - drag.startY) / 8) * 8;
-        const lastKey = "group-drag:" + device + ":" + selectedIds.join(",");
-        const previous = (groupElements as HTMLElement[]).map((item) => item.dataset.studioGroupLast || "0,0");
-        const previousDelta = previous[0].split(",").map(Number);
-        const deltaX = dx - (previousDelta[0] || 0);
-        const deltaY = dy - (previousDelta[1] || 0);
-        groupElements.forEach((item) => { item.dataset.studioGroupLast = dx + "," + dy; });
-        moveSelectionBy(deltaX, deltaY, lastKey);
-        return;
-      }
+
       const result = calculateSnap(
         startOffset.x + event.clientX - drag.startX,
         startOffset.y + event.clientY - drag.startY,
@@ -942,7 +932,7 @@ export function StudioWorkspace() {
     const pointerUp = () => {
       if (!drag) return;
       drag = null;
-      groupElements.forEach((item) => { item.style.cursor = ""; delete item.dataset.studioGroupLast; });
+      groupElements.forEach((item) => { item.style.cursor = ""; });
       verticalGuide.style.opacity = "0";
       horizontalGuide.style.opacity = "0";
       liveEditRef.current = null;
