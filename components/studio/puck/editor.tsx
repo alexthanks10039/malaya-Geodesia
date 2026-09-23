@@ -30,7 +30,7 @@ export function PuckStudio() {
     setHydrated(true);
   }, []);
 
-  const saveDraft = (next: Data, message = "LOCAL DRAFT") => {
+  const saveDraft = (next: Data<PuckSiteComponents, PuckSiteRootProps>, message = "LOCAL DRAFT") => {
     setData(next);
     window.localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
     setStatus(message);
