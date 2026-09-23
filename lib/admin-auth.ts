@@ -46,6 +46,7 @@ function verifyToken(token: string | undefined): boolean {
 }
 
 export async function isAdminAuthenticated(): Promise<boolean> {
+  if (process.env.STUDIO_AUTH_DISABLED === "true") return true;
   try {
     const store = await cookies();
     return verifyToken(store.get(COOKIE_NAME)?.value);
@@ -56,6 +57,7 @@ export async function isAdminAuthenticated(): Promise<boolean> {
 
 export async function requireAdminApi(): Promise<{ ok: true } | { ok: false; response: Response }> {
   try {
+    if (process.env.STUDIO_AUTH_DISABLED === "true") return { ok: true };
     if (!process.env.ADMIN_PASSWORD || !process.env.ADMIN_SESSION_SECRET) {
       return {
         ok: false,
