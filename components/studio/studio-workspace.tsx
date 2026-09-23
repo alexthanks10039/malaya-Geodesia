@@ -820,6 +820,7 @@ export function StudioWorkspace() {
   }
 
   function resetPage() {
+    if (!window.confirm("Сбросить все изменения этой страницы?")) return;
     const pages = { ...state.pages };
     delete pages[pagePath];
     commit({ ...state, pages });
@@ -829,6 +830,7 @@ export function StudioWorkspace() {
   }
 
   function resetAll() {
+    if (!window.confirm("Очистить весь Studio draft?")) return;
     clearStudioDrafts();
     const next = emptyState();
     undoRef.current = [];
@@ -1031,7 +1033,25 @@ export function StudioWorkspace() {
             >
               {node.children.length ? (isOpen ? <ChevronDown size={13} /> : <ChevronRight size={13} />) : <span />}
             </button>
-            <button type="button" className="studio-v2-layer-select" onClick={() => selectInFrame(node.id)}>
+            <button
+              type="button"
+              className="studio-v2-layer-select"
+              onClick={() => selectInFrame(node.id)}
+              onKeyDown={(event) => {
+                if (event.key !== "ArrowDown" && event.key !== "ArrowUp") return;
+                event.preventDefault();
+                const index = flatNodes.findIndex((item) => item.id === node.id);
+                const nextIndex = event.key === "ArrowDown"
+                  ? Math.min(flatNodes.length - 1, index + 1)
+                  : Math.max(0, index - 1);
+                const next = flatNodes[nextIndex];
+                if (next) {
+                  selectInFrame(next.id);
+                  document.querySelector<HTMLButtonElement>('[data-studio-layer-id="' + CSS.escape(next.id) + '"]')?.focus();
+                }
+              }}
+              data-studio-layer-id={node.id}
+            >
               <span className="studio-v2-layer-tag">{node.tag}</span>
               <span className="studio-v2-layer-name">
                 <b>{node.label || "(без текста)"}</b>
@@ -1088,7 +1108,7 @@ export function StudioWorkspace() {
               notify("Redo");
             }} disabled={!redoRef.current.length} title="Redo · Shift+Ctrl/Cmd+Z"><Redo2 size={15} /></button>
           </div>
-          <span className="studio-v2-draft-status"><i /> LOCAL DRAFT</span>
+          <span className={"studio-v2-draft-status " + (sameState(state, initialState) ? "" : "is-changed")}><i /> {sameState(state, initialState) ? "LOCAL DRAFT" : "UNSAVED CHANGES"}</span>
           <button type="button" className="studio-v2-button ghost studio-v2-hide-mobile" onClick={exportDraft}><Download size={14} /> Export</button>
           <button type="button" className="studio-v2-button acid" onClick={() => saveVersion(versionLabel || "Quick save")}><Save size={14} /> Save</button>
           <Link className="studio-v2-button ghost studio-v2-hide-mobile" href={pagePath} target="_blank" rel="noreferrer"><ExternalLink size={14} /> Open</Link>
