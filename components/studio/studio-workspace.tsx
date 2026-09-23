@@ -191,9 +191,10 @@ function elementPath(element: Element): string {
   const parts: string[] = [];
   let current: Element | null = element;
   while (current && current !== document.body) {
-    const parent = current.parentElement;
-    if (!parent) break;
-    const sameTag = Array.from(parent.children).filter((child) => child.tagName === current?.tagName);
+    const parent: Element | null = current.parentElement;
+    if (parent === null) break;
+    const currentTag = current.tagName;
+    const sameTag: Element[] = (Array.from(parent.children) as Element[]).filter((child: Element) => child.tagName === currentTag);
     const index = Math.max(0, sameTag.indexOf(current));
     parts.unshift(current.tagName.toLowerCase() + ":nth-of-type(" + (index + 1) + ")");
     current = parent;
