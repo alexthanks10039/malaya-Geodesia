@@ -62,7 +62,12 @@ export type PuckSiteComponents = {
   };
 };
 
-export type PuckSiteRootProps = {\n  pageTitle: string;\n  pageDescription: string;\n};\n\nconst config: Config<PuckSiteComponents, PuckSiteRootProps> = {
+export type PuckSiteRootProps = {
+  pageTitle: string;
+  pageDescription: string;
+};
+
+const config: Config<PuckSiteComponents, PuckSiteRootProps> = {
   root: {
     fields: {
       pageTitle: {
