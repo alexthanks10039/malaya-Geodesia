@@ -1518,6 +1518,18 @@ export function StudioWorkspace() {
     setSelectedIds(selected ? [selected.id] : []);
   }
 
+  function toggleHiddenById(id: string) {
+    const currentState = stateRef.current;
+    const page = currentState.pages[pagePath] ?? {};
+    const current = page[id] ?? {};
+    const hidden = !(current.hidden ?? false);
+    const next = { ...currentState, pages: { ...current.pages, [pagePath]: { ...page, [id]: { ...current, hidden } } } };
+    commit(next);
+    const element = findElement(frameRef.current?.contentDocument ?? null, id);
+    if (element) element.style.setProperty("display", hidden ? "none" : "");
+    notify(hidden ? "Layer hidden" : "Layer shown");
+  }
+
   function toggleLocked(id = selected?.id) {
     if (!id) return;
     const currentState = stateRef.current;
@@ -1800,6 +1812,20 @@ export function StudioWorkspace() {
               </span>
               {node.inserted && <span className="studio-v2-insert-badge">NEW</span>}
             </button>
+            <button
+              type="button"
+              className="studio-v2-layer-more"
+              title="Layer actions"
+              aria-label="Layer actions"
+              onClick={(event) => {
+                event.stopPropagation();
+                setContextMenu({
+                  id: node.id,
+                  x: Math.min(event.clientX, window.innerWidth - 210),
+                  y: Math.min(event.clientY, window.innerHeight - 260),
+                });
+              }}
+            ><MoreVertical size={13} /></button>
           </div>
           {isOpen && node.children.length ? <div className="studio-v2-layer-children">{renderTree(node.children)}</div> : null}
         </div>
@@ -2263,6 +2289,32 @@ export function StudioWorkspace() {
           </label>
         </div>
       </div>
+
+      {contextMenu ? (
+        <div
+          className="studio-v2-context-menu"
+          style={{ left: contextMenu.x, top: contextMenu.y }}
+          onMouseDown={(event) => event.stopPropagation()}
+        >
+          <div className="studio-v2-context-title">LAYER ACTIONS</div>
+          <button type="button" onClick={() => { selectInFrame(contextMenu.id); setContextMenu(null); }}><MousePointer2 size={13} /> Select</button>
+          <button type="button" onClick={() => { toggleLocked(contextMenu.id); setContextMenu(null); }}>
+            {state.pages[pagePath]?.[contextMenu.id]?.locked ? <Unlock size={13} /> : <Lock size={13} />}
+            {state.pages[pagePath]?.[contextMenu.id]?.locked ? "Unlock" : "Lock"}
+          </button>
+          <button type="button" onClick={() => { toggleHiddenById(contextMenu.id); setContextMenu(null); }}>
+            {state.pages[pagePath]?.[contextMenu.id]?.hidden ? <Eye size={13} /> : <EyeOff size={13} />}
+            {state.pages[pagePath]?.[contextMenu.id]?.hidden ? "Show" : "Hide"}
+          </button>
+          {state.pages[pagePath]?.[contextMenu.id]?.inserted ? (
+            <button type="button" onClick={() => { duplicateInserted([contextMenu.id]); setContextMenu(null); }}><CopyPlus size={13} /> Duplicate</button>
+          ) : null}
+          {selectedIds.length > 1 && selectedIds.every((id) => Boolean(state.pages[pagePath]?.[id]?.inserted)) ? (
+            <button type="button" onClick={() => { groupInsertedSelection(); setContextMenu(null); }}><Group size={13} /> Group / Frame</button>
+          ) : null}
+          <div className="studio-v2-context-shortcuts">↑↓ MOVE · SHIFT ×8 · CMD/CTRL+D DUPLICATE</div>
+        </div>
+      ) : null}
 
       {toast ? <div className="studio-v2-toast"><Check size={14} /> {toast}</div> : null}
     </main>
