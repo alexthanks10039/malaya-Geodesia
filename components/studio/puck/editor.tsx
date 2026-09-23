@@ -30,7 +30,7 @@ type PuckCmsData = {
   puck: Data<PuckSiteComponents, PuckSiteRootProps>;
 };
 
-type SaveStatus = "LOADING" | "SYNCED" | "SAVING" | "DRAFT SAVED" | "PUBLISHED" | "OFFLINE DRAFT" | "ERROR";
+type SaveStatus = "LOADING" | "SYNCED" | "SAVING" | "DRAFT SAVED" | "PUBLISHED" | "OFFLINE DRAFT" | "LOCAL CONFLICT" | "ERROR";
 
 function readLocalDraft(): Data<PuckSiteComponents, PuckSiteRootProps> | null {
   if (typeof window === "undefined") return null;
@@ -102,7 +102,10 @@ export function PuckStudio() {
         setVersion(page?.version ?? 0);
         const serverDraft = page ? puckFromCms(page.data) : null;
         const localDraft = readLocalDraft();
-        if (serverDraft) {
+        if (serverDraft && localDraft && JSON.stringify(serverDraft) !== JSON.stringify(localDraft)) {
+          setData(localDraft);
+          setStatus("LOCAL CONFLICT");
+        } else if (serverDraft) {
           setData(serverDraft);
           window.localStorage.setItem(STORAGE_KEY, JSON.stringify(serverDraft));
           setStatus("SYNCED");
@@ -268,7 +271,9 @@ export function PuckStudio() {
 
           <div className="puck-studio-actions">
             <span className={"puck-studio-status puck-status-" + status.toLowerCase().replace(/\s+/g, "-")}><i /> {status}</span>
-            <button type="button" className="puck-studio-reset" onClick={() => void resetDraft()}>Сбросить draft</button>
+            <button type="button" className="puck-studio-reset" onClick={() => void resetDraft()}>
+              {status === "LOCAL CONFLICT" ? "Взять серверный draft" : "Сбросить draft"}
+            </button>
             <a className="puck-studio-back" href="/studio">← Native Studio</a><StudioLogout />
           </div>
         </div>
