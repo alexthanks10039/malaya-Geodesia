@@ -301,3 +301,15 @@ body:has(.studio-v2) main{margin:0!important;max-width:none!important;padding:0!
   .studio-v2-resize-ui [data-resize="bottom"]{bottom:-6px;height:11px}
   .studio-v2-resize-ui [data-resize="corner"]{right:-8px;bottom:-8px;width:16px;height:16px}
 }
+
+#malaya-studio-guides{position:fixed;inset:0;z-index:2147483638;pointer-events:none}
+#malaya-studio-guides span{position:absolute;display:block;opacity:0;pointer-events:none;transition:opacity .08s ease}
+#malaya-studio-guides [data-guide="vertical"]{top:0;bottom:0;width:1px;background:#d9ff52;box-shadow:0 0 10px rgba(217,255,82,.35)}
+#malaya-studio-guides [data-guide="horizontal"]{left:0;right:0;height:1px;background:#d9ff52;box-shadow:0 0 10px rgba(217,255,82,.35)}
+.studio-v2-position-grid{display:grid;grid-template-columns:1fr 1fr auto;gap:7px;align-items:end;margin-bottom:8px}
+.studio-v2-position-reset{min-height:28px;padding:0 7px;border:1px solid #34402e;border-radius:6px;background:#141a11;color:#aab3a3;font:800 7px ui-monospace,SFMono-Regular,monospace;cursor:pointer;white-space:nowrap}
+.studio-v2-position-reset:hover{border-color:#607152;color:#d9ff52}
+@media(max-width:700px){
+  .studio-v2-position-grid{grid-template-columns:1fr 1fr}
+  .studio-v2-position-reset{grid-column:1/-1;width:100%}
+}
