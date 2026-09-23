@@ -66,7 +66,13 @@ function fallbackCreate(lead: Omit<LeadRecord, "status"> & { status?: LeadStatus
 
 export async function createLeadRecord(lead: Omit<LeadRecord, "status"> & { status?: LeadStatus }) {
   if (!isDatabaseConfigured()) return fallbackCreate(lead);
-  const record = fallbackCreate(lead);
+  const record: LeadRecord = {
+    ...lead,
+    id: lead.id || `GEO-${Date.now()}`,
+    status: lead.status || LEAD_STATUSES.NEW,
+    history: [{ action: "created", at: lead.createdAt || new Date().toISOString(), by: "website" }],
+    createdAt: lead.createdAt || new Date().toISOString(),
+  };
   try {
     const result = await query<Record<string, any>>(
       `INSERT INTO geo_leads
@@ -89,7 +95,7 @@ export async function createLeadRecord(lead: Omit<LeadRecord, "status"> & { stat
     return persisted;
   } catch (error) {
     console.error("[leads.db_create_failed]", error);
-    return record;
+    throw error;
   }
 }
 
@@ -160,6 +166,22 @@ export async function getLeadStats() {
   }
 }
 
+async function auditLeadAction(action: string, leadId: string, beforeData: LeadRecord | null, afterData: LeadRecord | null, by: string) {
+  if (!isDatabaseConfigured()) return;
+  await query(
+    "INSERT INTO cms_audit_log(entity_type,entity_id,action,actor,before_data,after_data,metadata) VALUES($1,$2,$3,$4,$5::jsonb,$6::jsonb,$7::jsonb)",
+    [
+      "lead",
+      leadId,
+      action,
+      by || "telegram",
+      beforeData ? JSON.stringify(beforeData) : null,
+      afterData ? JSON.stringify(afterData) : null,
+      JSON.stringify({ source: "telegram" }),
+    ],
+  );
+}
+
 function getLeadStatsMemory() {
   const all = [...memory.values()];
   return {
@@ -185,7 +207,9 @@ export async function updateLeadStatus({ leadId, status, by }: { leadId: string;
     "UPDATE geo_leads SET status=$1,history=$2::jsonb WHERE id=$3 RETURNING *",
     [status, JSON.stringify(history), leadId],
   );
-  return result.rows[0] ? normalize(result.rows[0]) : next;
+  const persisted = result.rows[0] ? normalize(result.rows[0]) : next;
+  await auditLeadAction("status_change", leadId, current, persisted, by);
+  return persisted;
 }
 
 export async function reassignLead({ leadId, employeeId, employeeName, by }: { leadId: string; employeeId: string; employeeName: string; by: string }) {
@@ -201,5 +225,7 @@ export async function reassignLead({ leadId, employeeId, employeeName, by }: { l
     "UPDATE geo_leads SET status=$1,assigned_to=$2::jsonb,history=$3::jsonb WHERE id=$4 RETURNING *",
     [LEAD_STATUSES.REASSIGNED, JSON.stringify(assignedTo), JSON.stringify(history), leadId],
   );
-  return result.rows[0] ? normalize(result.rows[0]) : next;
+  const persisted = result.rows[0] ? normalize(result.rows[0]) : next;
+  await auditLeadAction("reassign", leadId, current, persisted, by);
+  return persisted;
 }
