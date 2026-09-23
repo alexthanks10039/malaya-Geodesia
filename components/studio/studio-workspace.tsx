@@ -1264,6 +1264,42 @@ export function StudioWorkspace() {
     setSelected((current) => current ? { ...current, label: value, css: readCss(element) } : current);
   }
 
+  function updateStylesBatch(updates: Partial<StudioCssOverrides>, editKey = "batch-style") {
+    if (!selected) return;
+    const element = findElement(frameRef.current?.contentDocument ?? null, selected.id);
+    if (!element) return;
+
+    Object.entries(updates).forEach(([property, value]) => {
+      if (value === undefined) return;
+      const cssName = STYLE_MAP[property as keyof StudioCssOverrides];
+      if (cssName) element.style.setProperty(cssName, value);
+    });
+
+    const apply = (current: StudioElementOverride) =>
+      device === "desktop"
+        ? { ...current, css: { ...(current.css ?? {}), ...updates } }
+        : {
+            ...current,
+            responsiveCss: {
+              ...(current.responsiveCss ?? {}),
+              [device]: {
+                ...(current.responsiveCss?.[device] ?? {}),
+                ...updates,
+              },
+            },
+          };
+
+    const currentState = stateRef.current;
+    const page = currentState.pages[pagePath] ?? {};
+    const current = page[selected.id] ?? {};
+    const next = {
+      ...currentState,
+      pages: { ...currentState.pages, [pagePath]: { ...page, [selected.id]: apply(current) } },
+    };
+    liveCommit(next, editKey + ":" + device + ":" + selected.id);
+    setSelected((currentSelected) => currentSelected ? { ...currentSelected, css: { ...currentSelected.css, ...updates } } : currentSelected);
+  }
+
   function updateStyle(property: keyof StudioCssOverrides, value: string) {
     if (!selected) return;
     const element = findElement(frameRef.current?.contentDocument ?? null, selected.id);
