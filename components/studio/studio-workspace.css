@@ -260,3 +260,19 @@ body:has(.studio-v2) main{margin:0!important;max-width:none!important;padding:0!
 @media(prefers-reduced-motion:reduce){
   .studio-v2 *{scroll-behavior:auto!important;transition:none!important}
 }
+.studio-v2-draft-status.is-changed{color:#f0d08a}
+.studio-v2-draft-status.is-changed i{background:#f0d08a;box-shadow:0 0 8px rgba(240,208,138,.45)}
+.studio-v2-layer-select:focus-visible,
+.studio-v2-layer-chevron:focus-visible,
+.studio-v2-tabs button:focus-visible,
+.studio-v2-toolbar-center button:focus-visible,
+.studio-v2-toolbar-right>button:focus-visible,
+.studio-v2-mobile-page-select:focus-visible,
+.studio-v2-button:focus-visible{outline:2px solid #d9ff52;outline-offset:2px}
+.studio-v2-selected-chip small{margin-left:auto;color:#687464;font:800 7px ui-monospace,SFMono-Regular,monospace;white-space:nowrap}
+.studio-v2-data-empty{display:grid;justify-items:start;gap:8px;padding:28px 18px}
+.studio-v2-data-link{display:inline-flex;align-items:center;justify-content:center;min-height:30px;padding:0 10px;border:1px solid #536047;border-radius:7px;background:#181d15;color:#d9ff52;text-decoration:none;font:800 8px ui-monospace,SFMono-Regular,monospace}
+.studio-v2-data-link:hover{background:#252c20}
+@media(max-width:700px){
+  .studio-v2-selected-chip small{display:none}
+}

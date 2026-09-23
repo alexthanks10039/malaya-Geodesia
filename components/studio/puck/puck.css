@@ -157,6 +157,7 @@
   50%{opacity:1;transform:scale(1)}
 }
 @media(max-width:760px){
+  .puck-studio-shell{grid-template-rows:auto minmax(0,1fr)}
   .puck-studio-toolbar{
     align-items:flex-start;
     padding:10px;
@@ -167,6 +168,7 @@
     width:100%;
     justify-content:flex-end;
     flex-wrap:wrap;
+    row-gap:6px;
   }
   .puck-studio-brand{
     width:100%;
@@ -174,9 +176,20 @@
     gap:5px 8px;
   }
   .puck-studio-editor{
-    min-height:calc(100dvh - 234px);
+    min-height:0;
+    height:calc(100dvh - 254px);
   }
 }
 @media(prefers-reduced-motion:reduce){
   .puck-studio-loader-dot{animation:none}
+}
+
+.puck-status-local-conflict{color:#f0d08a}
+.puck-status-local-conflict i{background:#f0d08a;box-shadow:0 0 8px rgba(240,208,138,.5)}
+.puck-studio-reset:focus-visible,.puck-studio-back:focus-visible,.studio-logout:focus-visible{outline:2px solid #d9ff52;outline-offset:2px}
+@media(max-width:520px){
+  .puck-studio-actions{justify-content:stretch}
+  .puck-studio-actions>*{min-width:0}
+  .puck-studio-status{margin-right:auto}
+  .puck-studio-reset,.puck-studio-back,.studio-logout{padding-inline:7px}
 }
