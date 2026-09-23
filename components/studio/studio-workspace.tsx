@@ -55,6 +55,7 @@ import type {
   StudioComment,
   StudioCssOverrides,
   StudioElementOverride,
+  StudioPositionOffset,
   StudioInsertedBlock,
   StudioState,
   StudioResponsiveDevice,
@@ -309,6 +310,14 @@ function readCss(element: Element): StudioCssOverrides {
   };
 }
 
+function applyPositionOffset(element: HTMLElement, offset?: StudioPositionOffset): void {
+  if (!offset) {
+    element.style.translate = "";
+    return;
+  }
+  element.style.translate = Math.round(offset.x) + "px " + Math.round(offset.y) + "px";
+}
+
 function applyCss(element: HTMLElement, css?: StudioCssOverrides): void {
   if (!css) return;
 
@@ -378,6 +387,10 @@ function insertRuntimeBlocks(doc: Document, page: StudioState["pages"][string], 
     if (element) {
       const responsive = override.responsiveCss?.[device];
       if (responsive) applyCss(element, responsive);
+      const offset = device === "desktop"
+        ? override.positionOffset
+        : override.responsivePositionOffset?.[device] ?? override.positionOffset;
+      applyPositionOffset(element, offset);
       parent.appendChild(element);
     }
   }
@@ -396,6 +409,10 @@ function applyPageState(doc: Document, state: StudioState, path: string, device:
 
     applyCss(element, override.css);
     if (device !== "desktop") applyCss(element, override.responsiveCss?.[device]);
+    const offset = device === "desktop"
+      ? override.positionOffset
+      : override.responsivePositionOffset?.[device] ?? override.positionOffset;
+    applyPositionOffset(element, offset);
 
     if (override.hidden) {
       element.style.setProperty("display", "none");
@@ -502,6 +519,11 @@ export function StudioWorkspace() {
   const filteredTree = useMemo(() => filterTree(nodes, search), [nodes, search]);
   const activeOverride = selected ? state.pages[pagePath]?.[selected.id] : undefined;
   const activeResponsiveCss = selected && device !== "desktop" ? activeOverride?.responsiveCss?.[device] : undefined;
+  const activePositionOffset = selected
+    ? device === "desktop"
+      ? activeOverride?.positionOffset
+      : activeOverride?.responsivePositionOffset?.[device] ?? activeOverride?.positionOffset
+    : undefined;
   const styleForDevice = (property: keyof StudioCssOverrides) =>
     device === "desktop"
       ? selected?.css[property]
@@ -509,6 +531,40 @@ export function StudioWorkspace() {
   const pageInfo = studioPages.find((page) => page.path === pagePath) ?? studioPages[0];
   const selectedIndex = selected ? flatNodes.findIndex((node) => node.id === selected.id) : -1;
   const selectedPosition = selectedIndex >= 0 ? selectedIndex + 1 : 0;
+  const updatePositionOffset = useCallback((id: string, offset: StudioPositionOffset, editKey?: string) => {
+    const currentState = stateRef.current;
+    const page = currentState.pages[pagePath] ?? {};
+    const current = page[id] ?? {};
+    const next = {
+      ...currentState,
+      pages: {
+        ...currentState.pages,
+        [pagePath]: {
+          ...page,
+          [id]: device === "desktop"
+            ? { ...current, positionOffset: { x: Math.round(offset.x), y: Math.round(offset.y) } }
+            : {
+                ...current,
+                responsivePositionOffset: {
+                  ...(current.responsivePositionOffset ?? {}),
+                  [device]: { x: Math.round(offset.x), y: Math.round(offset.y) },
+                },
+              },
+        },
+      },
+    };
+    if (editKey) {
+      if (liveEditRef.current !== editKey) {
+        undoRef.current.push(currentState);
+        if (undoRef.current.length > 50) undoRef.current.shift();
+        redoRef.current = [];
+        liveEditRef.current = editKey;
+      }
+      writeState(next);
+    } else {
+      commit(next);
+    }
+  }, [commit, device, pagePath, writeState]);
 
   const notify = useCallback((message: string) => {
     setToast(message);
