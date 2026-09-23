@@ -1329,6 +1329,116 @@ export function StudioWorkspace() {
     setSelected((current) => current ? { ...current, css: { ...current.css, [property]: value } } : current);
   }
 
+  function setAutoLayout(mode: "flow" | "row" | "column" | "grid") {
+    if (!selected) return;
+    if (mode === "flow") {
+      updateStylesBatch({ display: "block", flexDirection: "", flexWrap: "", justifyContent: "", alignItems: "", gridTemplateColumns: "", gridTemplateRows: "" }, "auto-layout");
+    } else if (mode === "row") {
+      updateStylesBatch({ display: "flex", flexDirection: "row", flexWrap: "wrap", justifyContent: "flex-start", alignItems: "center" }, "auto-layout");
+    } else if (mode === "column") {
+      updateStylesBatch({ display: "flex", flexDirection: "column", flexWrap: "nowrap", justifyContent: "flex-start", alignItems: "stretch" }, "auto-layout");
+    } else {
+      updateStylesBatch({ display: "grid", gridTemplateColumns: "repeat(2, minmax(0, 1fr))", gridTemplateRows: "", gap: styleForDevice("gap") || "16px" }, "auto-layout");
+    }
+    notify("Auto Layout updated");
+  }
+
+  function updateConstraints(nextConstraints: StudioLayoutConstraints) {
+    if (!selected || !selected.inserted) {
+      notify("Constraints доступны для Studio-блоков");
+      return;
+    }
+    const currentState = stateRef.current;
+    const page = currentState.pages[pagePath] ?? {};
+    const current = page[selected.id] ?? {};
+    const active = device === "desktop" ? current.constraints : current.responsiveConstraints?.[device];
+    const hasConstraint = nextConstraints.horizontal !== "none" || nextConstraints.vertical !== "none";
+    const nextOverride = device === "desktop"
+      ? {
+          ...current,
+          constraints: hasConstraint ? nextConstraints : undefined,
+          css: {
+            ...(current.css ?? {}),
+            position: hasConstraint ? "absolute" : "",
+          },
+        }
+      : {
+          ...current,
+          responsiveConstraints: {
+            ...(current.responsiveConstraints ?? {}),
+            ...(hasConstraint ? { [device]: nextConstraints } : {}),
+          },
+          responsiveCss: {
+            ...(current.responsiveCss ?? {}),
+            [device]: {
+              ...(current.responsiveCss?.[device] ?? {}),
+              position: hasConstraint ? "absolute" : "",
+            },
+          },
+        };
+    const nextPage = { ...page, [selected.id]: nextOverride };
+    const parentId = current.inserted?.parentId;
+    if (hasConstraint && parentId) {
+      const parentOverride = nextPage[parentId] ?? {};
+      nextPage[parentId] = {
+        ...parentOverride,
+        css: { ...(parentOverride.css ?? {}), position: "relative" },
+      };
+      const parentElement = findElement(frameRef.current?.contentDocument ?? null, parentId);
+      if (parentElement && getComputedStyle(parentElement).position === "static") {
+        parentElement.style.position = "relative";
+      }
+    }
+    if (device !== "desktop" && !Object.keys(nextOverride.responsiveConstraints ?? {}).length) {
+      delete nextOverride.responsiveConstraints;
+    }
+    commit({ ...currentState, pages: { ...currentState.pages, [pagePath]: nextPage } });
+    refreshFrame();
+    notify(active ? DEVICE_LABEL[device] + " constraints updated" : "Constraints added");
+  }
+
+  function moveLayerOrder(direction: "forward" | "backward" | "front" | "back") {
+    if (!selected) return;
+    const currentState = stateRef.current;
+    const page = currentState.pages[pagePath] ?? {};
+    const current = page[selected.id] ?? {};
+
+    if (!current.inserted) {
+      const element = findElement(frameRef.current?.contentDocument ?? null, selected.id);
+      const currentZ = Number.parseInt(getComputedStyle(element ?? document.body).zIndex, 10);
+      const zIndex = Number.isFinite(currentZ) ? currentZ : 0;
+      const delta = direction === "forward" ? 1 : direction === "backward" ? -1 : direction === "front" ? 1000 : -1000;
+      updateStyle("zIndex", String(zIndex + delta));
+      return;
+    }
+
+    const parentId = current.inserted.parentId;
+    const siblings = Object.entries(page)
+      .filter(([, override]) => override.inserted?.parentId === parentId)
+      .sort(([, left], [, right]) => (left.inserted?.order ?? 0) - (right.inserted?.order ?? 0))
+      .map(([id]) => id);
+    const index = siblings.indexOf(selected.id);
+    if (index < 0) return;
+    let targetIndex = index;
+    if (direction === "forward") targetIndex = Math.min(siblings.length - 1, index + 1);
+    if (direction === "backward") targetIndex = Math.max(0, index - 1);
+    if (direction === "front") targetIndex = siblings.length - 1;
+    if (direction === "back") targetIndex = 0;
+    if (targetIndex === index) return;
+
+    const reordered = siblings.filter((id) => id !== selected.id);
+    reordered.splice(targetIndex, 0, selected.id);
+    const nextPage = { ...page };
+    reordered.forEach((id, order) => {
+      const override = nextPage[id];
+      if (!override?.inserted) return;
+      nextPage[id] = { ...override, inserted: { ...override.inserted, order } };
+    });
+    commit({ ...currentState, pages: { ...currentState.pages, [pagePath]: nextPage } });
+    refreshFrame();
+    notify("Layer order updated");
+  }
+
   function updateAttribute(name: "href" | "alt" | "title", value: string) {
     if (!selected) return;
     const element = findElement(frameRef.current?.contentDocument ?? null, selected.id);
