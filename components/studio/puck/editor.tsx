@@ -334,7 +334,7 @@ export function PuckStudio() {
             <button type="button" className="puck-studio-tool" onClick={() => void loadHistory()} disabled={!remote || historyBusy}>История</button>
             <button type="button" className="puck-studio-tool" onClick={() => setPreview("draft")}>Preview draft</button>
             <button type="button" className="puck-studio-tool" onClick={() => setPreview("published")} disabled={!remote?.publishedData}>Preview published</button>
-            <a className="puck-studio-back" href="/studio">← Native Studio</a><StudioLogout />
+            <a className="puck-studio-back" href="/studio/preview?mode=draft" target="_blank" rel="noreferrer">Draft preview ↗</a><a className="puck-studio-back" href="/studio/preview?mode=published" target="_blank" rel="noreferrer">Published ↗</a><a className="puck-studio-back" href="/studio">← Native Studio</a><StudioLogout />
           </div>
         </div>
 
