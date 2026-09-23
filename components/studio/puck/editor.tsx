@@ -179,7 +179,7 @@ export function PuckStudio() {
         const saveResponse = await fetch(API_BASE + "/" + page.id, {
           method: "PATCH",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ slug: "home", data: cmsData }),
+          body: JSON.stringify({ slug: "home", data: cmsData, expectedVersion: page.version }),
         });
         const savePayload = await saveResponse.json() as { ok?: boolean; item?: CmsPage; message?: string };
         if (!saveResponse.ok || !savePayload.ok || !savePayload.item) {
