@@ -8,6 +8,9 @@ import {
   Check,
   ChevronDown,
   ChevronRight,
+  ChevronLeft,
+  ChevronsUp,
+  ChevronsDown,
   Code2,
   Copy,
   Download,
@@ -1205,6 +1208,18 @@ export function StudioWorkspace() {
       if (!isTyping && (event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "d") {
         event.preventDefault();
         duplicateInserted();
+        return;
+      }
+
+      if (!isTyping && (event.key === "]" || event.key === "}")) {
+        event.preventDefault();
+        moveLayerOrder(event.shiftKey ? "front" : "forward");
+        return;
+      }
+
+      if (!isTyping && (event.key === "[" || event.key === "{")) {
+        event.preventDefault();
+        moveLayerOrder(event.shiftKey ? "back" : "backward");
         return;
       }
 
@@ -2505,6 +2520,9 @@ export function StudioWorkspace() {
                           {device !== "desktop" && activeResponsiveCss && Object.keys(activeResponsiveCss).length ? (
                             <button type="button" onClick={resetResponsive}><RotateCcw size={13} /> Reset {DEVICE_LABEL[device]}</button>
                           ) : null}
+                          <button type="button" onClick={() => toggleLocked()}>{activeOverride?.locked ? <Unlock size={13} /> : <Lock size={13} />} {activeOverride?.locked ? "Unlock" : "Lock"}</button>
+                          <button type="button" onClick={() => moveLayerOrder("forward")}><ChevronRight size={13} /> Forward</button>
+                          <button type="button" onClick={() => moveLayerOrder("backward")}><ChevronLeft size={13} /> Back</button>
                           <button type="button" onClick={toggleHidden}><EyeOff size={13} /> {activeOverride?.hidden ? "Показать" : "Скрыть"}</button>
                           <button type="button" className="danger" onClick={removeSelected}>{selected.inserted ? <Trash2 size={13} /> : <EyeOff size={13} />} {selected.inserted ? "Удалить блок" : "Скрыть элемент"}</button>
                         </div>
@@ -2578,6 +2596,11 @@ export function StudioWorkspace() {
           {state.pages[pagePath]?.[contextMenu.id]?.inserted ? (
             <button type="button" onClick={() => { duplicateInserted([contextMenu.id]); setContextMenu(null); }}><CopyPlus size={13} /> Duplicate</button>
           ) : null}
+          <div className="studio-v2-context-separator" />
+          <button type="button" onClick={() => { setSelected(contextMenu.id, true); setContextMenu(null); moveLayerOrder("forward"); }}><ChevronRight size={13} /> Bring forward</button>
+          <button type="button" onClick={() => { setSelected(contextMenu.id, true); setContextMenu(null); moveLayerOrder("backward"); }}><ChevronLeft size={13} /> Send backward</button>
+          <button type="button" onClick={() => { setSelected(contextMenu.id, true); setContextMenu(null); moveLayerOrder("front"); }}><ChevronsUp size={13} /> Bring to front</button>
+          <button type="button" onClick={() => { setSelected(contextMenu.id, true); setContextMenu(null); moveLayerOrder("back"); }}><ChevronsDown size={13} /> Send to back</button>
           {selectedIds.length > 1 && selectedIds.every((id) => Boolean(state.pages[pagePath]?.[id]?.inserted)) ? (
             <button type="button" onClick={() => { groupInsertedSelection(); setContextMenu(null); }}><Group size={13} /> Group / Frame</button>
           ) : null}
