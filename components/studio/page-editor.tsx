@@ -26,7 +26,7 @@ import {
 } from "@/studio/runtime/storage";
 import type { StudioCssOverrides, StudioState } from "@/studio/types";
 
-const STYLE_MAP: Record<keyof StudioCssOverrides, string> = {
+const STYLE_MAP: Partial<Record<keyof StudioCssOverrides, string>> = {
   fontSize: "font-size",
   lineHeight: "line-height",
   color: "color",
