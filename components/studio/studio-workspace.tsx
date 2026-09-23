@@ -1069,7 +1069,7 @@ export function StudioWorkspace() {
     const setLiveDimension = (property: "width" | "height", value: string) => {
       const currentState = stateRef.current;
       const page = currentState.pages[pagePath] ?? {};
-      const current = page[id] ?? {};
+      const current = page[selected.id] ?? {};
       const next = {
         ...currentState,
         pages: {
