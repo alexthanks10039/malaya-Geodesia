@@ -75,6 +75,7 @@ export type StudioElementOverride = {
   hidden?: boolean;
   locked?: boolean;
   constraints?: StudioLayoutConstraints;
+  responsiveConstraints?: Partial<Record<StudioResponsiveDevice, StudioLayoutConstraints>>;
   inserted?: StudioInsertedBlock;
 };
 
