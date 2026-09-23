@@ -631,16 +631,29 @@ export function StudioWorkspace() {
 
     doc.addEventListener("click", clickHandler, true);
 
-    const pointerHandler = (event: MouseEvent) => {
-      if (previewMode !== "select") return;
+    const interactClickHandler = (event: MouseEvent) => {
+      if (previewMode !== "interact") return;
       const target = event.target;
       if (!(target instanceof Element) || target.closest("[data-studio-dev-ui]")) return;
-      const element = target.closest("[data-studio-node-id]");
-      if (element instanceof HTMLElement) {
-        element.style.cursor = "crosshair";
+      const anchor = target.closest("a");
+      if (!(anchor instanceof HTMLAnchorElement)) return;
+      if (anchor.target && anchor.target !== "_self") return;
+      const href = anchor.getAttribute("href");
+      if (!href || href.startsWith("#") || href.startsWith("mailto:") || href.startsWith("tel:")) return;
+
+      try {
+        const url = new URL(href, doc.location.href);
+        if (url.origin !== doc.location.origin) return;
+        url.searchParams.set("studioPreview", "1");
+        event.preventDefault();
+        event.stopPropagation();
+        doc.defaultView?.location.assign(url.toString());
+      } catch {
+        // Leave non-standard links to the browser.
       }
     };
-    doc.addEventListener("mousemove", pointerHandler, true);
+
+    doc.addEventListener("click", interactClickHandler, true);
 
     const observer = new MutationObserver(() => {
       window.requestAnimationFrame(() => {
@@ -654,7 +667,7 @@ export function StudioWorkspace() {
 
     return () => {
       doc.removeEventListener("click", clickHandler, true);
-      doc.removeEventListener("mousemove", pointerHandler, true);
+      doc.removeEventListener("click", interactClickHandler, true);
       observer.disconnect();
     };
   }, [pagePath, previewMode, selectInFrame, selected, state]);
@@ -712,6 +725,7 @@ export function StudioWorkspace() {
       }
 
       if (event.key === "Escape" && !isTyping) {
+        setMobilePanel("none");
         setSelected(null);
         frameRef.current?.contentDocument?.querySelectorAll(".studio-frame-selected").forEach((item) => item.classList.remove("studio-frame-selected"));
       }
@@ -994,10 +1008,10 @@ export function StudioWorkspace() {
   const previewWidth = DEVICE_WIDTH[device];
   const canvasStyle =
     previewWidth === "fluid"
-      ? { width: "100%", transform: "scale(" + zoom / 100 + ")" }
+      ? { width: "100%", zoom: zoom / 100 }
       : {
           width: previewWidth + "px",
-          transform: "scale(" + zoom / 100 + ")",
+          zoom: zoom / 100,
         };
 
   const renderTree = (items: NodeSummary[]) =>
@@ -1073,9 +1087,9 @@ export function StudioWorkspace() {
             }} disabled={!redoRef.current.length} title="Redo · Shift+Ctrl/Cmd+Z"><Redo2 size={15} /></button>
           </div>
           <span className="studio-v2-draft-status"><i /> LOCAL DRAFT</span>
-          <button type="button" className="studio-v2-button ghost" onClick={exportDraft}><Download size={14} /> Export</button>
+          <button type="button" className="studio-v2-button ghost studio-v2-hide-mobile" onClick={exportDraft}><Download size={14} /> Export</button>
           <button type="button" className="studio-v2-button acid" onClick={() => saveVersion(versionLabel || "Quick save")}><Save size={14} /> Save</button>
-          <Link className="studio-v2-button ghost" href={pagePath} target="_blank" rel="noreferrer"><ExternalLink size={14} /> Open</Link>
+          <Link className="studio-v2-button ghost studio-v2-hide-mobile" href={pagePath} target="_blank" rel="noreferrer"><ExternalLink size={14} /> Open</Link>
           <StudioLogout />\n          <Link className="studio-v2-button ghost" href="/studio?engine=puck"><Code2 size={14} /> Puck</Link>
         </div>
       </header>
@@ -1089,8 +1103,14 @@ export function StudioWorkspace() {
         </div>
 
         <div className="studio-v2-toolbar-center">
+          <select className="studio-v2-mobile-page-select" value={pagePath} onChange={(event) => { setMobilePanel("none"); setPagePath(event.target.value); }} aria-label="Страница">
+            {studioPages.map((page) => (
+              <option value={page.path} key={page.path}>{page.label}</option>
+            ))}
+          </select>
           <button type="button" className="studio-v2-mobile-toggle" onClick={() => setMobilePanel((value) => value === "left" ? "none" : "left")} title="Layers / Design panel"><Layers3 size={14} /> Layers</button>
           <button type="button" className="studio-v2-mobile-toggle" onClick={() => setMobilePanel((value) => value === "right" ? "none" : "right")} title="Inspector panel"><Code2 size={14} /> Inspector</button>
+          <button type="button" className="studio-v2-mobile-toggle studio-v2-mobile-focus" onClick={() => { setMobilePanel("none"); setFocusMode((value) => !value); }} title="Focus mode"><MoreHorizontal size={14} /> Focus</button>
           <button type="button" className={previewMode === "select" ? "active" : ""} onClick={() => setPreviewMode("select")} title="Select mode"><MousePointer2 size={14} /> Select</button>
           <button type="button" className={previewMode === "interact" ? "active" : ""} onClick={() => setPreviewMode("interact")} title="Interact mode"><Eye size={14} /> Interact</button>
         </div>
@@ -1108,6 +1128,15 @@ export function StudioWorkspace() {
           <button type="button" onClick={() => setFocusMode((value) => !value)} title="Focus mode"><MoreHorizontal size={15} /></button>
         </div>
       </div>
+
+      {mobilePanel !== "none" && !focusMode ? (
+        <button
+          type="button"
+          className="studio-v2-mobile-scrim"
+          aria-label="Закрыть боковую панель"
+          onClick={() => setMobilePanel("none")}
+        />
+      ) : null}
 
       <div className="studio-v2-workspace">
         {!focusMode && (
