@@ -6,8 +6,10 @@ export const STUDIO_OVERRIDES_KEY = "malaya-studio-overrides";
 export const STUDIO_CALCULATOR_KEY = "malaya-studio-calculator";
 
 const emptyState: StudioState = {
+  version: 2,
   pages: {},
   globalTokens: {},
+  comments: [],
 };
 
 export function readStudioState(): StudioState {
@@ -19,8 +21,10 @@ export function readStudioState(): StudioState {
 
     const parsed = JSON.parse(raw) as Partial<StudioState>;
     return {
+      version: 2,
       pages: parsed.pages && typeof parsed.pages === "object" ? parsed.pages : {},
       globalTokens: parsed.globalTokens && typeof parsed.globalTokens === "object" ? parsed.globalTokens : {},
+      comments: Array.isArray(parsed.comments) ? parsed.comments : [],
     };
   } catch {
     return emptyState;
