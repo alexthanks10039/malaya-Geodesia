@@ -337,3 +337,17 @@ body:has(.studio-v2) main{margin:0!important;max-width:none!important;padding:0!
 .studio-v2-context-menu button{display:flex;align-items:center;gap:7px;width:100%;min-height:31px;padding:0 8px;border:0;border-radius:6px;background:transparent;color:#9aa692;text-align:left;font:800 7px ui-monospace,SFMono-Regular,monospace;cursor:pointer}
 .studio-v2-context-menu button:hover{background:#20271c;color:#d9ff52}
 .studio-v2-context-shortcuts{padding:7px 8px 5px;border-top:1px solid #273025;color:#4e5c4b;font:6px ui-monospace,SFMono-Regular,monospace;line-height:1.4}
+
+.studio-v2-auto-layout,.studio-v2-constraints-panel{display:grid;gap:8px;padding:9px;border:1px solid #30382d;border-radius:8px;background:#10150f}
+.studio-v2-auto-layout-head{display:flex;align-items:baseline;justify-content:space-between;gap:8px}
+.studio-v2-auto-layout-head span{color:#d9ff52;font:800 6px ui-monospace,SFMono-Regular,monospace;letter-spacing:.09em}
+.studio-v2-auto-layout-head small{color:#5e6b59;font:7px ui-monospace,SFMono-Regular,monospace}
+.studio-v2-auto-layout-presets{display:grid;grid-template-columns:repeat(4,1fr);gap:4px}
+.studio-v2-auto-layout-presets button{min-height:28px;border:1px solid #30382d;border-radius:6px;background:#0f130d;color:#76836f;font:800 6px ui-monospace,SFMono-Regular,monospace}
+.studio-v2-auto-layout-presets button:hover,.studio-v2-auto-layout-presets button.active{border-color:#5b6c50;background:#1a2117;color:#d9ff52}
+.studio-v2-field-grid.compact{gap:6px}
+.studio-v2-field-grid select,.studio-v2-constraint-row select{box-sizing:border-box;width:100%;height:31px;padding:0 7px;border:1px solid #30372d;border-radius:7px;background:#0f120e;color:#d9dfd4;outline:0;font:700 8px ui-monospace,SFMono-Regular,monospace}
+.studio-v2-field-grid select:focus,.studio-v2-constraint-row select:focus{border-color:#64735a;box-shadow:0 0 0 3px rgba(217,255,82,.035)}
+.studio-v2-constraint-row{display:grid;grid-template-columns:1fr 1fr;gap:7px}
+.studio-v2-constraints-help{color:#596655;font-size:7px;line-height:1.4}
+.studio-v2-context-separator{height:1px;margin:4px 3px;background:#273025}
