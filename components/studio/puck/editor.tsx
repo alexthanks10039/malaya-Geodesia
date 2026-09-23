@@ -170,7 +170,7 @@ export function PuckStudio() {
     window.localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
     setStatus("SAVING");
 
-    try {
+    const runPublish = async () => {
       const cmsData = wrapForCms(next);
       let page = remoteRef.current;
 
@@ -181,7 +181,9 @@ export function PuckStudio() {
           body: JSON.stringify({ slug: "home", data: cmsData }),
         });
         const savePayload = await saveResponse.json() as { ok?: boolean; item?: CmsPage; message?: string };
-        if (!saveResponse.ok || !savePayload.ok || !savePayload.item) throw new Error(savePayload.message || "Не удалось сохранить draft");
+        if (!saveResponse.ok || !savePayload.ok || !savePayload.item) {
+          throw new Error(savePayload.message || "Не удалось сохранить draft");
+        }
         page = savePayload.item;
       } else {
         const createResponse = await fetch(API_BASE, {
@@ -190,7 +192,9 @@ export function PuckStudio() {
           body: JSON.stringify({ slug: "home", data: cmsData }),
         });
         const createPayload = await createResponse.json() as { ok?: boolean; item?: CmsPage; message?: string };
-        if (!createResponse.ok || !createPayload.ok || !createPayload.item) throw new Error(createPayload.message || "Не удалось создать страницу");
+        if (!createResponse.ok || !createPayload.ok || !createPayload.item) {
+          throw new Error(createPayload.message || "Не удалось создать страницу");
+        }
         page = createPayload.item;
       }
 
@@ -200,12 +204,22 @@ export function PuckStudio() {
         body: JSON.stringify({ action: "publish" }),
       });
       const publishPayload = await publishResponse.json() as { ok?: boolean; item?: CmsPage; message?: string };
-      if (!publishResponse.ok || !publishPayload.ok || !publishPayload.item) throw new Error(publishPayload.message || "Не удалось опубликовать");
+      if (!publishResponse.ok || !publishPayload.ok || !publishPayload.item) {
+        throw new Error(publishPayload.message || "Не удалось опубликовать");
+      }
+
       remoteRef.current = publishPayload.item;
       setRemote(publishPayload.item);
       setVersion(publishPayload.item.version);
       setStatus("PUBLISHED");
       window.localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
+    };
+
+    try {
+      // Wait for any earlier autosave to finish. Otherwise an older queued
+      // onChange could overwrite the freshly published draft after Publish.
+      savingRef.current = savingRef.current.then(runPublish, runPublish);
+      await savingRef.current;
     } catch (error) {
       setStatus("ERROR");
       throw error;
