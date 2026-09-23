@@ -754,7 +754,7 @@ export function StudioWorkspace() {
       doc.removeEventListener("click", interactClickHandler, true);
       observer.disconnect();
     };
-  }, [pagePath, previewMode, selectInFrame, selected, state]);
+  }, [pagePath, previewMode, selectInFrame, selected, selectedIds, state]);
 
   useEffect(() => {
     const doc = frameRef.current?.contentDocument ?? null;
@@ -1814,7 +1814,8 @@ export function StudioWorkspace() {
                   <span className="studio-v2-layer-tag">{selected.tag}</span>
                   <b>{selected.label || "(без текста)"}</b>
                   <small>{"#"+selectedPosition+" / "+flatNodes.length}</small>
-                  {device !== "desktop" && <em className="studio-v2-responsive-badge">{DEVICE_LABEL[device]} only</em>}
+                  {selectedIds.length > 1 ? <em className="studio-v2-multi-badge">{selectedIds.length} SELECTED</em> : null}
+                                    {device !== "desktop" && <em className="studio-v2-responsive-badge">{DEVICE_LABEL[device]} only</em>}
                   {selected.inserted ? <em>NEW BLOCK</em> : activeOverride ? <em>OVERRIDE</em> : <i>DEFAULT</i>}
                 </div>
 
@@ -1827,6 +1828,23 @@ export function StudioWorkspace() {
 
                     {openSections[section] && section === "content" ? (
                       <div className="studio-v2-section-body">
+                        {selectedIds.length > 1 ? (
+                          <div className="studio-v2-batch-panel">
+                            <div className="studio-v2-batch-title"><span>GROUP</span><b>{selectedIds.length} layers selected</b></div>
+                            <div className="studio-v2-batch-actions">
+                              <button type="button" onClick={() => applyBatchAlignment("left")}><AlignLeft size={12} /> Left</button>
+                              <button type="button" onClick={() => applyBatchAlignment("centerX")}><AlignCenter size={12} /> Center</button>
+                              <button type="button" onClick={() => applyBatchAlignment("right")}><AlignRight size={12} /> Right</button>
+                              <button type="button" onClick={() => applyBatchAlignment("top")}>↑ Top</button>
+                              <button type="button" onClick={() => applyBatchAlignment("centerY")}>↕ Middle</button>
+                              <button type="button" onClick={() => applyBatchAlignment("bottom")}>↓ Bottom</button>
+                              <button type="button" onClick={() => applyBatchAlignment("distributeX")}>↔ Distribute X</button>
+                              <button type="button" onClick={() => applyBatchAlignment("distributeY")}>↕ Distribute Y</button>
+                            </div>
+                            <button type="button" className="studio-v2-clear-selection" onClick={clearMultiSelection}>Leave multi-select</button>
+                          </div>
+                        ) : null}
+
                         {selected.textEditable ? (
                           <label className="studio-v2-field wide">
                             <span>Текст</span>
