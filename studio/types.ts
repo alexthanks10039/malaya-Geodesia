@@ -58,6 +58,7 @@ export type StudioElementOverride = {
     title?: string;
   };
   hidden?: boolean;
+  locked?: boolean;
   inserted?: StudioInsertedBlock;
 };
 

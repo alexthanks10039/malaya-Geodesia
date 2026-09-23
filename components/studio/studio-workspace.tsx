@@ -13,6 +13,11 @@ import {
   Download,
   Eye,
   EyeOff,
+  Lock,
+  Unlock,
+  CopyPlus,
+  Group,
+  MoreVertical,
   ExternalLink,
   FilePlus2,
   Grid3X3,
@@ -417,6 +422,9 @@ function applyPageState(doc: Document, state: StudioState, path: string, device:
     if (override.hidden) {
       element.style.setProperty("display", "none");
     }
+    if (override.locked) {
+      element.setAttribute("data-studio-locked", "true");
+    }
 
     if (override.attributes?.href !== undefined && "href" in element) {
       element.setAttribute("href", override.attributes.href);
@@ -513,6 +521,7 @@ export function StudioWorkspace() {
   const [toast, setToast] = useState("");
   const [focusMode, setFocusMode] = useState(false);
   const [mobilePanel, setMobilePanel] = useState<"none" | "left" | "right">("none");
+  const [contextMenu, setContextMenu] = useState<{ id: string; x: number; y: number } | null>(null);
   const stateRef = useRef(state);
   const draggedNodeRef = useRef<string | null>(null);
   const selectedIdsRef = useRef(selectedIds);
@@ -671,6 +680,8 @@ export function StudioWorkspace() {
       previewMode === "select"
         ? "[data-studio-node-id]:hover{outline:1px dashed rgba(217,255,82,.92)!important;outline-offset:2px;cursor:crosshair!important}"
         : "[data-studio-node-id]:hover{cursor:default!important}",
+      '[data-studio-node-id][data-studio-locked="true"]{cursor:not-allowed!important;opacity:.72}',
+
       "[data-studio-node-id].studio-frame-selected{outline:2px solid #d9ff52!important;outline-offset:3px;box-shadow:0 0 0 4px rgba(217,255,82,.16)!important}",
       "[data-studio-node-id].studio-frame-multi-selected{outline:1px solid rgba(217,255,82,.75)!important;outline-offset:2px;box-shadow:0 0 0 2px rgba(217,255,82,.08)!important}",
       "[data-studio-inserted]{outline-offset:2px}",
@@ -770,7 +781,7 @@ export function StudioWorkspace() {
 
   useEffect(() => {
     const doc = frameRef.current?.contentDocument ?? null;
-    if (!doc?.body || !selected || selectedIds.length > 1 || previewMode !== "select") return;
+    if (!doc?.body || !selected || previewMode !== "select") return;
     const element = findElement(doc, selected.id);
     if (!element) return;
 
@@ -791,6 +802,11 @@ export function StudioWorkspace() {
       ? override?.positionOffset ?? { x: 0, y: 0 }
       : override?.responsivePositionOffset?.[device] ?? override?.positionOffset ?? { x: 0, y: 0 };
     const startRect = element.getBoundingClientRect();
+    const isGroup = selectedIds.length > 1;
+    const groupElements = (isGroup ? selectedIds : [selected.id])
+      .map((id) => findElement(doc, id))
+      .filter((item): item is HTMLElement => Boolean(item));
+    const groupStartRects = groupElements.map((item) => ({ element: item, rect: item.getBoundingClientRect() }));
     const parent = element.parentElement;
     const candidatesX: number[] = [];
     const candidatesY: number[] = [];
@@ -808,6 +824,8 @@ export function StudioWorkspace() {
     }
 
     let drag: { startX: number; startY: number } | null = null;
+    let groupLastX = 0;
+    let groupLastY = 0;
 
     const calculateSnap = (rawX: number, rawY: number) => {
       const grid = 8;
@@ -876,15 +894,33 @@ export function StudioWorkspace() {
       if (event.button !== 0) return;
       if (event.target instanceof Element && event.target.closest("[data-resize]")) return;
       if (event.target instanceof Element && event.target.closest("[data-studio-dev-ui]")) return;
+      const current = stateRef.current.pages[pagePath]?.[selected.id];
+      if (current?.locked) return;
       drag = { startX: event.clientX, startY: event.clientY };
+      groupLastX = 0;
+      groupLastY = 0;
       element.setPointerCapture?.(event.pointerId);
-      element.style.cursor = "move";
+      groupElements.forEach((item) => { item.style.cursor = "move"; });
     };
 
     const pointerMove = (event: PointerEvent) => {
       if (!drag) return;
       event.preventDefault();
       event.stopPropagation();
+
+      if (isGroup) {
+        const nextGroupX = Math.round((event.clientX - drag.startX) / 8) * 8;
+        const nextGroupY = Math.round((event.clientY - drag.startY) / 8) * 8;
+        const deltaX = nextGroupX - groupLastX;
+        const deltaY = nextGroupY - groupLastY;
+        if (deltaX || deltaY) {
+          moveSelectionBy(deltaX, deltaY, "group-drag:" + device + ":" + selectedIds.join(","));
+          groupLastX = nextGroupX;
+          groupLastY = nextGroupY;
+        }
+        return;
+      }
+
       const result = calculateSnap(
         startOffset.x + event.clientX - drag.startX,
         startOffset.y + event.clientY - drag.startY,
@@ -896,7 +932,7 @@ export function StudioWorkspace() {
     const pointerUp = () => {
       if (!drag) return;
       drag = null;
-      element.style.cursor = "";
+      groupElements.forEach((item) => { item.style.cursor = ""; });
       verticalGuide.style.opacity = "0";
       horizontalGuide.style.opacity = "0";
       liveEditRef.current = null;
@@ -913,9 +949,9 @@ export function StudioWorkspace() {
       doc.removeEventListener("pointerup", pointerUp, true);
       doc.removeEventListener("pointercancel", pointerUp, true);
       guideHost.remove();
-      element.style.cursor = "";
+      groupElements.forEach((item) => { item.style.cursor = ""; delete item.dataset.studioGroupLast; });
     };
-  }, [device, pagePath, previewMode, selected, selectedIds.length, updatePositionOffset]);
+  }, [device, pagePath, previewMode, selected, selectedIds, moveSelectionBy, updatePositionOffset]);
 
   useEffect(() => {
     const doc = frameRef.current?.contentDocument ?? null;
@@ -1079,7 +1115,30 @@ export function StudioWorkspace() {
         return;
       }
 
+      if (!isTyping && (event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "d") {
+        event.preventDefault();
+        duplicateInserted();
+        return;
+      }
+
+      if (!isTyping && (event.key === "Delete" || event.key === "Backspace")) {
+        event.preventDefault();
+        removeSelected();
+        return;
+      }
+
+      if (!isTyping && ["ArrowLeft", "ArrowRight", "ArrowUp", "ArrowDown"].includes(event.key)) {
+        event.preventDefault();
+        const step = event.shiftKey ? 8 : 1;
+        nudgeSelection(
+          event.key === "ArrowLeft" ? -step : event.key === "ArrowRight" ? step : 0,
+          event.key === "ArrowUp" ? -step : event.key === "ArrowDown" ? step : 0,
+        );
+        return;
+      }
+
       if (event.key === "Escape" && !isTyping) {
+        setContextMenu(null);
         setMobilePanel("none");
         setSelected(null);
         setSelectedIds([]);
@@ -1094,7 +1153,7 @@ export function StudioWorkspace() {
 
     window.addEventListener("keydown", keydown);
     return () => window.removeEventListener("keydown", keydown);
-  }, [notify, state, versionLabel, writeState]);
+  }, [notify, removeSelected, duplicateInserted, nudgeSelection, state, versionLabel, writeState]);
 
   function setOverride(id: string, updater: (current: StudioElementOverride) => StudioElementOverride, editKey?: string) {
     const page = state.pages[pagePath] ?? {};
@@ -1459,6 +1518,192 @@ export function StudioWorkspace() {
     setSelectedIds(selected ? [selected.id] : []);
   }
 
+  function toggleHiddenById(id: string) {
+    const currentState = stateRef.current;
+    const page = currentState.pages[pagePath] ?? {};
+    const current = page[id] ?? {};
+    const hidden = !(current.hidden ?? false);
+    const next = { ...currentState, pages: { ...currentState.pages, [pagePath]: { ...page, [id]: { ...current, hidden } } } };
+    commit(next);
+    const element = findElement(frameRef.current?.contentDocument ?? null, id);
+    if (element) element.style.setProperty("display", hidden ? "none" : "");
+    notify(hidden ? "Layer hidden" : "Layer shown");
+  }
+
+  function toggleLocked(id = selected?.id) {
+    if (!id) return;
+    const currentState = stateRef.current;
+    const page = currentState.pages[pagePath] ?? {};
+    const current = page[id] ?? {};
+    const locked = !current.locked;
+    const next = { ...currentState, pages: { ...currentState.pages, [pagePath]: { ...page, [id]: { ...current, locked } } } };
+    commit(next);
+    const element = findElement(frameRef.current?.contentDocument ?? null, id);
+    if (element) {
+      if (locked) element.setAttribute("data-studio-locked", "true");
+      else element.removeAttribute("data-studio-locked");
+    }
+    notify(locked ? "Layer locked" : "Layer unlocked");
+  }
+
+  function duplicateInserted(ids = selectedIds.length ? selectedIds : selected ? [selected.id] : []) {
+    const currentState = stateRef.current;
+    const page = currentState.pages[pagePath] ?? {};
+    const sourceIds = ids.filter((id) => Boolean(page[id]?.inserted));
+    if (!sourceIds.length) {
+      notify("Duplicate доступен для Studio-блоков");
+      return;
+    }
+
+    const used = new Set(Object.keys(page));
+    let counter = 1;
+    const newPage = { ...page };
+
+    const makeId = () => {
+      let id = stableInsertedId("duplicate-" + crypto.randomUUID());
+      while (used.has(id)) id = stableInsertedId("duplicate-" + crypto.randomUUID() + "-" + counter++);
+      used.add(id);
+      return id;
+    };
+
+    const cloneTree = (sourceId: string, parentId: string) => {
+      const source = page[sourceId]?.inserted;
+      if (!source) return;
+      const nextId = makeId();
+      newPage[nextId] = {
+        ...page[sourceId],
+        inserted: {
+          ...source,
+          parentId,
+          text: source.text,
+          css: source.css ? { ...source.css } : undefined,
+          order: (source.order ?? 0) + 1,
+        },
+      };
+      Object.entries(page)
+        .filter(([, override]) => override.inserted?.parentId === sourceId)
+        .forEach(([childId]) => cloneTree(childId, nextId));
+    };
+
+    sourceIds.forEach((id) => {
+      const source = page[id]?.inserted;
+      if (source) cloneTree(id, source.parentId);
+    });
+
+    commit({ ...currentState, pages: { ...currentState.pages, [pagePath]: newPage } });
+    setSelectedIds([]);
+    setSelected(null);
+    refreshFrame();
+    notify(sourceIds.length > 1 ? "Блоки дублированы" : "Блок дублирован");
+  }
+
+  function groupInsertedSelection() {
+    const ids = selectedIds.filter((id) => Boolean(stateRef.current.pages[pagePath]?.[id]?.inserted));
+    if (ids.length < 2) {
+      notify("Выбери минимум два Studio-блока");
+      return;
+    }
+    const page = stateRef.current.pages[pagePath] ?? {};
+    const sources = ids.map((id) => page[id]?.inserted).filter((item): item is StudioInsertedBlock => Boolean(item));
+    const parentId = sources[0]?.parentId;
+    if (!parentId || sources.some((item) => item.parentId !== parentId)) {
+      notify("Блоки должны быть в одном контейнере");
+      return;
+    }
+    const groupId = stableInsertedId("frame-" + crypto.randomUUID());
+    const maxOrder = Math.max(...Object.values(page).map((item) => item.inserted?.order ?? 0), 0);
+    const frame: StudioInsertedBlock = { parentId, kind: "container", text: "Frame", order: maxOrder + 1, css: { display: "block" } };
+    const nextPage: StudioState["pages"][string] = { ...page, [groupId]: { inserted: frame } };
+    ids.forEach((id, index) => {
+      const override = nextPage[id];
+      if (!override?.inserted) return;
+      nextPage[id] = { ...override, inserted: { ...override.inserted, parentId: groupId, order: index } };
+    });
+    commit({ ...stateRef.current, pages: { ...stateRef.current.pages, [pagePath]: nextPage } });
+    setSelected(null);
+    setSelectedIds([groupId]);
+    refreshFrame();
+    window.setTimeout(() => selectInFrame(groupId), 0);
+    notify("Frame создан");
+  }
+
+  function moveSelectionBy(dx: number, dy: number, editKey?: string) {
+    const ids = selectedIdsRef.current.length > 1
+      ? selectedIdsRef.current
+      : selected?.id
+        ? [selected.id]
+        : [];
+    if (!ids.length) return;
+
+    const currentState = stateRef.current;
+    const page = currentState.pages[pagePath] ?? {};
+    const nextPage = { ...page };
+    const currentOffsets: Record<string, StudioPositionOffset> = {};
+
+    ids.forEach((id) => {
+      const current = nextPage[id] ?? {};
+      if (current.locked) return;
+      const offset = device === "desktop"
+        ? current.positionOffset ?? { x: 0, y: 0 }
+        : current.responsivePositionOffset?.[device] ?? current.positionOffset ?? { x: 0, y: 0 };
+      currentOffsets[id] = offset;
+      const nextOffset = { x: Math.round(offset.x + dx), y: Math.round(offset.y + dy) };
+      nextPage[id] = device === "desktop"
+        ? { ...current, positionOffset: nextOffset }
+        : {
+            ...current,
+            responsivePositionOffset: {
+              ...(current.responsivePositionOffset ?? {}),
+              [device]: nextOffset,
+            },
+          };
+      const element = findElement(frameRef.current?.contentDocument ?? null, id);
+      if (element) element.style.translate = nextOffset.x + "px " + nextOffset.y + "px";
+    });
+
+    const nextState = { ...currentState, pages: { ...currentState.pages, [pagePath]: nextPage } };
+    if (editKey) {
+      if (liveEditRef.current !== editKey) {
+        undoRef.current.push(currentState);
+        if (undoRef.current.length > 50) undoRef.current.shift();
+        redoRef.current = [];
+        liveEditRef.current = editKey;
+      }
+      writeState(nextState);
+    } else {
+      commit(nextState);
+    }
+  }
+
+  function nudgeSelection(dx: number, dy: number) {
+    const ids = selectedIds.length ? selectedIds : selected ? [selected.id] : [];
+    if (!ids.length) return;
+    const currentState = stateRef.current;
+    const page = currentState.pages[pagePath] ?? {};
+    const nextPage = { ...page };
+    ids.forEach((id) => {
+      const current = nextPage[id] ?? {};
+      if (current.locked) return;
+      const offset = device === "desktop"
+        ? current.positionOffset ?? { x: 0, y: 0 }
+        : current.responsivePositionOffset?.[device] ?? current.positionOffset ?? { x: 0, y: 0 };
+      const nextOffset = { x: offset.x + dx, y: offset.y + dy };
+      nextPage[id] = device === "desktop"
+        ? { ...current, positionOffset: nextOffset }
+        : {
+            ...current,
+            responsivePositionOffset: {
+              ...(current.responsivePositionOffset ?? {}),
+              [device]: nextOffset,
+            },
+          };
+      const element = findElement(frameRef.current?.contentDocument ?? null, id);
+      if (element) element.style.translate = nextOffset.x + "px " + nextOffset.y + "px";
+    });
+    commit({ ...currentState, pages: { ...currentState.pages, [pagePath]: nextPage } });
+    notify(ids.length > 1 ? "Group moved" : "Layer moved");
+  }
+
   function removeSelected() {
     if (!selected) return;
 
@@ -1568,6 +1813,20 @@ export function StudioWorkspace() {
               </span>
               {node.inserted && <span className="studio-v2-insert-badge">NEW</span>}
             </button>
+            <button
+              type="button"
+              className="studio-v2-layer-more"
+              title="Layer actions"
+              aria-label="Layer actions"
+              onClick={(event) => {
+                event.stopPropagation();
+                setContextMenu({
+                  id: node.id,
+                  x: Math.min(event.clientX, window.innerWidth - 210),
+                  y: Math.min(event.clientY, window.innerHeight - 260),
+                });
+              }}
+            ><MoreVertical size={13} /></button>
           </div>
           {isOpen && node.children.length ? <div className="studio-v2-layer-children">{renderTree(node.children)}</div> : null}
         </div>
@@ -2031,6 +2290,32 @@ export function StudioWorkspace() {
           </label>
         </div>
       </div>
+
+      {contextMenu ? (
+        <div
+          className="studio-v2-context-menu"
+          style={{ left: contextMenu.x, top: contextMenu.y }}
+          onMouseDown={(event) => event.stopPropagation()}
+        >
+          <div className="studio-v2-context-title">LAYER ACTIONS</div>
+          <button type="button" onClick={() => { selectInFrame(contextMenu.id); setContextMenu(null); }}><MousePointer2 size={13} /> Select</button>
+          <button type="button" onClick={() => { toggleLocked(contextMenu.id); setContextMenu(null); }}>
+            {state.pages[pagePath]?.[contextMenu.id]?.locked ? <Unlock size={13} /> : <Lock size={13} />}
+            {state.pages[pagePath]?.[contextMenu.id]?.locked ? "Unlock" : "Lock"}
+          </button>
+          <button type="button" onClick={() => { toggleHiddenById(contextMenu.id); setContextMenu(null); }}>
+            {state.pages[pagePath]?.[contextMenu.id]?.hidden ? <Eye size={13} /> : <EyeOff size={13} />}
+            {state.pages[pagePath]?.[contextMenu.id]?.hidden ? "Show" : "Hide"}
+          </button>
+          {state.pages[pagePath]?.[contextMenu.id]?.inserted ? (
+            <button type="button" onClick={() => { duplicateInserted([contextMenu.id]); setContextMenu(null); }}><CopyPlus size={13} /> Duplicate</button>
+          ) : null}
+          {selectedIds.length > 1 && selectedIds.every((id) => Boolean(state.pages[pagePath]?.[id]?.inserted)) ? (
+            <button type="button" onClick={() => { groupInsertedSelection(); setContextMenu(null); }}><Group size={13} /> Group / Frame</button>
+          ) : null}
+          <div className="studio-v2-context-shortcuts">↑↓ MOVE · SHIFT ×8 · CMD/CTRL+D DUPLICATE</div>
+        </div>
+      ) : null}
 
       {toast ? <div className="studio-v2-toast"><Check size={14} /> {toast}</div> : null}
     </main>
