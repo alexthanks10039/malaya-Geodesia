@@ -3,13 +3,11 @@ import { createAdminSession, loginAdmin } from "@/lib/admin-auth";
 
 export const dynamic = "force-dynamic";
 
-export async function POST(request: Request) {
+export async function POST() {
   try {
-    const body = await request.json().catch(() => ({})) as { password?: string };
-    const candidate = typeof body.password === "string" ? body.password : "";
-    if (!(await loginAdmin(candidate))) {
+    if (!(await loginAdmin(""))) {
       return NextResponse.json(
-        { ok: false, message: "Неверный пароль" },
+        { ok: false, message: "Studio auth is disabled" },
         { status: 401, headers: { "Cache-Control": "no-store" } },
       );
     }
