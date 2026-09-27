@@ -5,6 +5,10 @@ import { cookies } from "next/headers";
 const COOKIE_NAME = "malaya_studio_session";
 const SESSION_TTL_SECONDS = 60 * 60 * 12;
 
+function authDisabled(): boolean {
+  return process.env.STUDIO_AUTH_DISABLED?.trim().toLowerCase() === "true";
+}
+
 function secret(): string {
   const value = process.env.ADMIN_SESSION_SECRET;
   if (!value || value.length < 32) {
@@ -46,6 +50,7 @@ function verifyToken(token: string | undefined): boolean {
 }
 
 export async function isAdminAuthenticated(): Promise<boolean> {
+  if (authDisabled()) return true;
   try {
     const store = await cookies();
     return verifyToken(store.get(COOKIE_NAME)?.value);
@@ -55,6 +60,7 @@ export async function isAdminAuthenticated(): Promise<boolean> {
 }
 
 export async function requireAdminApi(): Promise<{ ok: true } | { ok: false; response: Response }> {
+  if (authDisabled()) return { ok: true };
   try {
     if (!process.env.ADMIN_PASSWORD || !process.env.ADMIN_SESSION_SECRET) {
       return {
@@ -81,6 +87,7 @@ export async function requireAdminApi(): Promise<{ ok: true } | { ok: false; res
 }
 
 export async function loginAdmin(candidate: string): Promise<boolean> {
+  if (authDisabled()) return true;
   try {
     return safeEqual(candidate, password());
   } catch {
@@ -89,6 +96,7 @@ export async function loginAdmin(candidate: string): Promise<boolean> {
 }
 
 export async function createAdminSession(): Promise<void> {
+  if (authDisabled()) return;
   const expiresAt = Math.floor(Date.now() / 1000) + SESSION_TTL_SECONDS;
   const store = await cookies();
   store.set(COOKIE_NAME, sessionToken(expiresAt), {
