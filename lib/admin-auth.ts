@@ -4,7 +4,7 @@ export async function isAdminAuthenticated(): Promise<boolean> {
   return true;
 }
 
-export async function requireAdminApi(): Promise<{ ok: true }> {
+export async function requireAdminApi(): Promise<{ ok: true } | { ok: false; response: Response }> {
   return { ok: true };
 }
 
