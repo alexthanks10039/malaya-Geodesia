@@ -88,6 +88,7 @@ export function PuckStudio() {
   const [status, setStatus] = useState<SaveStatus>("LOADING");
   const [remote, setRemote] = useState<CmsPage | null>(null);
   const [versions, setVersions] = useState<CmsVersion[]>([]);
+  const [version, setVersion] = useState(0);
   const [preview, setPreview] = useState<PreviewMode | null>(null);
   const [historyOpen, setHistoryOpen] = useState(false);
   const [historyBusy, setHistoryBusy] = useState(false);
