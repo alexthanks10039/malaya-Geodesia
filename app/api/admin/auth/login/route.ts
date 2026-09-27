@@ -5,9 +5,9 @@ export const dynamic = "force-dynamic";
 
 export async function POST(request: Request) {
   try {
-    const body = await request.json() as { password?: string };
+    const body = await request.json().catch(() => ({})) as { password?: string };
     const candidate = typeof body.password === "string" ? body.password : "";
-    if (!candidate || !(await loginAdmin(candidate))) {
+    if (!(await loginAdmin(candidate))) {
       return NextResponse.json(
         { ok: false, message: "Неверный пароль" },
         { status: 401, headers: { "Cache-Control": "no-store" } },
