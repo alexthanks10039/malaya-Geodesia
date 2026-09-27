@@ -10,24 +10,21 @@ This repository is **Малая геодезия**, a practical geodesy knowledg
 - CSS
 - Three.js + Motion + lucide-react
 - Node.js >= 20
-- Prisma schema is present for future/persistent data work
+- PostgreSQL via `pg` + SQL migrations
+- Prisma schema is retained as a future/compatibility reference, not an active runtime dependency
 
 ## Repository map
-- `app/page.tsx`: homepage composition
-- `app/layout.tsx`: root layout/global CSS
-- `app/globals.css`: global layout and responsive styles
-- `app/product-polish.css`: calculator/product responsive polish
-- `app/*`: route pages (calculator, services, technologies, knowledge, cases, partners, contacts)
-- `app/api/leads/route.ts`: calculator lead endpoint
-- `components/calculator.tsx`: 4-step calculator UI
-- `components/geo-scan-scene.tsx`: Three.js visual scene
-- `components/geospatial-index.tsx`: geospatial index/animation
-- `components/hero.tsx`: homepage hero
-- `components/theme-toggle.tsx`: persistent theme switch
-- `lib/calculator.ts`: calculator pricing/estimate logic
-- `lib/data.ts`: product/knowledge data
-- `prisma/schema.prisma`: database schema
-- `.github/workflows/`: CI/preview workflows
+See `docs/ARCHITECTURE.md` for the canonical project boundaries.
+
+Key paths:
+- `app/`: routes, pages, layouts and API route handlers
+- `components/`: reusable React UI; `components/studio/` is Studio UI
+- `lib/`: shared server/domain logic
+- `studio/`: Studio runtime, configuration and types
+- `db/migrations/`: PostgreSQL migrations
+- `scripts/`: migrations, seed and preview tooling
+- `docs/`: project and operational documentation
+- `_module-bank/`: archived inactive modules
 
 ## Working rules for AI agents
 1. Inspect only the files relevant to the requested change. Do not scan the whole repository unnecessarily.
@@ -41,7 +38,9 @@ This repository is **Малая геодезия**, a practical geodesy knowledg
 9. Do not add a dependency when the existing stack can solve the task.
 10. For CSS changes, check for existing duplicate rules before adding more overrides.
 11. Treat calculator prices as preliminary product logic, not verified market prices.
-12. The lead API currently returns a synthetic lead ID and does not constitute durable lead storage unless persistence is explicitly implemented.
+12. Treat PostgreSQL/SQL migrations as the active persistence model. Do not introduce a second active data layer without an explicit reconciliation step.
+13. Keep Studio route/UI/core boundaries intact: `app/studio`, `components/studio`, `studio`.
+14. Keep password authentication disabled unless a deliberate security change explicitly restores the archived module from `_module-bank/auth-password/`.
 
 ## Verification
 Run:
