@@ -64,7 +64,8 @@ export async function listAdminContent(type:ContentType,options:{status?:Content
   if(q){values.push("%"+q+"%");const n=values.length;where.push("(draft_slug ILIKE $"+n+" OR COALESCE(draft_data->>'title',draft_data->>'name','') ILIKE $"+n+")");}
   const whereSql=where.join(" AND ");
   const limitParam=values.push(limit);
-  const offsetParam=values.push(offset);\n  const result=await query<CmsRow>("SELECT "+CMS_SELECT+" FROM cms_content WHERE "+whereSql+" ORDER BY updated_at DESC LIMIT $"+limitParam+" OFFSET $"+offsetParam,values);
+  const offsetParam=values.push(offset);
+  const result=await query<CmsRow>("SELECT "+CMS_SELECT+" FROM cms_content WHERE "+whereSql+" ORDER BY updated_at DESC LIMIT $"+limitParam+" OFFSET $"+offsetParam,values);
   const countResult=await query<{count:string}>("SELECT COUNT(*)::text AS count FROM cms_content WHERE "+whereSql,values.slice(0,-2));
   return {items:result.rows.map(mapRow),total:Number(countResult.rows[0]?.count??0),limit,offset};
 }
