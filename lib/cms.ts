@@ -117,7 +117,7 @@ export async function publishContent(id:string,type:ContentType,expectedVersion?
   try{
     return await withTransaction(async client=>{
       const row=await getRowForUpdate(client,id,type);if(!row)throw new CmsError("Content not found",404);
-      const current=mapRow(row);conflict(current,expectedVersion);
+      const current=mapRow(row);conflict(current,normalizeExpectedVersion(expectedVersion));
       const result=await client.query<CmsRow>("UPDATE cms_content SET published_slug=draft_slug,published_path=draft_path,published_data=draft_data,status='published',published_at=now(),version=version+1 WHERE id=$1 AND content_type=$2 RETURNING "+CMS_SELECT,[id,type]);
       const item=mapRow(result.rows[0]);await insertAudit(client,type,id,"publish",auditPayload(current),auditPayload(item),{previousPublishedPath:current.publishedPath});await insertVersion(client,item,"publish");return item;
     });
@@ -128,7 +128,7 @@ export async function unpublishContent(id:string,type:ContentType,expectedVersio
   if(!isDatabaseConfigured())throw new CmsError("DATABASE_URL is required for writes",503);
   return withTransaction(async client=>{
     const row=await getRowForUpdate(client,id,type);if(!row)throw new CmsError("Content not found",404);
-    const current=mapRow(row);conflict(current,expectedVersion);
+    const current=mapRow(row);conflict(current,normalizeExpectedVersion(expectedVersion));
     const result=await client.query<CmsRow>("UPDATE cms_content SET published_slug=NULL,published_path=NULL,published_data=NULL,status='draft',published_at=NULL,version=version+1 WHERE id=$1 AND content_type=$2 RETURNING "+CMS_SELECT,[id,type]);
     const item=mapRow(result.rows[0]);await insertAudit(client,type,id,"unpublish",auditPayload(current),auditPayload(item),{previousPublishedPath:current.publishedPath});await insertVersion(client,item,"unpublish");return item;
   });
@@ -138,7 +138,7 @@ export async function deleteContent(id:string,type:ContentType,expectedVersion?:
   if(!isDatabaseConfigured())throw new CmsError("DATABASE_URL is required for writes",503);
   return withTransaction(async client=>{
     const row=await getRowForUpdate(client,id,type);if(!row)throw new CmsError("Content not found",404);
-    const current=mapRow(row);conflict(current,expectedVersion);
+    const current=mapRow(row);conflict(current,normalizeExpectedVersion(expectedVersion));
     await insertVersion(client,current,"delete");
     await client.query("DELETE FROM cms_content WHERE id=$1 AND content_type=$2",[id,type]);
     await insertAudit(client,type,id,"delete",auditPayload(current),null,{previousPublishedPath:current.publishedPath});
@@ -168,7 +168,7 @@ export async function rollbackContent(id:string,type:ContentType,version:number,
   if(!isDatabaseConfigured())throw new CmsError("DATABASE_URL is required for writes",503);
   return withTransaction(async client=>{
     const row=await getRowForUpdate(client,id,type);if(!row)throw new CmsError("Content not found",404);
-    const current=mapRow(row);conflict(current,expectedVersion);
+    const current=mapRow(row);conflict(current,normalizeExpectedVersion(expectedVersion));
     const snapshot=await getContentVersion(id,type,version);if(!snapshot)throw new CmsError("Version not found",404);
     const slug=snapshot.slug,path=rowPath(type,slug);
     const result=await client.query<CmsRow>("UPDATE cms_content SET draft_slug=$1,draft_path=$2,draft_data=$3,status=$4,version=version+1 WHERE id=$5 AND content_type=$6 RETURNING "+CMS_SELECT,[slug,path,JSON.stringify(snapshot.data),current.publishedData?"changes":"draft",id,type]);
