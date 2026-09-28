@@ -26,13 +26,13 @@
 | Задача | Статус |
 |---|---:|
 | PostgreSQL архитектура | 🟢 ~90% |
-| SQL migrations | 🟢 ~90% |
-| CMS CRUD | ✅ 101% |
-| Content versions | 🟡 ~75% |
-| Rollback | 🟡 ~80% |
-| Audit log | 🟡 ~70% |
-| File storage | 🟡 ~65% |
-| Admin Files API | 🟡 ~70% |
+| SQL migrations | 🟢 ~95% |
+| CMS CRUD | ✅ 100% |
+| Content versions | ✅ 100% |
+| Rollback | ✅ 100% |
+| Audit log | ✅ 100% |
+| File storage | ✅ 100% |
+| Admin Files API | ✅ 100% |
 | Google Forms → backend | 🟡 ~60% |
 | Telegram backend | 🟡 ~70% |
 | Telegram notifications | 🟡 ~70% |
@@ -147,6 +147,8 @@
 - Архитектурные границы проекта зафиксированы.
 - Большой структурный рефакторинг отложен до стабилизации backend/API.
 
-## CMS CRUD 101%
+## CMS — 100%
 
-Закрыт полный жизненный цикл CMS: list/read/create/update/delete, optimistic locking, publish/unpublish, версии и rollback, audit events, уникальные URL, фильтрация, пагинация, корректные HTTP-ошибки и cache revalidation.
+Текущий CMS-контур закрывает product scope: case, service, knowledge, partner, page; PostgreSQL storage; draft/changes/published; create/read/update/delete; optimistic locking; version history; rollback; audit before/after/metadata; unique draft/published URL; search; status filters; pagination; file storage через Vercel Blob; загрузка и удаление с сохранением консистентности метаданных; cache revalidation для опубликованных маршрутов; Puck → CMS для главной страницы; published reads используют только publishedSlug.
+
+Ограничение текущего продукта: authentication Studio намеренно отключена и остаётся отдельной задачей безопасности, а полноценный Lead/CRM контур не является частью CMS.
