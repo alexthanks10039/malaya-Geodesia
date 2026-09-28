@@ -24,6 +24,9 @@ jobs:
       - name: Install dependencies
         run: npm install
 
+      - name: CMS smoke tests
+        run: npm run test:cms
+
       - name: TypeScript check
         run: npm run lint
 
