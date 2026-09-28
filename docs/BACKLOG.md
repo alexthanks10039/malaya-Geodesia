@@ -133,7 +133,7 @@
 1. Чистый production build.
 2. Deployment + smoke-test.
 3. Telegram и Leads → production-ready.
-4. CMS, files и audit.
+4. CMS CRUD закрыт, затем files и audit.
 5. Studio/CMS → полноценная рабочая админка.
 6. UX, cases, knowledge base.
 7. PostGIS, карта, геопространственная модель и AI.
@@ -146,3 +146,7 @@
 - Старая password auth сохранена в `_module-bank/auth-password/`.
 - Архитектурные границы проекта зафиксированы.
 - Большой структурный рефакторинг отложен до стабилизации backend/API.
+
+## CMS CRUD 101%
+
+Закрыт полный жизненный цикл CMS: list/read/create/update/delete, optimistic locking, publish/unpublish, версии и rollback, audit events, уникальные URL, фильтрация, пагинация, корректные HTTP-ошибки и cache revalidation.
