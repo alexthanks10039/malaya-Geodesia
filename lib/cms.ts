@@ -171,7 +171,17 @@ export async function listFiles(folder?:string){
   const result=await query<FileRow>(folder?"SELECT id,pathname,url,filename,content_type,size,folder,created_at FROM file_assets WHERE folder=$1 ORDER BY created_at DESC":"SELECT id,pathname,url,filename,content_type,size,folder,created_at FROM file_assets ORDER BY created_at DESC",folder?[folder]:[]);
   return result.rows.map(mapFileRow);
 }
-export async function deleteFileAsset(id:string){if(!isDatabaseConfigured())throw new CmsError("DATABASE_URL is required for writes",503);const result=await query<FileRow>("DELETE FROM file_assets WHERE id=$1 RETURNING id,pathname,url,filename,content_type,size,folder,created_at",[id]),row=result.rows[0];if(!row)throw new CmsError("File not found",404);const file=mapFileRow(row);await query("INSERT INTO cms_audit_log(entity_type,entity_id,action,actor,before_data) VALUES('file',$1,'delete','studio',$2)",[id,JSON.stringify(file)]);return file;}
+export async function deleteFileAsset(id:string){
+  if(!isDatabaseConfigured())throw new CmsError("DATABASE_URL is required for writes",503);
+  return withTransaction(async client=>{
+    const result=await client.query<FileRow>("DELETE FROM file_assets WHERE id=$1 RETURNING id,pathname,url,filename,content_type,size,folder,created_at",[id]);
+    const row=result.rows[0];
+    if(!row)throw new CmsError("File not found",404);
+    const file=mapFileRow(row);
+    await client.query("INSERT INTO cms_audit_log(entity_type,entity_id,action,actor,before_data) VALUES('file',$1,'delete','studio',$2)",[id,JSON.stringify(file)]);
+    return file;
+  });
+}
 export async function getAuditRecord(id:number,entityType?:string,entityId?:string){
   if(!isDatabaseConfigured())return null;
   const values:unknown[]=[id];const where=["id=$1"];
@@ -185,7 +195,14 @@ export type CmsVersion={id:number;contentId:string;contentType:ContentType;versi
 type CmsVersionRow={id:number;content_id:string;content_type:ContentType;version:number;action:string;slug:string;path:string;status:ContentStatus;draft_data:Record<string,unknown>|null;published_data:Record<string,unknown>|null;created_at:string};
 function mapVersion(row:CmsVersionRow):CmsVersion{return{id:Number(row.id),contentId:row.content_id,contentType:row.content_type,version:row.version,action:row.action,slug:row.slug,path:row.path,status:row.status,data:row.draft_data??{},publishedData:row.published_data??null,createdAt:new Date(row.created_at).toISOString()};}
 export async function listContentVersions(id:string,type:ContentType){if(!isDatabaseConfigured())return[];const result=await query<CmsVersionRow>("SELECT id,content_id,content_type,version,action,slug,path,status,draft_data,published_data,created_at FROM cms_content_versions WHERE content_id=$1 AND content_type=$2 ORDER BY version DESC",[id,type]);return result.rows.map(mapVersion);}
-export async function getContentVersion(id:string,type:ContentType,version:number,client?:Pick<PoolClient,"query">){if(!isDatabaseConfigured())return null;const runner=client??{query};const result=await runner.query<CmsVersionRow>("SELECT id,content_id,content_type,version,action,slug,path,status,draft_data,published_data,created_at FROM cms_content_versions WHERE content_id=$1 AND content_type=$2 AND version=$3 LIMIT 1",[id,type,version]);return result.rows[0]?mapVersion(result.rows[0]):null;}
+export async function getContentVersion(id:string,type:ContentType,version:number,client?:PoolClient){
+  if(!isDatabaseConfigured())return null;
+  const sql="SELECT id,content_id,content_type,version,action,slug,path,status,draft_data,published_data,created_at FROM cms_content_versions WHERE content_id=$1 AND content_type=$2 AND version=$3 LIMIT 1";
+  const result=client
+    ? await client.query<CmsVersionRow>(sql,[id,type,version])
+    : await query<CmsVersionRow>(sql,[id,type,version]);
+  return result.rows[0]?mapVersion(result.rows[0]):null;
+}
 export async function rollbackContent(id:string,type:ContentType,version:number,expectedVersion?:number){
   if(!isDatabaseConfigured())throw new CmsError("DATABASE_URL is required for writes",503);
   return withTransaction(async client=>{
