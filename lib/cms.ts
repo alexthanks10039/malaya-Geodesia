@@ -149,8 +149,28 @@ export async function deleteContent(id:string,type:ContentType,expectedVersion?:
 }
 
 function mapFileRow(row:FileRow):FileAsset{return{id:row.id,pathname:row.pathname,url:row.url,filename:row.filename,contentType:row.content_type,size:Number(row.size),folder:row.folder,createdAt:new Date(row.created_at).toISOString()};}
-export async function saveFileAsset(input:{pathname:string;url:string;filename:string;contentType?:string;size?:number;folder?:string}){if(!isDatabaseConfigured())throw new CmsError("DATABASE_URL is required for writes",503);const id=crypto.randomUUID(),result=await query<FileRow>("INSERT INTO file_assets(id,pathname,url,filename,content_type,size,folder) VALUES($1,$2,$3,$4,$5,$6,$7) RETURNING id,pathname,url,filename,content_type,size,folder,created_at",[id,input.pathname,input.url,input.filename,input.contentType??"application/octet-stream",input.size??0,input.folder??"studio"]);const row=result.rows[0];await query("INSERT INTO cms_audit_log(entity_type,entity_id,action,actor,after_data) VALUES('file',$1,'upload','studio',$2)",[id,JSON.stringify({pathname:input.pathname,url:input.url,filename:input.filename,folder:input.folder??"studio"})]);return mapFileRow(row);}
-export async function listFiles(folder?:string){if(!isDatabaseConfigured())return[];const result=await query<FileRow>(folder?"SELECT id,pathname,url,filename,content_type,size,folder,created_at FROM file_assets WHERE folder=$1 ORDER BY created_at DESC":"SELECT id,pathname,url,filename,content_type,size,folder,created_at FROM file_assets ORDER BY created_at DESC",folder?[folder]:[]);return result.rows.map(mapFileRow);}
+export async function saveFileAsset(input:{pathname:string;url:string;filename:string;contentType?:string;size?:number;folder?:string}){
+  if(!isDatabaseConfigured())throw new CmsError("DATABASE_URL is required for writes",503);
+  const id=crypto.randomUUID();
+  return withTransaction(async client=>{
+    const result=await client.query<FileRow>("INSERT INTO file_assets(id,pathname,url,filename,content_type,size,folder) VALUES($1,$2,$3,$4,$5,$6,$7) RETURNING id,pathname,url,filename,content_type,size,folder,created_at",
+      [id,input.pathname,input.url,input.filename,input.contentType??"application/octet-stream",input.size??0,input.folder??"studio"]);
+    const row=result.rows[0];
+    await client.query("INSERT INTO cms_audit_log(entity_type,entity_id,action,actor,after_data) VALUES('file',$1,'upload','studio',$2)",
+      [id,JSON.stringify({pathname:input.pathname,url:input.url,filename:input.filename,contentType:input.contentType??"application/octet-stream",size:input.size??0,folder:input.folder??"studio"})]);
+    return mapFileRow(row);
+  });
+}
+export async function getFileAsset(id:string){
+  if(!isDatabaseConfigured())return null;
+  const result=await query<FileRow>("SELECT id,pathname,url,filename,content_type,size,folder,created_at FROM file_assets WHERE id=$1 LIMIT 1",[id]);
+  return result.rows[0]?mapFileRow(result.rows[0]):null;
+}
+export async function listFiles(folder?:string){
+  if(!isDatabaseConfigured())return[];
+  const result=await query<FileRow>(folder?"SELECT id,pathname,url,filename,content_type,size,folder,created_at FROM file_assets WHERE folder=$1 ORDER BY created_at DESC":"SELECT id,pathname,url,filename,content_type,size,folder,created_at FROM file_assets ORDER BY created_at DESC",folder?[folder]:[]);
+  return result.rows.map(mapFileRow);
+}
 export async function deleteFileAsset(id:string){if(!isDatabaseConfigured())throw new CmsError("DATABASE_URL is required for writes",503);const result=await query<FileRow>("DELETE FROM file_assets WHERE id=$1 RETURNING id,pathname,url,filename,content_type,size,folder,created_at",[id]),row=result.rows[0];if(!row)throw new CmsError("File not found",404);const file=mapFileRow(row);await query("INSERT INTO cms_audit_log(entity_type,entity_id,action,actor,before_data) VALUES('file',$1,'delete','studio',$2)",[id,JSON.stringify(file)]);return file;}
 export async function getAuditRecord(id:number,entityType?:string,entityId?:string){
   if(!isDatabaseConfigured())return null;
@@ -160,7 +180,7 @@ export async function getAuditRecord(id:number,entityType?:string,entityId?:stri
   const result=await query<AuditRow>("SELECT id,entity_type,entity_id,action,actor,before_data,after_data,metadata,created_at FROM cms_audit_log WHERE "+where.join(" AND ")+" LIMIT 1",values);const row=result.rows[0];
   return row?({id:row.id,entityType:row.entity_type,entityId:row.entity_id,action:row.action,actor:row.actor,beforeData:row.before_data,afterData:row.after_data,metadata:row.metadata,createdAt:new Date(row.created_at).toISOString()} satisfies AuditRecord):null;
 }
-export async function listAuditLogs(options:{entityType?:string;entityId?:string;limit?:number}={}){if(!isDatabaseConfigured())return[];const limit=Math.min(Math.max(options.limit??100,1),250),values:unknown[]=[],where:string[]=[];if(options.entityType){values.push(options.entityType);where.push("entity_type=$"+values.length);}if(options.entityId){values.push(options.entityId);where.push("entity_id=$"+values.length);}values.push(limit);const whereSql=where.length?"WHERE "+where.join(" AND "):"";const result=await query<AuditRow>("SELECT id,entity_type,entity_id,action,actor,before_data,after_data,metadata,created_at FROM cms_audit_log "+whereSql+" ORDER BY created_at DESC LIMIT $"+values.length,values);return result.rows.map(row=>({id:row.id,entityType:row.entity_type,entityId:row.entity_id,action:row.action,actor:row.actor,beforeData:row.before_data,afterData:row.after_data,metadata:row.metadata,createdAt:new Date(row.created_at).toISOString()} satisfies AuditRecord));}
+export async function listAuditLogs(options:{entityType?:string;entityId?:string;limit?:number}={}){if(!isDatabaseConfigured())return[];const requested=options.limit??100;const limit=Number.isSafeInteger(requested)?Math.min(Math.max(requested,1),250):100;const values:unknown[]=[],where:string[]=[];if(options.entityType){values.push(options.entityType);where.push("entity_type=$"+values.length);}if(options.entityId){values.push(options.entityId);where.push("entity_id=$"+values.length);}values.push(limit);const whereSql=where.length?"WHERE "+where.join(" AND "):"";const result=await query<AuditRow>("SELECT id,entity_type,entity_id,action,actor,before_data,after_data,metadata,created_at FROM cms_audit_log "+whereSql+" ORDER BY created_at DESC LIMIT $"+values.length,values);return result.rows.map(row=>({id:row.id,entityType:row.entity_type,entityId:row.entity_id,action:row.action,actor:row.actor,beforeData:row.before_data,afterData:row.after_data,metadata:row.metadata,createdAt:new Date(row.created_at).toISOString()} satisfies AuditRecord));}
 export type CmsVersion={id:number;contentId:string;contentType:ContentType;version:number;action:string;slug:string;path:string;status:ContentStatus;data:Record<string,unknown>;publishedData:Record<string,unknown>|null;createdAt:string};
 type CmsVersionRow={id:number;content_id:string;content_type:ContentType;version:number;action:string;slug:string;path:string;status:ContentStatus;draft_data:Record<string,unknown>|null;published_data:Record<string,unknown>|null;created_at:string};
 function mapVersion(row:CmsVersionRow):CmsVersion{return{id:Number(row.id),contentId:row.content_id,contentType:row.content_type,version:row.version,action:row.action,slug:row.slug,path:row.path,status:row.status,data:row.draft_data??{},publishedData:row.published_data??null,createdAt:new Date(row.created_at).toISOString()};}
