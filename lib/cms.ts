@@ -61,7 +61,7 @@ export async function listAdminContent(type:ContentType,options:{status?:Content
   const limit=Math.min(Math.max(options.limit??100,1),250),offset=Math.max(0,options.offset??0);
   const values:unknown[]=[type],where=["content_type=$1"];
   if(status&&status!=="all"){values.push(status);where.push("status=$"+values.length);}
-  if(q){values.push("%"+q+"%");const n=values.length;where.push("(draft_slug ILIKE $"+n+" OR COALESCE(draft_data->>'title',draft_data->>'name','') ILIKE $"+n+")");}
+  if(q){values.push("%"+q+"%");const n=values.length;where.push("(draft_slug ILIKE $"+n+" OR draft_data::text ILIKE $"+n+")");}
   const whereSql=where.join(" AND ");
   const limitParam=values.push(limit);
   const offsetParam=values.push(offset);
@@ -83,7 +83,7 @@ export async function getPublishedContent(type:ContentType){
     return result.rows.map(mapRow);
   }catch{return(staticMap[type]??[]).map((item,index)=>staticItem(type,item,index));}
 }
-export async function getPublishedBySlug(type:ContentType,slug:string){const items=await getPublishedContent(type);return items.find(item=>item.publishedSlug===slug||item.slug===slug)||null;}
+export async function getPublishedBySlug(type:ContentType,slug:string){const items=await getPublishedContent(type);return items.find(item=>item.publishedSlug===slug)||null;}
 export async function getPublishedPage(path:string){if(!isDatabaseConfigured())return null;const result=await query<CmsRow>("SELECT "+CMS_SELECT+" FROM cms_content WHERE content_type='page' AND published_path=$1 AND published_data IS NOT NULL LIMIT 1",[path]);return result.rows[0]?mapRow(result.rows[0]):null;}
 
 export async function createContent(type:ContentType,slugInput:string|undefined,dataInput:unknown){
@@ -132,7 +132,7 @@ export async function unpublishContent(id:string,type:ContentType,expectedVersio
     const row=await getRowForUpdate(client,id,type);if(!row)throw new CmsError("Content not found",404);
     const current=mapRow(row);conflict(current,normalizeExpectedVersion(expectedVersion));
     const result=await client.query<CmsRow>("UPDATE cms_content SET published_slug=NULL,published_path=NULL,published_data=NULL,status='draft',published_at=NULL,version=version+1 WHERE id=$1 AND content_type=$2 RETURNING "+CMS_SELECT,[id,type]);
-    const item=mapRow(result.rows[0]);await insertAudit(client,type,id,"unpublish",auditPayload(current),auditPayload(item),{previousPublishedPath:current.publishedPath});await insertVersion(client,item,"unpublish");return item;
+    const mapped=mapRow(result.rows[0]);const item={...mapped,previousPublishedPath:current.publishedPath};await insertAudit(client,type,id,"unpublish",auditPayload(current),auditPayload(mapped),{previousPublishedPath:current.publishedPath});await insertVersion(client,mapped,"unpublish");return item;
   });
 }
 
@@ -185,13 +185,13 @@ export type CmsVersion={id:number;contentId:string;contentType:ContentType;versi
 type CmsVersionRow={id:number;content_id:string;content_type:ContentType;version:number;action:string;slug:string;path:string;status:ContentStatus;draft_data:Record<string,unknown>|null;published_data:Record<string,unknown>|null;created_at:string};
 function mapVersion(row:CmsVersionRow):CmsVersion{return{id:Number(row.id),contentId:row.content_id,contentType:row.content_type,version:row.version,action:row.action,slug:row.slug,path:row.path,status:row.status,data:row.draft_data??{},publishedData:row.published_data??null,createdAt:new Date(row.created_at).toISOString()};}
 export async function listContentVersions(id:string,type:ContentType){if(!isDatabaseConfigured())return[];const result=await query<CmsVersionRow>("SELECT id,content_id,content_type,version,action,slug,path,status,draft_data,published_data,created_at FROM cms_content_versions WHERE content_id=$1 AND content_type=$2 ORDER BY version DESC",[id,type]);return result.rows.map(mapVersion);}
-export async function getContentVersion(id:string,type:ContentType,version:number){if(!isDatabaseConfigured())return null;const result=await query<CmsVersionRow>("SELECT id,content_id,content_type,version,action,slug,path,status,draft_data,published_data,created_at FROM cms_content_versions WHERE content_id=$1 AND content_type=$2 AND version=$3 LIMIT 1",[id,type,version]);return result.rows[0]?mapVersion(result.rows[0]):null;}
+export async function getContentVersion(id:string,type:ContentType,version:number,client?:Pick<PoolClient,"query">){if(!isDatabaseConfigured())return null;const runner=client??{query};const result=await runner.query<CmsVersionRow>("SELECT id,content_id,content_type,version,action,slug,path,status,draft_data,published_data,created_at FROM cms_content_versions WHERE content_id=$1 AND content_type=$2 AND version=$3 LIMIT 1",[id,type,version]);return result.rows[0]?mapVersion(result.rows[0]):null;}
 export async function rollbackContent(id:string,type:ContentType,version:number,expectedVersion?:number){
   if(!isDatabaseConfigured())throw new CmsError("DATABASE_URL is required for writes",503);
   return withTransaction(async client=>{
     const row=await getRowForUpdate(client,id,type);if(!row)throw new CmsError("Content not found",404);
     const current=mapRow(row);conflict(current,normalizeExpectedVersion(expectedVersion));
-    const snapshot=await getContentVersion(id,type,version);if(!snapshot)throw new CmsError("Version not found",404);
+    const snapshot=await getContentVersion(id,type,version,client);if(!snapshot)throw new CmsError("Version not found",404);
     const slug=snapshot.slug,path=rowPath(type,slug),storedData={...snapshot.data,slug};
     const result=await client.query<CmsRow>("UPDATE cms_content SET draft_slug=$1,draft_path=$2,draft_data=$3,status=$4,version=version+1 WHERE id=$5 AND content_type=$6 RETURNING "+CMS_SELECT,[slug,path,JSON.stringify(storedData),current.publishedData?"changes":"draft",id,type]);
     const item=mapRow(result.rows[0]);await insertAudit(client,type,id,"rollback",auditPayload(current),auditPayload(item),{fromVersion:version});await insertVersion(client,item,"rollback");return item;
