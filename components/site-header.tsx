@@ -1,12 +1,19 @@
 "use client";
+
 import Link from "next/link";
 import { useEffect, useState } from "react";
-import { usePathname } from "next/navigation";
 import { ArrowUpRight, Menu, X } from "lucide-react";
+import { usePathname } from "next/navigation";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { StudioDevModeButton } from "@/components/studio/dev-mode";
 
-const nav = [["Услуги", "/services"], ["Калькулятор", "/calculator"], ["Кейсы", "/cases"], ["Справочник", "/knowledge"]] as const;
+const nav = [
+  ["Услуги", "/services"],
+  ["Калькулятор", "/calculator"],
+  ["Библиотека калькуляторов", "/calculators-lab"],
+  ["Кейсы", "/cases"],
+  ["Справочник", "/knowledge"],
+] as const;
 
 export function SiteHeader() {
   const pathname = usePathname();
