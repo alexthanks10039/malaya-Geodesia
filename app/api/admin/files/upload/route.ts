@@ -10,7 +10,7 @@ async function guard(){return requireAdminApi();}
 const allowedContentTypes=["image/jpeg","image/png","image/webp","image/gif","video/mp4","video/webm","video/quicktime","application/pdf","application/zip","application/octet-stream","text/csv"];
 
 function safeFolder(value:unknown){
-  return String(value??"studio").toLowerCase().replace(/[^a-z0-9/_-]/g,"-").replace(/\\+/g,"/").replace(/^\\/+|\\/+$/g,"").slice(0,80)||"studio";
+  return String(value??"studio").toLowerCase().replace(/[^a-z0-9/_-]/g,"-").replace(/\\+/g,"/").replace(/^\/+|\/+$/g,"").slice(0,80)||"studio";
 }
 
 export async function POST(request:Request){
