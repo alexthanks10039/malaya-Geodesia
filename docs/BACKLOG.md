@@ -27,7 +27,7 @@
 |---|---:|
 | PostgreSQL архитектура | 🟢 ~90% |
 | SQL migrations | 🟢 ~90% |
-| CMS CRUD | 🟡 ~75% |
+| CMS CRUD | ✅ 101% |
 | Content versions | 🟡 ~75% |
 | Rollback | 🟡 ~80% |
 | Audit log | 🟡 ~70% |
