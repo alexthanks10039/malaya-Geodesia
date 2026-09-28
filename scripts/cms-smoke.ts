@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import {isContentType,normalizeContentData,slugify} from "../lib/cms";
 
 const cases=[
-  ["Площадь участка 11 соток","ploshhad-uchastka-11-sotok"],
+  ["Площадь участка 11 соток","ploshad-uchastka-11-sotok"],
   ["  Топосъёмка / Алматы  ","toposemka-almaty"],
   ["Құрылыс / Геодезия","qurylys-geodeziya"],
 ] as const;
