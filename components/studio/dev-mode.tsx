@@ -143,6 +143,7 @@ export function StudioDevModeButton(){
 
 export function StudioDevMode(){
   const pathname=usePathname();
+  if (pathname === "/studio" || pathname.startsWith("/studio/")) return null;
   const searchRef=useRef<HTMLInputElement>(null);
   const applyingRef=useRef(false);
   const [enabled,setEnabled]=useState(false);
