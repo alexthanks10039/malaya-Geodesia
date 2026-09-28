@@ -1,5 +1,37 @@
-import {NextResponse}from"next/server";import{del}from"@vercel/blob";import{deleteFileAsset,listFiles}from"@/lib/cms";export const dynamic="force-dynamic";
-async function guard() { return requireAdminApi(); }
-import { requireAdminApi } from "@/lib/admin-auth";
-export async function GET(request:Request){const auth=await guard();if(!auth.ok)return auth.response;const url=new URL(request.url);return NextResponse.json({ok:true,items:await listFiles(url.searchParams.get("folder")||undefined)});}
-export async function DELETE(request:Request){const auth=await guard();if(!auth.ok)return auth.response;try{const body=await request.json();const file=await deleteFileAsset(String(body?.id??""));await del(file.url);return NextResponse.json({ok:true,file});}catch(error){return NextResponse.json({ok:false,message:error instanceof Error?error.message:"Delete failed"},{status:400});}}
+import {NextResponse}from"next/server";
+import{del}from"@vercel/blob";
+import{CmsError,deleteFileAsset,getFileAsset,listFiles}from"@/lib/cms";
+import{requireAdminApi}from"@/lib/admin-auth";
+
+export const dynamic="force-dynamic";
+
+export async function GET(request:Request){
+  const auth=await requireAdminApi();if(!auth.ok)return auth.response;
+  try{
+    const url=new URL(request.url);
+    const folder=url.searchParams.get("folder")?.trim()||undefined;
+    return NextResponse.json({ok:true,items:await listFiles(folder)},{headers:{"Cache-Control":"no-store"}});
+  }catch(error){
+    if(error instanceof CmsError)return NextResponse.json({ok:false,message:error.message},{status:error.status});
+    return NextResponse.json({ok:false,message:"Failed to load files"},{status:500});
+  }
+}
+
+export async function DELETE(request:Request){
+  const auth=await requireAdminApi();if(!auth.ok)return auth.response;
+  try{
+    let body:unknown;
+    try{body=await request.json();}catch{return NextResponse.json({ok:false,message:"Invalid JSON body"},{status:400});}
+    const id=String((body as {id?:unknown})?.id??"").trim();
+    if(!id)return NextResponse.json({ok:false,message:"File id is required"},{status:400});
+    const file=await getFileAsset(id);
+    if(!file)throw new CmsError("File not found",404);
+
+    await del(file.url);
+    const removed=await deleteFileAsset(id);
+    return NextResponse.json({ok:true,file:removed},{headers:{"Cache-Control":"no-store"}});
+  }catch(error){
+    if(error instanceof CmsError)return NextResponse.json({ok:false,message:error.message},{status:error.status});
+    return NextResponse.json({ok:false,message:error instanceof Error?error.message:"Delete failed"},{status:500});
+  }
+}
