@@ -19,7 +19,7 @@ export default async function StudioPreview({searchParams}:Props){
  if(!(await isAdminAuthenticated()))redirect("/studio/login");
  const {mode="published"}=await searchParams;
  const page=mode==="draft"
-   ? (await listAdminContent("page")).find(item=>item.slug==="home"||item.path==="/") ?? null
+   ? (await listAdminContent("page")).items.find(item=>item.slug==="home"||item.path==="/") ?? null
    : await getPublishedPage("/");
  const data=extract(page?.data??page?.publishedData) ?? initialPuckData;
  return <main className="studio-preview-page">
