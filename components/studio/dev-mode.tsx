@@ -143,7 +143,7 @@ export function StudioDevModeButton(){
 
 export function StudioDevMode(){
   const pathname=usePathname();
-  if (pathname === "/studio" || pathname.startsWith("/studio/")) return null;
+  const isStudioRoute = pathname === "/studio" || pathname.startsWith("/studio/");
   const searchRef=useRef<HTMLInputElement>(null);
   const applyingRef=useRef(false);
   const [enabled,setEnabled]=useState(false);
@@ -221,6 +221,7 @@ export function StudioDevMode(){
   };
 
   useEffect(()=>{
+    if(isStudioRoute){setEnabled(false);return;}
     const studioPreview=new URLSearchParams(window.location.search).get("studioPreview")==="1";
     if(studioPreview){
       setEnabled(false);
@@ -306,6 +307,8 @@ export function StudioDevMode(){
         {open&&node.children.length?<div className="studio-dev-tree-children">{renderTree(node.children)}</div>:null}
       </div>;
     });
+
+  if(isStudioRoute)return null;
 
   return <>
     <div className="studio-dev-fab-wrap" data-studio-dev-ui>
