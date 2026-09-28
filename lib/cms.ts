@@ -91,7 +91,7 @@ export async function createContent(type:ContentType,slugInput:string|undefined,
   const path=rowPath(type,slug),id=crypto.randomUUID(),storedData={...data,slug};
   try{
     return await withTransaction(async client=>{
-      const result=await client.query<CmsRow>("INSERT INTO cms_content(id,content_type,draft_slug,draft_path,draft_data,status) VALUES($1,$2,$3,$4,$5,'draft') RETURNING "+CMS_SELECT,[id,type,slug,path,JSON.stringify(data)]);
+      const result=await client.query<CmsRow>("INSERT INTO cms_content(id,content_type,draft_slug,draft_path,draft_data,status) VALUES($1,$2,$3,$4,$5,'draft') RETURNING "+CMS_SELECT,[id,type,slug,path,JSON.stringify(storedData)]);
       const item=mapRow(result.rows[0]);await insertAudit(client,type,id,"create",null,auditPayload(item),{path});await insertVersion(client,item,"create");return item;
     });
   }catch(error){if(uniqueError(error))throw new CmsError("URL already exists: "+path,409);throw error;}
