@@ -1,6 +1,7 @@
 import {cases,knowledge,services} from "@/lib/data";
 import {partners} from "@/lib/partners";
 import {isDatabaseConfigured,query,withTransaction} from "@/lib/db";
+import type {PoolClient} from "pg";
 import {CONTENT_ROUTE_PREFIX,CONTENT_TYPES,type AuditRecord,type CmsContent,type ContentStatus,type ContentType,type FileAsset} from "@/lib/cms-types";
 
 type CmsRow={id:string;content_type:ContentType;draft_slug:string;draft_path:string;published_slug:string|null;published_path:string|null;draft_data:Record<string,unknown>;published_data:Record<string,unknown>|null;status:ContentStatus;version:number;created_at:string;updated_at:string;published_at:string|null};
@@ -40,7 +41,7 @@ function auditPayload(item:CmsContent|null){if(!item)return null;return{type:ite
 async function insertAudit(client:{query:(text:string,values?:unknown[])=>Promise<unknown>},entityType:string,entityId:string,action:string,beforeData:unknown,afterData:unknown,metadata:unknown=null){await client.query("INSERT INTO cms_audit_log(entity_type,entity_id,action,actor,before_data,after_data,metadata) VALUES($1,$2,$3,$4,$5,$6,$7)",[entityType,entityId,action,"studio",beforeData?JSON.stringify(beforeData):null,afterData?JSON.stringify(afterData):null,metadata?JSON.stringify(metadata):null]);}
 async function insertVersion(client:{query:(text:string,values?:unknown[])=>Promise<unknown>},item:CmsContent,action:string){await client.query("INSERT INTO cms_content_versions(content_id,content_type,version,action,slug,path,status,draft_data,published_data) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9) ON CONFLICT(content_id,version) DO NOTHING",[item.id,item.type,item.version,action,item.slug,item.path,item.status,JSON.stringify(item.data),item.publishedData?JSON.stringify(item.publishedData):null]);}
 
-async function getRowForUpdate(client:{query:<T extends Record<string,unknown>=Record<string,unknown>>(text:string,values?:unknown[])=>Promise<{rows:T[]}>},id:string,type:ContentType){
+async function getRowForUpdate(client:PoolClient,id:string,type:ContentType){
   const result=await client.query<CmsRow>("SELECT "+CMS_SELECT+" FROM cms_content WHERE id=$1 AND content_type=$2 FOR UPDATE",[id,type]);
   return result.rows[0]??null;
 }
@@ -102,7 +103,7 @@ export async function updateContent(id:string,type:ContentType,slugInput:string|
   try{
     return await withTransaction(async client=>{
       const row=await getRowForUpdate(client,id,type);if(!row)throw new CmsError("Content not found",404);
-      const current=mapRow(row);conflict(current,expectedVersion);
+      const current=mapRow(row);conflict(current,normalizeExpectedVersion(expectedVersion));
       const slug=slugify(slugInput?.trim()||current.slug);if(type==="page"&&slug!=="home")throw new CmsError("Only the home page is currently supported by Puck");
       const path=rowPath(type,slug),nextStatus:ContentStatus=current.publishedData?"changes":"draft";
       const result=await client.query<CmsRow>("UPDATE cms_content SET draft_slug=$1,draft_path=$2,draft_data=$3,status=$4,version=version+1 WHERE id=$5 AND content_type=$6 RETURNING "+CMS_SELECT,[slug,path,JSON.stringify(data),nextStatus,id,type]);
