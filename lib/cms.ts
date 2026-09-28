@@ -88,7 +88,7 @@ export async function createContent(type:ContentType,slugInput:string|undefined,
   if(!isDatabaseConfigured())throw new CmsError("DATABASE_URL is required for writes",503);
   const data=normalizeContentData(dataInput),slug=slugify(slugInput?.trim()||String(data.slug??data.title??data.name??""));
   if(type==="page"&&slug!=="home")throw new CmsError("Only the home page is currently supported by Puck");
-  const path=rowPath(type,slug),id=crypto.randomUUID();
+  const path=rowPath(type,slug),id=crypto.randomUUID(),storedData={...data,slug};
   try{
     return await withTransaction(async client=>{
       const result=await client.query<CmsRow>("INSERT INTO cms_content(id,content_type,draft_slug,draft_path,draft_data,status) VALUES($1,$2,$3,$4,$5,'draft') RETURNING "+CMS_SELECT,[id,type,slug,path,JSON.stringify(data)]);
@@ -105,8 +105,8 @@ export async function updateContent(id:string,type:ContentType,slugInput:string|
       const row=await getRowForUpdate(client,id,type);if(!row)throw new CmsError("Content not found",404);
       const current=mapRow(row);conflict(current,normalizeExpectedVersion(expectedVersion));
       const slug=slugify(slugInput?.trim()||current.slug);if(type==="page"&&slug!=="home")throw new CmsError("Only the home page is currently supported by Puck");
-      const path=rowPath(type,slug),nextStatus:ContentStatus=current.publishedData?"changes":"draft";
-      const result=await client.query<CmsRow>("UPDATE cms_content SET draft_slug=$1,draft_path=$2,draft_data=$3,status=$4,version=version+1 WHERE id=$5 AND content_type=$6 RETURNING "+CMS_SELECT,[slug,path,JSON.stringify(data),nextStatus,id,type]);
+      const path=rowPath(type,slug),storedData={...data,slug},nextStatus:ContentStatus=current.publishedData?"changes":"draft";
+      const result=await client.query<CmsRow>("UPDATE cms_content SET draft_slug=$1,draft_path=$2,draft_data=$3,status=$4,version=version+1 WHERE id=$5 AND content_type=$6 RETURNING "+CMS_SELECT,[slug,path,JSON.stringify(storedData),nextStatus,id,type]);
       const item=mapRow(result.rows[0]);await insertAudit(client,type,id,"update_draft",auditPayload(current),auditPayload(item),{draftPath:path});await insertVersion(client,item,"update_draft");return item;
     });
   }catch(error){if(uniqueError(error))throw new CmsError("URL already exists: "+rowPath(type,slugify(slugInput?.trim()??"")),409);throw error;}
@@ -170,8 +170,8 @@ export async function rollbackContent(id:string,type:ContentType,version:number,
     const row=await getRowForUpdate(client,id,type);if(!row)throw new CmsError("Content not found",404);
     const current=mapRow(row);conflict(current,normalizeExpectedVersion(expectedVersion));
     const snapshot=await getContentVersion(id,type,version);if(!snapshot)throw new CmsError("Version not found",404);
-    const slug=snapshot.slug,path=rowPath(type,slug);
-    const result=await client.query<CmsRow>("UPDATE cms_content SET draft_slug=$1,draft_path=$2,draft_data=$3,status=$4,version=version+1 WHERE id=$5 AND content_type=$6 RETURNING "+CMS_SELECT,[slug,path,JSON.stringify(snapshot.data),current.publishedData?"changes":"draft",id,type]);
+    const slug=snapshot.slug,path=rowPath(type,slug),storedData={...snapshot.data,slug};
+    const result=await client.query<CmsRow>("UPDATE cms_content SET draft_slug=$1,draft_path=$2,draft_data=$3,status=$4,version=version+1 WHERE id=$5 AND content_type=$6 RETURNING "+CMS_SELECT,[slug,path,JSON.stringify(storedData),current.publishedData?"changes":"draft",id,type]);
     const item=mapRow(result.rows[0]);await insertAudit(client,type,id,"rollback",auditPayload(current),auditPayload(item),{fromVersion:version});await insertVersion(client,item,"rollback");return item;
   });
 }
