@@ -72,11 +72,11 @@
 | Puck integration | 🟢 ~80% |
 | Puck editor | 🟡 ~80% |
 | Preview | 🟡 ~75% |
-| Content management | 🟡 ~75% |
-| Version history UI | 🟡 ~70% |
-| Rollback UI | 🟡 ~70% |
-| File manager | 🟡 ~65% |
-| Audit UI | 🟡 ~60% |
+| Content management | ✅ 100% |
+| Version history UI | ✅ 100% |
+| Rollback UI | ✅ 100% |
+| File manager | ✅ 100% |
+| Audit UI | ✅ 100% |
 | Calculator Studio | 🟢 ~90% |
 | Редактирование формул и коэффициентов | 🟢 ~90% |
 | Dynamic calculator | 🟢 ~95% |
