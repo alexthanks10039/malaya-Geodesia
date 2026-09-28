@@ -1,7 +1,7 @@
 
 "use client";
 import {useEffect,useMemo,useState} from"react";
-import {Copy,File,FilePlus2,FolderOpen,History,ImagePlus,Link2,Pencil,RefreshCw,Save,Send,Trash2,Upload,X} from"lucide-react";
+import {ChevronLeft,ChevronRight,Copy,File,FilePlus2,FolderOpen,History,ImagePlus,Link2,Pencil,RefreshCw,Save,Search,Send,Trash2,Upload,X} from"lucide-react";
 import {upload} from"@vercel/blob/client";
 import {CONTENT_LABELS,CONTENT_TYPES,type AuditRecord,type CmsContent,type ContentType,type FileAsset} from"@/lib/cms-types";
 function titleOf(item:CmsContent){const data=item.data;return String(data.title??data.name??data.slug??"Без названия");}
