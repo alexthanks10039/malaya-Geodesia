@@ -121,7 +121,7 @@ export async function publishContent(id:string,type:ContentType,expectedVersion?
       const row=await getRowForUpdate(client,id,type);if(!row)throw new CmsError("Content not found",404);
       const current=mapRow(row);conflict(current,normalizeExpectedVersion(expectedVersion));
       const result=await client.query<CmsRow>("UPDATE cms_content SET published_slug=draft_slug,published_path=draft_path,published_data=draft_data,status='published',published_at=now(),version=version+1 WHERE id=$1 AND content_type=$2 RETURNING "+CMS_SELECT,[id,type]);
-      const item=mapRow(result.rows[0]);await insertAudit(client,type,id,"publish",auditPayload(current),auditPayload(item),{previousPublishedPath:current.publishedPath});await insertVersion(client,item,"publish");return item;
+      const mapped=mapRow(result.rows[0]);const item=current.publishedPath&&current.publishedPath!==mapped.publishedPath?{...mapped,previousPublishedPath:current.publishedPath}:mapped;await insertAudit(client,type,id,"publish",auditPayload(current),auditPayload(mapped),{previousPublishedPath:current.publishedPath});await insertVersion(client,mapped,"publish");return item;
     });
   }catch(error){if(uniqueError(error))throw new CmsError("Published URL already exists",409);throw error;}
 }
