@@ -6,6 +6,7 @@
 
 - отдельная ветка: `feature/calculators-lab`;
 - отдельный route: `/calculators-lab`;
+- отдельный API: `/api/calculators-lab`;
 - основной route `/calculator` не изменён;
 - компоненты не импортируются из основного Calculator UI;
 - нет ссылок из основной навигации;
@@ -14,17 +15,21 @@
 ## Архитектура
 
 ```
-UI
- ↓
-Calculator Registry
- ↓
-Schema-driven Definition
- ↓
-Calculator Engine
- ↓
-Domain Calculator
- ↓
-Calculator Result
+                  CALCULATOR LAB
+                        │
+                  Registry / Schema
+                        │
+              ┌─────────┴─────────┐
+              ↓                   ↓
+          Web UI              API Manifest
+              │                   │
+              └─────────┬─────────┘
+                        ↓
+                 Calculator Engine
+                        ↓
+                  Domain function
+                        ↓
+                     Result
 ```
 
 Каждый калькулятор содержит:
@@ -38,7 +43,7 @@ Calculator Result
 
 Это позволяет позже подключить один и тот же контракт к public UI, Studio, API и тестам.
 
-## Реализовано в лаборатории
+## Реализовано
 
 1. Площадь по координатам XY.
 2. Расстояние + азимут.
@@ -48,32 +53,38 @@ Calculator Result
 6. Объём траншеи.
 7. Стоимость топосъёмки.
 
+## API
+
+`GET /api/calculators-lab` возвращает только сериализуемый manifest без внутренних функций расчёта.
+
+Это заготовка для будущего Calculator Studio:
+
+```
+Manifest
+  ↓
+Visual Schema Editor
+  ↓
+Variables / Formula Builder
+  ↓
+Version
+  ↓
+Publish
+```
+
+## Smoke test
+
+`npm run test:calculator-lab` проверяет базовые эталонные сценарии для ключевых калькуляторов.
+
 ## Источники и лицензии
 
 Лаборатория не копирует GPL-код из сторонних проектов.
 
-- `chrisveness/geodesy` используется как алгоритмический референс для геодезических функций.
+- `chrisveness/geodesy` используется как алгоритмический референс для геодезических функций; пакет публикуется под MIT.
 - `edips/surveyingcalculator` используется как функциональный референс каталога survey-калькуляторов.
 - `hypar-io/CutAndFill` и earthwork calculators используются как архитектурные референсы для Cut/Fill.
 
 Перед импортом стороннего исходного кода в production необходимо отдельно проверить лицензию конкретного репозитория и сохранить attribution/NOTICE при необходимости.
 
-## Следующий слой
+## Production boundary
 
-После UX-валидации можно вынести:
-
-```
-CalculatorDefinition
-        ↓
-CalculatorSchema
-        ↓
-Studio Builder
-        ↓
-Formula/Variable Editor
-        ↓
-Versioned Config
-        ↓
-Public Calculator
-```
-
-Production-публикация не выполняется из этой ветки автоматически как часть основного продукта.
+Production-публикация не выполняется из этой ветки. После UX-валидации можно переносить выбранные калькуляторы по одному в основной Calculator Engine и подключать их к CMS/Studio.

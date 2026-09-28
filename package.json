@@ -11,7 +11,8 @@
     "db:migrate": "node scripts/db-migrate.mjs",
     "db:seed": "tsx scripts/seed.ts",
     "codespace": "bash scripts/codespace-preview.sh",
-    "prebuild": "node scripts/db-migrate-if-configured.mjs"
+    "prebuild": "node scripts/db-migrate-if-configured.mjs",
+    "test:calculator-lab": "tsx scripts/calculator-lab-smoke.ts"
   },
   "engines": {
     "node": "24.x"
