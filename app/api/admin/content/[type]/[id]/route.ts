@@ -12,9 +12,10 @@ function errorResponse(error:unknown,fallback:string){
 
 function expectedVersion(value:unknown){return value===undefined||value===null||value===""?undefined:Number(value);}
 
-function revalidateCmsPaths(type:string,item:{path:string;publishedPath:string|null}){
+function revalidateCmsPaths(type:string,item:{path:string;publishedPath:string|null;previousPublishedPath?:string|null}){
   const paths=new Set<string>([item.path]);
   if(item.publishedPath)paths.add(item.publishedPath);
+  if(item.previousPublishedPath)paths.add(item.previousPublishedPath);
   if(type==="page")paths.add("/");
   for(const path of paths)revalidatePath(path);
 }
