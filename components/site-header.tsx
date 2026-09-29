@@ -18,10 +18,11 @@ export function SiteHeader() {
       if (event.key === "Escape") setOpen(false);
     };
     document.addEventListener("keydown", closeOnEscape);
+    const previousOverflow = document.body.style.overflow;
     document.body.style.overflow = "hidden";
     return () => {
       document.removeEventListener("keydown", closeOnEscape);
-      document.body.style.overflow = "";
+      document.body.style.overflow = previousOverflow;
     };
   }, [open]);
 
@@ -63,46 +64,46 @@ export function SiteHeader() {
           {open ? <X size={20} /> : <Menu size={20} />}
         </button>
       </div>
-
-      <div className={"mobile-nav " + (open ? "is-open" : "")} id="mobile-navigation" aria-hidden={!open}>
-        <button className="mobile-nav-backdrop" type="button" aria-label="Закрыть меню" onClick={close} tabIndex={open ? 0 : -1} />
-        <nav className="mobile-nav-panel" aria-label="Мобильная навигация">
-          <div className="mobile-nav-head">
-            <span className="eyebrow">NAV / 2026</span>
-            <span className="mobile-nav-status"><i /> ONLINE</span>
-          </div>
-
-          <div className="mobile-nav-links">
-            {nav.map(([title, href], index) => {
-              const active = pathname === href || pathname.startsWith(href + "/");
-              return (
-                <Link
-                  className={"mobile-nav-link " + (active ? "active" : "")}
-                  href={href}
-                  key={href}
-                  onClick={close}
-                  tabIndex={open ? 0 : -1}
-                  aria-current={active ? "page" : undefined}
-                >
-                  <span className="mobile-nav-index">0{index + 1}</span>
-                  <strong>{title}</strong>
-                  <ArrowUpRight size={20} />
-                </Link>
-              );
-            })}
-          </div>
-
-          <div className="mobile-nav-bottom">
-            <div>
-              <span className="eyebrow">Следующий шаг</span>
-              <p>Опишите задачу, а мы подберём метод и состав работ.</p>
-            </div>
-            <Link className="mobile-nav-cta" href="/calculator" onClick={close} tabIndex={open ? 0 : -1}>
-              Рассчитать проект <ArrowUpRight size={17} />
-            </Link>
-          </div>
-        </nav>
-      </div>
     </header>
+
+    <div className={"mobile-nav " + (open ? "is-open" : "")} id="mobile-navigation" aria-hidden={!open}>
+      <button className="mobile-nav-backdrop" type="button" aria-label="Закрыть меню" onClick={close} tabIndex={open ? 0 : -1} />
+      <nav className="mobile-nav-panel" aria-label="Мобильная навигация">
+        <div className="mobile-nav-head">
+          <span className="eyebrow">NAV / 2026</span>
+          <span className="mobile-nav-status"><i /> ONLINE</span>
+        </div>
+
+        <div className="mobile-nav-links">
+          {nav.map(([title, href], index) => {
+            const active = pathname === href || pathname.startsWith(href + "/");
+            return (
+              <Link
+                className={"mobile-nav-link " + (active ? "active" : "")}
+                href={href}
+                key={href}
+                onClick={close}
+                tabIndex={open ? 0 : -1}
+                aria-current={active ? "page" : undefined}
+              >
+                <span className="mobile-nav-index">0{index + 1}</span>
+                <strong>{title}</strong>
+                <ArrowUpRight size={20} />
+              </Link>
+            );
+          })}
+        </div>
+
+        <div className="mobile-nav-bottom">
+          <div>
+            <span className="eyebrow">Следующий шаг</span>
+            <p>Опишите задачу, а мы подберём метод и состав работ.</p>
+          </div>
+          <Link className="mobile-nav-cta" href="/calculator" onClick={close} tabIndex={open ? 0 : -1}>
+            Рассчитать проект <ArrowUpRight size={17} />
+          </Link>
+        </div>
+      </nav>
+    </div>
   );
 }
