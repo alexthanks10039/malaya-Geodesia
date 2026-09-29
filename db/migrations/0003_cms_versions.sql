@@ -1,3 +1,6 @@
+-- ARCHITECTURE: CMS versioning/audit extension.
+-- Добавляет immutable-ish snapshots и историю изменений для draft/published workflow.
+-- Версионирование хранится в БД, чтобы rollback не зависел от состояния браузера.
 CREATE TABLE IF NOT EXISTS cms_content_versions(
  id bigserial PRIMARY KEY,
  content_id text NOT NULL,
