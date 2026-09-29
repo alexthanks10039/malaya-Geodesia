@@ -1,4 +1,10 @@
 "use client";
+/**
+ * ARCHITECTURE: Reusable presentation component.
+ * Отвечает за визуальный блок и локальное взаимодействие.
+ * Данные и доменные правила должны приходить через props/hooks/lib, а не через прямую БД-зависимость.
+ */
+
 
 import Link from "next/link";
 import { ArrowRight, Crosshair, Database, Grid3X3, Layers3, Search, ScanLine, X } from "lucide-react";
