@@ -1,4 +1,8 @@
-import { PuckStudio } from "@/components/studio/puck/editor";
+/**
+ * ARCHITECTURE: Next.js route/page entry point.
+ * Этот файл связывает URL с соответствующим UI и данными.
+ * Persistence, бизнес-правила и расчётная математика находятся ниже по слоям.
+ */\n\nimport { PuckStudio } from "@/components/studio/puck/editor";
 import { redirect } from "next/navigation";
 import { isAdminAuthenticated } from "@/lib/admin-auth";
 import { StudioWorkspace } from "@/components/studio/studio-workspace";
