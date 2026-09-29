@@ -15,6 +15,7 @@ export type CalculatorRun = {
   error: string;
 };
 
+// ARCHITECTURE: Lab execution facade. Registry отвечает «какой calculator выбрать», definition отвечает «как считать», API отвечает только за transport.
 export function runCalculator(
   id: string,
   values: Record<string, unknown>,
