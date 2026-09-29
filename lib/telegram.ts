@@ -1,3 +1,9 @@
+/**
+ * ARCHITECTURE: Telegram transport adapter.
+ * Единственная точка формирования и отправки Telegram-запросов.
+ * Domain/API-код передаёт готовое сообщение и не знает детали HTTP Telegram.
+ */
+
 import { LEAD_STATUSES, getLeadById, getLeadStats, getLeadsByStatus, createLeadRecord, updateLeadStatus, reassignLead } from "@/lib/telegram-leads";
 
 const token = () => process.env.TG_KEY?.trim() || "";
