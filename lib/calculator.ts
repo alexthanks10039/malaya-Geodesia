@@ -1,3 +1,9 @@
+/**
+ * ARCHITECTURE: Legacy pricing service / migration adapter.
+ * Содержит текущую реализацию публичного расчёта до полного перехода на Calculation Core.
+ * Не добавляем сюда новые независимые формулы: цель модуля — безопасная совместимость со старым /calculator.
+ */
+
 import {
   evaluateFormulas,
   validateFormulaDefinitions,
