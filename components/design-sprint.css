@@ -1,3 +1,4 @@
+/* ARCHITECTURE: Feature-local visual layer for design/sprint sections. Keeps visual rules close to the related UI without moving data or domain logic into CSS. */
 /* Design sprint: stronger hierarchy, denser cards, cleaner responsive rhythm. */
 
 .site-header {
