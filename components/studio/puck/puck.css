@@ -1,3 +1,4 @@
+/* ARCHITECTURE: Puck editor presentation skin. Adapts third-party editor UI to Studio visual language without coupling it to CMS domain rules. */
 .puck-studio-page{
   min-height:calc(100dvh - 150px);
   background:#11140f;
