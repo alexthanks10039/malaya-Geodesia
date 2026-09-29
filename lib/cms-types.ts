@@ -1,3 +1,8 @@
+/**
+ * ARCHITECTURE: CMS domain contracts.
+ * Типы описывают persisted content и связывают API, CMS service и Studio без привязки к React-компонентам.
+ */
+
 export const CONTENT_TYPES=["case","service","knowledge","partner","page"] as const;
 export type ContentType=(typeof CONTENT_TYPES)[number];
 export const CONTENT_ROUTE_PREFIX:Record<ContentType,string>={case:"/cases",service:"/services",knowledge:"/knowledge",partner:"/partners",page:"/"};
