@@ -1,3 +1,9 @@
+/**
+ * ARCHITECTURE: Safe formula execution boundary.
+ * Разбирает и вычисляет выражения без eval/Function, отделяя вычисление от Studio UI и persistence.
+ * Это промежуточный слой перед будущим typed AST engine: его контракт должен оставаться детерминированным.
+ */
+
 const IDENTIFIER_RE = /^[A-Za-z_][A-Za-z0-9_]*$/;
 
 type Token =
