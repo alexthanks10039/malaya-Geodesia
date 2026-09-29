@@ -1,3 +1,4 @@
+/* ARCHITECTURE: Theme tokens and theme-specific presentation rules. Theme state is controlled by theme-toggle.tsx; this file contains only visual policy. */
 /* Theme preference: system by default, manual light/dark choice is persisted in localStorage. */
 :root { color-scheme: light dark; }
 
