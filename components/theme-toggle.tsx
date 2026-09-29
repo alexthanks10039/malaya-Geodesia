@@ -1,4 +1,9 @@
 "use client";
+/**
+ * ARCHITECTURE: Theme presentation control.
+ * Управляет пользовательским выбором light/dark темы и не имеет зависимости от доменных данных.
+ */
+
 
 import { Moon, Sun } from "lucide-react";
 import { useEffect, useState } from "react";
