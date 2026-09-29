@@ -1,3 +1,9 @@
+/**
+ * ARCHITECTURE: Conditional database migration entry point.
+ * Позволяет CI/deploy выполнить миграции только когда DB configuration доступна.
+ * Deployment automation остаётся отдельно от application domain logic.
+ */
+
 import process from "node:process";
 
 if (!process.env.DATABASE_URL) {
