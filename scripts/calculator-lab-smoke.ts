@@ -1,3 +1,9 @@
+/**
+ * ARCHITECTURE: Calculator Lab verification harness.
+ * Выполняет быстрые deterministic проверки доменных calculators без браузера и Next.js.
+ * Скрипт проверяет контракт engine, но production UI тестируется отдельным E2E слоем.
+ */
+
 import { getCalculatorDefinition } from "../lib/calculators-lab/registry";
 import { runCalculator } from "../lib/calculators-lab/engine";
 
