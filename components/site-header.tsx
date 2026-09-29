@@ -1,4 +1,10 @@
 "use client";
+/**
+ * ARCHITECTURE: Global navigation shell.
+ * Отвечает только за навигацию, тему и открытие Studio/mobile menu.
+ * Он не владеет данными страниц и не должен содержать расчётную или CMS-логику.
+ */
+
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { usePathname } from "next/navigation";
