@@ -1,3 +1,4 @@
+/* ARCHITECTURE: Studio workspace presentation layer. Defines editor shell/layout; application state and persistence stay in TS modules. */
 body:has(.studio-v2){overflow:hidden}
 body:has(.studio-v2) .site-header,
 body:has(.studio-v2) .site-footer{display:none!important}
