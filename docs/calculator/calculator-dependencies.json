@@ -1,0 +1,157 @@
+{
+  "audit": {
+    "branch": "feature/studio-v4",
+    "ref": "8645f16baae7f398c178f16ee918716317e8f5ce",
+    "scope": "stage-01-audit",
+    "businessLogicChanged": false
+  },
+  "modules": [
+    {
+      "id": "public-calculator-ui",
+      "path": "components/calculator.tsx",
+      "status": "implemented",
+      "criticality": "P0",
+      "dependsOn": ["pricing-facade", "studio-calculator-config", "lead-api"],
+      "usedBy": ["app/calculator/page.tsx"],
+      "responsibility": "Public preliminary estimate UX and lead conversion"
+    },
+    {
+      "id": "pricing-facade",
+      "path": "lib/calculator.ts",
+      "status": "implemented-with-legacy-fallback",
+      "criticality": "P0",
+      "dependsOn": ["formula-engine", "studio-calculator-config"],
+      "usedBy": ["public-calculator-ui", "studio-calculator-editor"],
+      "responsibility": "Compatibility facade producing CalculatorEstimate"
+    },
+    {
+      "id": "formula-engine",
+      "path": "lib/formula-engine.ts",
+      "status": "implemented",
+      "criticality": "P0",
+      "dependsOn": [],
+      "usedBy": ["pricing-facade", "studio-calculator-editor"],
+      "responsibility": "Safe deterministic expression parsing and evaluation"
+    },
+    {
+      "id": "studio-calculator-config",
+      "path": "studio/config/calculator.ts",
+      "status": "implemented-local-config",
+      "criticality": "P0",
+      "dependsOn": ["formula-engine"],
+      "usedBy": ["public-calculator-ui", "pricing-facade", "studio-calculator-editor"],
+      "responsibility": "Current calculator types, pricing, coefficients and formula definitions"
+    },
+    {
+      "id": "studio-calculator-storage",
+      "path": "studio/runtime/storage.ts",
+      "status": "implemented-browser-storage",
+      "criticality": "P0",
+      "dependsOn": [],
+      "usedBy": ["public-calculator-ui", "studio-calculator-editor"],
+      "responsibility": "Browser-local Studio overrides and calculator config persistence"
+    },
+    {
+      "id": "studio-calculator-editor",
+      "path": "components/studio/calculator-editor.tsx",
+      "status": "implemented-prototype",
+      "criticality": "P0",
+      "dependsOn": ["pricing-facade", "formula-engine", "studio-calculator-config", "studio-calculator-storage"],
+      "usedBy": ["studio-workspace"],
+      "responsibility": "Edit and test current calculator configuration"
+    },
+    {
+      "id": "calculator-lab-registry",
+      "path": "lib/calculators-lab/registry.ts",
+      "status": "implemented",
+      "criticality": "P0",
+      "dependsOn": ["calculator-lab-definitions"],
+      "usedBy": ["calculator-lab-engine", "calculator-lab-smoke"],
+      "responsibility": "Resolve technical calculators by id"
+    },
+    {
+      "id": "calculator-lab-engine",
+      "path": "lib/calculators-lab/engine.ts",
+      "status": "implemented",
+      "criticality": "P0",
+      "dependsOn": ["calculator-lab-registry"],
+      "usedBy": ["calculator-lab-smoke", "future-api"],
+      "responsibility": "Execute registered technical calculator definitions"
+    },
+    {
+      "id": "calculator-lab-definitions",
+      "path": "lib/calculators-lab/definitions.ts",
+      "status": "implemented-code-defined",
+      "criticality": "P0",
+      "dependsOn": ["calculator-lab-math", "calculator-lab-parsers"],
+      "usedBy": ["calculator-lab-registry"],
+      "responsibility": "Technical calculator metadata, inputs and executable calculations"
+    },
+    {
+      "id": "calculator-lab-verification",
+      "path": "scripts/calculator-lab-smoke.ts",
+      "status": "implemented-smoke",
+      "criticality": "P0",
+      "dependsOn": ["calculator-lab-registry", "calculator-lab-engine"],
+      "usedBy": ["github-ci"],
+      "responsibility": "Deterministic smoke coverage for Calculator Lab"
+    },
+    {
+      "id": "db",
+      "path": "lib/db.ts",
+      "status": "implemented",
+      "criticality": "P0",
+      "dependsOn": ["postgresql"],
+      "usedBy": ["cms", "future-calculation-persistence"],
+      "responsibility": "PostgreSQL pool, query and transaction boundary"
+    },
+    {
+      "id": "cms",
+      "path": "lib/cms.ts",
+      "status": "implemented",
+      "criticality": "P0",
+      "dependsOn": ["db", "cms-types", "seed-read-model"],
+      "usedBy": ["admin-api", "published-pages"],
+      "responsibility": "CMS CRUD, versions, publish/rollback, audit and file metadata"
+    },
+    {
+      "id": "lead-api",
+      "path": "app/api/leads/route.ts",
+      "status": "implemented-no-db-persistence",
+      "criticality": "P1",
+      "dependsOn": ["telegram"],
+      "usedBy": ["public-calculator-ui"],
+      "responsibility": "Validate calculator lead request and notify owner"
+    },
+    {
+      "id": "telegram",
+      "path": "lib/telegram.ts",
+      "status": "implemented",
+      "criticality": "P1",
+      "dependsOn": ["TG_KEY", "OWNER_ID"],
+      "usedBy": ["lead-api", "telegram-webhook"],
+      "responsibility": "Telegram transport/integration"
+    }
+  ],
+  "criticalDependencyPaths": [
+    ["public-calculator-ui", "pricing-facade", "formula-engine"],
+    ["studio-calculator-editor", "studio-calculator-config", "formula-engine"],
+    ["calculator-lab-registry", "calculator-lab-engine", "calculator-lab-definitions"],
+    ["cms", "db"],
+    ["lead-api", "telegram"]
+  ],
+  "knownArchitecturalSplits": [
+    "Public pricing calculator and Calculator Lab have separate execution models.",
+    "Calculator configuration is browser-local while CMS persistence is PostgreSQL-backed.",
+    "Prisma schema exists as a reference while SQL migrations are the active persistence model.",
+    "Public pricing has a legacy fallback path."
+  ],
+  "cycles": [],
+  "riskPoints": [
+    "Changing lib/calculator.ts can alter public pricing results.",
+    "Changing formula-engine.ts affects both public pricing and Studio formula validation.",
+    "Changing studio/config/calculator.ts affects public calculator and Studio editor behavior.",
+    "Changing Calculator Lab definitions affects smoke-test expectations.",
+    "Changing db migrations requires database compatibility verification."
+  ]
+}
