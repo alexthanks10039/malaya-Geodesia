@@ -1,3 +1,10 @@
+/**
+ * ARCHITECTURE: Admin API boundary.
+ * Отвечает за HTTP-контракт Studio, валидацию входа, авторизацию и вызов backend/domain-слоя.
+ * Бизнес-правила и расчётная математика не должны жить в route.ts.
+ * Response формируется явно, чтобы внутренние поля БД не утекали в клиентский контур.
+ */
+
 import{NextResponse}from"next/server";
 import{handleUpload,type HandleUploadBody}from"@vercel/blob/client";
 import{saveFileAsset}from"@/lib/cms";
