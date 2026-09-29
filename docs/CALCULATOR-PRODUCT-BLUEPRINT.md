@@ -201,45 +201,187 @@ Calculation references exactly one model version.
 Quote references exactly one Calculation.
 AuditLog references mutable configuration entities.
 
-## 8. Calculation Core
+## 8. Calculation Core — annotated architecture
 
-Recommended package boundary:
+### 8.1 Как читать архитектуру
 
+```text
+PUBLIC / INTERNAL UI
+  │
+  │  Ввод и отображение. Не содержит бизнес-формул и реальных тарифов.
+  ↓
+APPLICATION API
+  │
+  │  Принимает запрос, проверяет режим/права/версию и передаёт данные в Core.
+  ↓
+CALCULATION ORCHESTRATOR
+  │
+  │  Собирает модель, параметры, rates, coefficients, rules и scenario.
+  │  Управляет порядком выполнения, но не содержит конкретной математики.
+  ↓
+CALCULATION CORE
+  │
+  │  Единый deterministic engine: одинаковые входы + версия = одинаковый результат.
+  │  Не зависит от React, Next.js, PostgreSQL или конкретного интерфейса.
+  ↓
+RULE ENGINE
+  │
+  │  Условия и ветвления: тип объекта, рельеф, срочность, выезды и т.п.
+  │  Меняет контекст расчёта, но не отвечает за UI.
+  ↓
+FORMULA ENGINE
+  │
+  │  Исполняет безопасные математические выражения и зависимости между формулами.
+  │  Никакого eval и произвольного JavaScript.
+  ↓
+PRICING ENGINE
+  │
+  │  Переводит технический объём работ в цену клиента.
+  │  Fixed, per-unit, per-area, tiered, package, markup, min/max и т.д.
+  ↓
+COST ENGINE
+  │
+  │  Отдельно считает внутреннюю себестоимость: труд, оборудование, транспорт,
+  │  подрядчики, обработка и overhead. В Public результат не раскрывается.
+  ↓
+UNIT ECONOMICS ENGINE
+  │
+  │  Считает Revenue, COGS, Gross Profit, Margin и Contribution Margin.
+  │  Используется только во внутреннем/финансовом контуре.
+  ↓
+TRACE / EXPLANATION
+  │
+  │  Объясняет каждый шаг: вход → formula/rate/coefficient → промежуточный результат.
+  ↓
+RESULT / QUOTE / ANALYTICS
+     │  Result отдаёт расчёт; Quote строит КП; Analytics собирает метрики.
+```
+
+### 8.2 PUBLIC и INTERNAL: две поверхности одного engine
+
+```text
+PUBLIC MODE
+  │  Минимум данных + customer-safe model.
+  │  Показываем ориентир, срок и допущения.
+  │  Не передаём COGS, внутренние ставки и маржу.
+  ↓
+CALCULATION CORE
+  │  Тот же deterministic engine.
+  ↓
+PRELIMINARY RESULT
+     Цена + срок + assumptions + preliminary=true
+
+INTERNAL MODE
+  │  Полные технические, ресурсные и финансовые параметры.
+  │  Доступны rate cards, equipment, labor, transport и cost structure.
+  ↓
+CALCULATION CORE
+  │  Тот же engine, но с другой input/output policy и model.
+  ↓
+DETAILED RESULT
+     Цена + себестоимость + прибыль + маржа + полный trace + quote
+```
+
+Архитектурное решение: Public и Internal не имеют двух независимых формул. Различия реализуются через model/policy/permissions.
+
+### 8.3 Что отвечает каждый слой
+
+| Слой | За что отвечает | Что запрещено хранить | Основные потребители |
+|---|---|---|---|
+| UI | UX, ввод и отображение | реальные тарифы и бизнес-формулы | Client, Manager |
+| API | HTTP, auth, validation, response policy | основную математику | Web, Mobile, Widget |
+| Orchestrator | сбор контекста и порядок запуска | JSX/UI state | Backend |
+| Rules | условия и ветвления | HTTP/React/SQL | Product, Admin |
+| Formula Engine | арифметика и зависимости | DB access/UI | Calculation Core |
+| Pricing Engine | цена клиента | внутреннюю авторизацию | Client, Manager |
+| Cost Engine | себестоимость | public presentation | Engineer, Finance |
+| Unit Economics | прибыльность | frontend state | Finance, Owner |
+| Trace | объяснение и воспроизводимость | изменение результата | permitted roles |
+| Result | сериализация результата | самостоятельный пересчёт | API, UI, Quote |
+| Analytics | события и агрегаты | изменение Calculation | Product, Owner |
+
+### 8.4 Граница модулей в коде
+
+```text
 lib/calculation-core/
-- types
-- schema
-- expression/lexer
-- expression/parser
-- expression/ast
-- expression/evaluator
-- rules/engine
-- pricing/engine
-- cost/engine
-- unit-economics/engine
-- trace
-- validator
-- hash
+│
+├── types.ts
+│   # Контракты request/response, model version, result, trace и warnings.
+│
+├── schema/
+│   # Динамические параметры: тип, единица, диапазон, required, visibility.
+│
+├── orchestrator/
+│   # Собирает зависимости и запускает расчёт. Конкретные цены здесь не живут.
+│
+├── rules/
+│   # Declarative conditions/actions: если условие → изменить контекст расчёта.
+│
+├── expression/
+│   # Lexer → Parser → AST → Validator → Evaluator. Без eval.
+│
+├── pricing/
+│   # Стратегии customer pricing и их комбинации.
+│
+├── cost/
+│   # Resource quantity × rate → direct cost → COGS.
+│
+├── unit-economics/
+│   # Revenue → COGS → Gross Profit → Margin → Contribution.
+│
+├── trace/
+│   # Дерево вычисления для ответа на вопрос «почему получилась эта сумма?».
+│
+├── validator/
+│   # Проверяет модель до публикации и блокирует невалидную конфигурацию.
+│
+└── hash/
+    # Контрольная сумма published model для воспроизводимости.
+```
 
-Contract:
+### 8.5 Что хранится в коде, а что в данных
 
-CalculationRequest:
-calculatorId
-modelVersionId
-inputs
-scenarioId
-mode
-context = regionId, currency, taxProfileId
+```text
+CODE
+  │  Стабильный механизм: parser, evaluator, rules engine, pricing strategies,
+  │  validators, trace и API contracts.
+  ↓
+CONFIGURATION / DATA
+  │  Изменяемый бизнесом слой: services, parameters, rates, coefficients,
+  │  formulas, rules, taxes, regions и scenarios.
+  ↓
+PUBLISHED MODEL VERSION
+  │  Замороженный снимок configuration. После publish не редактируется.
+  ↓
+CALCULATION SNAPSHOT
+     Конкретный расчёт = inputs + model version + resolved variables + trace + result.
+```
 
-CalculationResponse:
-calculationId
-modelVersionId
-result
-trace
-warnings
+### 8.6 Главный контракт
 
-Invariant:
-same model version + same inputs + same context = same result.
+```ts
+type CalculationRequest = {
+  calculatorId: string; // Какой продуктовый калькулятор запускаем.
+  modelVersionId: string; // Точная версия модели для воспроизводимости.
+  mode: "public" | "internal"; // Public = предварительный, Internal = подробный.
+  inputs: Record<string, unknown>; // Фактические параметры проекта.
+  scenarioId?: string; // Набор дополнительных business overrides.
+  context: {
+    regionId: string; // Региональные ставки и правила.
+    currency: string; // Валюта и политика округления.
+    taxProfileId?: string; // Налоговая политика, прежде всего для internal.
+  };
+};
+```
 
+Главный invariant:
+
+```text
+same model version + same inputs + same scenario + same context
+                         = same calculation result
+```
+
+Именно эта граница позволит затем использовать один Core в сайте, API, мобильном/desktop-клиенте и embeddable widget.
 ## 9. Formula Engine
 
 Current parser is a useful prototype. Production should evolve to:
