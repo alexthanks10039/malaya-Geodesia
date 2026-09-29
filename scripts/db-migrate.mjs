@@ -1,3 +1,9 @@
+/**
+ * ARCHITECTURE: Database migration runner.
+ * Применяет последовательные SQL migrations и отделяет schema lifecycle от application runtime.
+ * Сам скрипт не содержит бизнес-правил: он только управляет инфраструктурным процессом.
+ */
+
 import fs from"node:fs";import path from"node:path";import process from"node:process";import pg from"pg";
 const{Pool}=pg;const connectionString=process.env.DATABASE_URL;if(!connectionString){console.error("DATABASE_URL is not configured.");process.exit(1);}
 const isLocal=/localhost|127\\.0\\.0\\.1/.test(connectionString);const pool=new Pool({connectionString,max:2,ssl:isLocal||process.env.DATABASE_SSL==="false"?false:{rejectUnauthorized:false}});const client=await pool.connect();
