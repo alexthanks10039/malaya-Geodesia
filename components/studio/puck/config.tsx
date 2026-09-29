@@ -1,3 +1,9 @@
+/**
+ * ARCHITECTURE: Puck component/config boundary.
+ * Описывает разрешённые компоненты и их editable props для визуального редактора.
+ * Конфигурация не должна содержать persistence и не должна обходить CMS/versioning слой.
+ */
+
 import type { Config, Data, Slot } from "@puckeditor/core";
 import { ArrowRight, Boxes, Crosshair, Database, ScanLine } from "lucide-react";
 import { Hero } from "@/components/hero";
