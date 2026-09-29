@@ -1,3 +1,6 @@
+-- ARCHITECTURE: Initial CMS persistence contract.
+-- Определяет базовые таблицы контента, поэтому изменение схемы должно быть backward-compatible с существующим runtime.
+-- UI не зависит от структуры напрямую: доступ идёт через lib/cms.ts.
 CREATE TABLE IF NOT EXISTS cms_migrations(id text PRIMARY KEY,applied_at timestamptz NOT NULL DEFAULT now());
 CREATE TABLE IF NOT EXISTS cms_content(
  id text PRIMARY KEY,
