@@ -1,3 +1,9 @@
+/**
+ * ARCHITECTURE: Studio editor UI.
+ * Отвечает за UX изменения конкретного доменного объекта.
+ * Сохранение, версии и публикация принадлежат backend/CMS слоям, а не React state этого компонента.
+ */
+
 
 "use client";
 import {useEffect,useMemo,useState} from"react";
