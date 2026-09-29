@@ -1,3 +1,9 @@
+/**
+ * ARCHITECTURE: Calculator Lab contracts.
+ * Определяет типизированную границу между calculator definitions, registry, engine и API.
+ * Здесь должны жить только данные/контракты, а не побочные эффекты и UI.
+ */
+
 export type CalculatorInputKind = "number" | "select" | "textarea";
 
 export type CalculatorInputSpec = {
