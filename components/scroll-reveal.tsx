@@ -1,4 +1,10 @@
 "use client";
+/**
+ * ARCHITECTURE: Reusable presentation component.
+ * Отвечает за конкретный UI-блок и пользовательское взаимодействие.
+ * Не хранит persistence и не дублирует доменные правила; данные приходят из props/lib.
+ */
+
 import { motion } from "motion/react";
 import type { ReactNode } from "react";
 
