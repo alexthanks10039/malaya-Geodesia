@@ -1,3 +1,8 @@
+/**
+ * ARCHITECTURE: Studio shared contracts.
+ * Описывает типы административного интерфейса и конфигурации без зависимости от конкретного экрана.
+ */
+
 export type StudioPage = {
   label: string;
   path: string;
