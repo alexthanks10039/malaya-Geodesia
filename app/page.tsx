@@ -1,3 +1,9 @@
+/**
+ * ARCHITECTURE: Next.js page/layout entry point.
+ * Отвечает за маршрут, получение данных и композицию UI.
+ * Бизнес-логика и persistence не должны дублироваться в странице.
+ */
+
 import Link from "next/link";
 import { ArrowRight, Boxes, Crosshair, Database, Ruler, ScanLine } from "lucide-react";
 import { Hero } from "@/components/hero";
