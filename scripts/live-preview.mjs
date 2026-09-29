@@ -1,3 +1,9 @@
+/**
+ * ARCHITECTURE: Preview automation.
+ * Запускает/проверяет локальный preview workflow отдельно от production application logic.
+ * Нужен для воспроизводимого визуального smoke-check без добавления dev-логики в страницы.
+ */
+
 import {spawn} from "node:child_process";
 import {request} from "node:http";
 
