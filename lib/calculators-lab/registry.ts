@@ -1,3 +1,9 @@
+/**
+ * ARCHITECTURE: Calculator Registry.
+ * Это каталог доступных технических calculators и точка их разрешения по key.
+ * Registry знает «какой calculator существует», но не смешивает transport или persistence.
+ */
+
 import { calculatorDefinitions } from "@/lib/calculators-lab/definitions";
 import type { CalculatorDefinition } from "@/lib/calculators-lab/types";
 
