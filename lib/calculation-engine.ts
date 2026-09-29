@@ -8,8 +8,8 @@
  * - возвращает итоговые значения + execution trace;
  * - не знает ничего о React, Studio, HTTP, БД или конкретной геодезической услуге.
  *
- * Это фундамент «Супер-калькулятора». Следующие этапы смогут подключить к нему
- * параметры, коэффициенты, тарифы и Unit Economics, не смешивая бизнес-логику с UI.
+ * Конфигурационный слой подключается через runConfiguredCalculation:
+ * Parameters/Coefficients/Rates -> numeric variables -> this deterministic core.
  */
 
 import {
@@ -17,6 +17,10 @@ import {
   validateFormulaDefinitions,
   type FormulaDefinition,
 } from "@/lib/formula-engine";
+import {
+  resolveCalculationConfig,
+  type CalculationConfig,
+} from "@/lib/calculation-engine/config";
 
 export type CalculationModel = {
   /** Уникальный идентификатор модели. Не должен зависеть от UI-route. */
@@ -114,4 +118,20 @@ export function runCalculation(
       diagnostics: [message],
     };
   }
+}
+
+/**
+ * ARCHITECTURE: Configured calculation facade.
+ * Converts business configuration into the stable numeric engine contract.
+ * Later the same config can come from PostgreSQL/CMS without changing callers.
+ */
+export function runConfiguredCalculation(
+  config: CalculationConfig,
+  inputs: Record<string, unknown>,
+): CalculationRun {
+  const resolved = resolveCalculationConfig(config, inputs);
+  if (!resolved.ok) {
+    return resolved;
+  }
+  return runCalculation(resolved.model, resolved.variables);
 }
