@@ -1,3 +1,9 @@
+/**
+ * ARCHITECTURE: CMS persistence/application service.
+ * Централизует PostgreSQL-операции, CRUD, versions, publish/rollback, audit и file metadata.
+ * UI/API не должны повторять здесь логику: этот слой является единой backend-точкой для CMS invariants.
+ */
+
 import {cases,knowledge,services} from "@/lib/data";
 import {partners} from "@/lib/partners";
 import {isDatabaseConfigured,query,withTransaction} from "@/lib/db";
