@@ -1,3 +1,9 @@
+/**
+ * ARCHITECTURE: Studio configuration persistence adapter.
+ * Отвечает за чтение/запись текущей конфигурации runtime и скрывает конкретный storage механизм от UI.
+ * Это адаптер, а не долгосрочный источник истины: опубликованные модели должны храниться версионированно.
+ */
+
 import type { CalculatorStudioConfig } from "@/studio/config/calculator";
 import type { StudioGlobalTokens, StudioPageOverrides, StudioState } from "@/studio/types";
 
