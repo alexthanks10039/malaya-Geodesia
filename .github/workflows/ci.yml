@@ -1,3 +1,6 @@
+# ARCHITECTURE: CI is the repository quality gate.
+# It runs deterministic type/lint/smoke checks before code is treated as releasable.
+# CI should verify business contracts, not contain application logic.
 name: CI
 
 on:
