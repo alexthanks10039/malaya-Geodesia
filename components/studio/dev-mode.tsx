@@ -110,6 +110,7 @@ function findElement(id:string){
   const element=document.querySelector("[data-studio-node-id=\""+CSS.escape(id)+"\"]");
   return element instanceof HTMLElement?element:null;
 }
+// ARCHITECTURE: Visual override adapter. Применяет только локальные Studio overrides к DOM; это preview/editing, а не persisted business logic.
 function applyDrafts(state:StudioState,path:string){
   const nodes=collectNodes();const page=state.pages[path]??{};
   for(const[id,override]of Object.entries(page)){
@@ -147,6 +148,7 @@ export function StudioDevModeButton(){
   return <button type="button" className="studio-header-dev-button" onClick={()=>window.dispatchEvent(new Event(STUDIO_TOGGLE_EVENT))} aria-label="Открыть Dev Mode редактора" title="Dev Mode · Ctrl/⌘ + Shift + E"><Code2 size={16}/><span>DEV</span></button>;
 }
 
+// ARCHITECTURE: Dev Mode controller. Хранит только состояние инструмента инспекции и связывает DOM events с Studio runtime storage.
 export function StudioDevMode(){
   const pathname=usePathname();
   const isStudioRoute = pathname === "/studio" || pathname.startsWith("/studio/");
