@@ -1,3 +1,9 @@
+/**
+ * ARCHITECTURE: CMS smoke verification harness.
+ * Проверяет ключевые persistence/versioning операции через backend contract.
+ * Это safety net для миграций и регрессий, а не часть production runtime.
+ */
+
 import assert from "node:assert/strict";
 import {isContentType,normalizeContentData,slugify} from "../lib/cms";
 
