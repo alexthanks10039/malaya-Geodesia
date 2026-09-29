@@ -1,4 +1,10 @@
 "use client";
+/**
+ * ARCHITECTURE: Calculator Lab UI.
+ * Отвечает за выбор технического калькулятора, ввод параметров и показ результата.
+ * Расчётные алгоритмы находятся в lib/calculators-lab, поэтому UI остаётся тонким.
+ */
+
 
 import { useMemo, useState } from "react";
 import { Calculator, ChevronRight, CircleAlert, Copy, Database, FlaskConical, GitBranch, Info, RotateCcw } from "lucide-react";
