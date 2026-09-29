@@ -1,4 +1,10 @@
 "use client";
+/**
+ * ARCHITECTURE: Studio application shell.
+ * Компонирует навигацию, редакторы и рабочие панели Studio.
+ * Бизнес-операции выполняются специализированными API/editor слоями, а workspace управляет UX.
+ */
+
 
 import Link from "next/link";
 import {
