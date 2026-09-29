@@ -1,3 +1,9 @@
+/**
+ * ARCHITECTURE: Legacy/local Studio calculator configuration.
+ * Содержит редактируемые методы, форматы, коэффициенты и формулы текущего Studio runtime.
+ * В целевой архитектуре эти данные должны стать versioned CalculationModel в БД, а UI — только редактором.
+ */
+
 import { isFormulaKey } from "@/lib/formula-engine";
 
 export type CalculatorType = {
