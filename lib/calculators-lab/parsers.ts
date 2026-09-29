@@ -1,3 +1,9 @@
+/**
+ * ARCHITECTURE: Calculator Lab input parsing boundary.
+ * Преобразует внешние значения в типизированные inputs domain-калькуляторов.
+ * Parser не должен вычислять цену и не должен зависеть от UI/HTTP.
+ */
+
 import { normalizeAzimuth } from "@/lib/calculators-lab/math";
 
 export function numberValue(
