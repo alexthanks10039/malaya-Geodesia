@@ -1,3 +1,5 @@
+# ARCHITECTURE: Visual regression/preview workflow.
+# Exists to validate rendered UI separately from domain calculations and persistence.
 name: Visual preview
 
 on:
