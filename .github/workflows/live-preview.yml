@@ -1,3 +1,5 @@
+# ARCHITECTURE: Live preview automation.
+# Builds/serves a preview environment for visual verification without modifying production runtime.
 name: Live Preview
 
 on:
