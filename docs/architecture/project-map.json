@@ -1,0 +1,261 @@
+{
+  "manifest_version": "1.0.0",
+  "project": {
+    "name": "Малая геодезия",
+    "repository": "alexthanks10039/malaya-Geodesia",
+    "branch_audited": "feature/studio-v4",
+    "audited_commit": "f5566cb",
+    "audited_at": "2026-09-29",
+    "stack": {
+      "framework": "Next.js 16 App Router",
+      "react": "19",
+      "typescript": "5.9",
+      "node": "24.x",
+      "database": "PostgreSQL via pg + SQL migrations",
+      "ui": ["CSS", "Motion", "lucide-react"],
+      "graphics": ["Three.js"],
+      "studio_editor": "@puckeditor/core 0.23.0"
+    },
+    "source_of_truth_order": ["actual code", "tests", "configuration", "documentation"]
+  },
+  "modules": [
+    {
+      "module": "app-routes",
+      "path": "/app",
+      "status": "implemented",
+      "criticality": "P0",
+      "purpose": "Next.js route/page/layout and API entry points.",
+      "depends_on": ["components", "lib", "studio"],
+      "used_by": ["browser", "deployment"],
+      "public_interfaces": ["HTTP routes", "page routes"],
+      "data_models": ["CMS content read models", "calculator inputs"],
+      "do_not_break": ["route contracts", "server/client boundaries", "dynamic route params"],
+      "known_issues": ["Architecture is documented across several route trees rather than one generated route registry."],
+      "tests": ["TypeScript check", "production build", "workflow smoke tests"],
+      "change_policy": {"backup_required": true, "tests_required": true, "rollback_required": true}
+    },
+    {
+      "module": "cms",
+      "path": "/lib/cms.ts",
+      "status": "implemented",
+      "criticality": "P0",
+      "purpose": "CMS persistence/application service for content CRUD, publishing, versions, rollback, audit and file metadata.",
+      "depends_on": ["db", "cms-types", "SQL migrations", "Vercel Blob for file storage where configured"],
+      "used_by": ["admin API", "Studio", "published/read-model pages"],
+      "public_interfaces": ["content CRUD", "version listing", "rollback", "audit", "file metadata"],
+      "data_models": ["cms_content", "cms_content_versions", "cms_audit_log", "file_assets"],
+      "do_not_break": ["draft/published separation", "version identity", "rollback semantics", "content type constraints"],
+      "known_issues": ["Large service file is a concentration point for future domain decomposition."],
+      "tests": ["npm run test:cms", "npm run lint", "npm run build"],
+      "change_policy": {"backup_required": true, "tests_required": true, "rollback_required": true}
+    },
+    {
+      "module": "studio",
+      "path": "/app/studio + /components/studio + /studio",
+      "status": "implemented",
+      "criticality": "P0",
+      "purpose": "Administrative visual editing environment, Puck integration, content management and configuration editing.",
+      "depends_on": ["CMS", "admin API", "Puck", "Studio runtime/config"],
+      "used_by": ["internal editors"],
+      "public_interfaces": ["/studio", "Studio API routes"],
+      "data_models": ["CMS content", "Puck page data", "calculator Studio config"],
+      "do_not_break": ["route/UI/core separation", "no accidental password reactivation", "mobile interaction layers", "draft/publish workflow"],
+      "known_issues": ["Password authentication is intentionally disabled; archived implementation exists in _module-bank/auth-password.", "Studio has historically had overlay/z-index and clickability regressions."],
+      "tests": ["TypeScript", "build", "browser/E2E when available"],
+      "change_policy": {"backup_required": true, "tests_required": true, "rollback_required": true}
+    },
+    {
+      "module": "legacy-calculator",
+      "path": "/lib/calculator.ts + /components/calculator.tsx + /studio/config/calculator.ts",
+      "status": "partial",
+      "criticality": "P0",
+      "purpose": "Current public geodesy price/time estimator with configurable Studio coefficients and formula evaluation plus legacy fallback.",
+      "depends_on": ["formula-engine", "Studio calculator config"],
+      "used_by": ["/calculator UI"],
+      "public_interfaces": ["calculateEstimate", "buildCalculatorVariables", "getFormulaDiagnostics"],
+      "data_models": ["CalculatorInput", "CalculatorEstimate", "CalculatorStudioConfig"],
+      "do_not_break": ["public preliminary estimate", "backward compatibility", "config-driven coefficients", "fallback behavior"],
+      "known_issues": ["This is still a migration/legacy adapter rather than the final universal Calculation Core.", "Business configuration is partly code/config-file based rather than fully DB-driven."],
+      "tests": ["calculator smoke tests where applicable", "TypeScript", "build"],
+      "change_policy": {"backup_required": true, "tests_required": true, "rollback_required": true}
+    },
+    {
+      "module": "calculator-lab",
+      "path": "/lib/calculators-lab + /app/calculators-lab + /app/api/calculators-lab",
+      "status": "in-development",
+      "criticality": "P0",
+      "purpose": "Isolated catalog and deterministic execution layer for technical calculators, intended to evolve into the universal calculator product core.",
+      "depends_on": ["calculator registry", "calculator definitions", "pure math/parsers"],
+      "used_by": ["Calculator Lab UI", "Calculator Lab API", "smoke tests"],
+      "public_interfaces": ["runCalculator", "registry", "manifest", "CalculatorDefinition contract"],
+      "data_models": ["CalculatorDefinition", "CalculatorInputSpec", "CalculatorResult"],
+      "do_not_break": ["deterministic execution", "registry IDs", "input contract", "separation from React/HTTP"],
+      "known_issues": ["Current definitions are code-based; full DB-backed Parameters/Rates/Coefficients/Versions model is not yet implemented.", "Current contract does not yet represent the planned public-vs-internal unit-economics split."],
+      "tests": ["npm run test:calculator-lab", "TypeScript", "build"],
+      "change_policy": {"backup_required": true, "tests_required": true, "rollback_required": true}
+    },
+    {
+      "module": "formula-engine",
+      "path": "/lib/formula-engine.ts",
+      "status": "implemented",
+      "criticality": "P0",
+      "purpose": "Safe formula validation/evaluation used by the current pricing calculator.",
+      "depends_on": ["formula definitions supplied by calculator config"],
+      "used_by": ["legacy-calculator", "Studio calculator configuration"],
+      "public_interfaces": ["evaluateFormulas", "validateFormulaDefinitions"],
+      "data_models": ["formula definitions", "variable context"],
+      "do_not_break": ["determinism", "safe expression handling", "diagnostic behavior"],
+      "known_issues": ["It is not yet the full typed/DB-backed formula AST engine described in the product blueprint."],
+      "tests": ["calculator smoke", "TypeScript", "build"],
+      "change_policy": {"backup_required": true, "tests_required": true, "rollback_required": true}
+    },
+    {
+      "module": "database",
+      "path": "/lib/db.ts + /db/migrations",
+      "status": "implemented",
+      "criticality": "P0",
+      "purpose": "PostgreSQL connection boundary and active schema migration model.",
+      "depends_on": ["DATABASE_URL/runtime environment"],
+      "used_by": ["CMS", "migration scripts"],
+      "public_interfaces": ["database client/pool", "SQL schema"],
+      "data_models": ["cms_content", "file_assets", "cms_audit_log", "cms_content_versions", "cms_migrations"],
+      "do_not_break": ["migration order", "schema constraints", "transaction semantics"],
+      "known_issues": ["Database is optional during build when DATABASE_URL is absent; production persistence therefore depends on deployment environment configuration.", "Prisma schema is retained as a future/compatibility reference, not active runtime."],
+      "tests": ["CMS smoke", "build migration hook"],
+      "change_policy": {"backup_required": true, "tests_required": true, "rollback_required": true}
+    },
+    {
+      "module": "telegram-integration",
+      "path": "/lib/telegram.ts + /lib/telegram-leads.ts + /app/api/telegram",
+      "status": "implemented",
+      "criticality": "P1",
+      "purpose": "Telegram transport and lead notification integration.",
+      "depends_on": ["Telegram credentials/runtime environment"],
+      "used_by": ["lead API/integration flows"],
+      "public_interfaces": ["Telegram send helpers", "webhook/API route where present"],
+      "data_models": ["lead payloads"],
+      "do_not_break": ["secret isolation", "notification failure not becoming lead source of truth"],
+      "known_issues": ["Integration should be verified against the dedicated test bot/environment before production changes."],
+      "tests": ["integration/manual test", "TypeScript", "build"],
+      "change_policy": {"backup_required": true, "tests_required": true, "rollback_required": true}
+    },
+    {
+      "module": "file-storage",
+      "path": "/app/api/admin/files + /lib/cms.ts",
+      "status": "partial",
+      "criticality": "P1",
+      "purpose": "Admin file metadata and upload boundary, using Vercel Blob integration where configured.",
+      "depends_on": ["CMS", "@vercel/blob", "runtime environment"],
+      "used_by": ["Studio", "CMS"],
+      "public_interfaces": ["admin file listing", "upload endpoint"],
+      "data_models": ["file_assets"],
+      "do_not_break": ["unique pathname/url metadata", "folder semantics", "CMS references"],
+      "known_issues": ["Storage behavior depends on deployment environment and should not be assumed available locally without credentials."],
+      "tests": ["TypeScript", "build", "manual upload smoke"],
+      "change_policy": {"backup_required": true, "tests_required": true, "rollback_required": true}
+    }
+  ],
+  "components": {
+    "global_ui": "/components",
+    "studio_ui": "/components/studio",
+    "calculator_ui": "/components/calculator.tsx",
+    "calculator_lab_ui": "/components/calculator-lab",
+    "navigation": "/components/site-header.tsx",
+    "visualization": ["Three.js components", "geospatial visual components"]
+  },
+  "dependency_map": {
+    "critical": [
+      "app/studio -> components/studio -> lib/cms -> lib/db -> PostgreSQL",
+      "app/calculator -> components/calculator -> lib/calculator -> lib/formula-engine -> studio/config/calculator",
+      "app/calculators-lab -> Calculator Lab UI -> app/api/calculators-lab -> lib/calculators-lab/engine -> registry -> definitions",
+      "admin content API -> lib/cms -> PostgreSQL",
+      "admin file API -> lib/cms + Vercel Blob"
+    ],
+    "risk_points": [
+      "lib/cms.ts is a large backend concentration point.",
+      "lib/calculator.ts is a compatibility bridge containing fallback behavior.",
+      "studio/config/calculator.ts is still a configuration source outside the DB-backed CMS model.",
+      "Studio UI has complex overlay/state interactions and historically suffered click interception regressions.",
+      "Multiple CSS files/overrides increase responsive regression risk."
+    ],
+    "cycles": "No confirmed dependency cycle from the audited architecture; a complete static import graph should be generated before claiming cycle-free status with certainty."
+  },
+  "data_models": {
+    "implemented": [
+      {"name":"cms_content","source":"db/migrations/0001_cms.sql","purpose":"Draft/published CMS content for case/service/knowledge/partner/page."},
+      {"name":"file_assets","source":"db/migrations/0001_cms.sql","purpose":"Uploaded asset metadata."},
+      {"name":"cms_audit_log","source":"db/migrations/0001_cms.sql","purpose":"Audit history of CMS entity changes."},
+      {"name":"cms_content_versions","source":"db/migrations/0003_cms_versions.sql","purpose":"Version snapshots and rollback source."},
+      {"name":"CalculatorDefinition","source":"lib/calculators-lab/types.ts","purpose":"Code-level Calculator Lab contract."},
+      {"name":"CalculatorInputSpec","source":"lib/calculators-lab/types.ts","purpose":"Dynamic input definition for Lab calculators."},
+      {"name":"CalculatorResult","source":"lib/calculators-lab/types.ts","purpose":"Calculator result presentation contract."},
+      {"name":"CalculatorStudioConfig","source":"studio/config/calculator.ts","purpose":"Current configurable pricing/urgency/formula settings."}
+    ],
+    "planned_not_implemented": ["Service", "Parameter", "ParameterOption", "Rate", "Coefficient", "Formula", "FormulaVariable", "Scenario", "CostItem", "UnitEconomicsModel", "Calculation", "CalculationResult", "CalculationVersion", "Region", "Currency", "TaxRule", "Quote", "User", "Role", "Permission", "Project"]
+  },
+  "apis": {
+    "admin": ["/api/admin/auth/login", "/api/admin/auth/logout", "/api/admin/audit", "/api/admin/content/[type]", "/api/admin/content/[type]/[id]", "/api/admin/content/[type]/[id]/versions", "/api/admin/files", "/api/admin/files/upload"],
+    "calculator": ["/api/calculators-lab"],
+    "leads_and_integrations": ["/api/leads", "/api/telegram/webhook where present"],
+    "rule": "Routes are transport boundaries. Domain logic belongs in lib/ or dedicated domain modules."
+  },
+  "routes": {
+    "public": ["/", "/calculator", "/calculators-lab", "/cases", "/services", "/knowledge", "/partners", "/technologies", "/contacts"],
+    "internal": ["/studio", "/studio/content", "/studio/preview", "/studio/login"],
+    "note": "Dynamic [slug] routes exist under cases/knowledge/services and should be treated as published-content consumers."
+  },
+  "environment": {
+    "documented": ["ADMIN_PASSWORD", "ADMIN_SESSION_SECRET"],
+    "runtime_observed": ["DATABASE_URL is read by migration/build tooling", "Telegram integration requires runtime credentials", "Vercel Blob may require runtime credentials"],
+    "security_rule": "Never commit real secrets. Use environment configuration and example placeholders only."
+  },
+  "deployment": {
+    "platform": "Vercel",
+    "build": "npm run build",
+    "prebuild": "node scripts/db-migrate-if-configured.mjs",
+    "ci": ".github/workflows/ci.yml",
+    "preview": ".github/workflows/preview.yml",
+    "deployment_policy": "Documentation-only changes must not trigger a Vercel deployment. Prefer CI/documentation commits without deployment when possible."
+  },
+  "tests": {
+    "commands": ["npm run test:cms", "npm run test:calculator-lab", "npm run lint", "npm run build"],
+    "coverage_state": "Smoke/type/build checks exist; full unit/integration/E2E coverage for the target enterprise calculator architecture is not yet implemented.",
+    "required_for_code_change": ["targeted smoke/tests", "npm run lint", "npm run build"]
+  },
+  "security": {
+    "studio_password": "disabled intentionally; archived implementation in _module-bank/auth-password",
+    "secrets": "environment-only",
+    "rbac": "not fully implemented; current admin boundary is simpler than planned enterprise RBAC",
+    "financial_data_visibility": "planned separation between public and internal calculator views is not yet a complete persisted permission model"
+  },
+  "critical_modules": ["lib/cms.ts", "lib/db.ts", "lib/calculator.ts", "lib/formula-engine.ts", "lib/calculators-lab/engine.ts", "lib/calculators-lab/definitions.ts", "components/studio", "app/api/admin"],
+  "current_state": {
+    "implemented": ["Next.js site routes", "CMS CRUD/versioning/audit foundation", "Studio/Puck foundation", "public calculator with configurable Studio settings", "Calculator Lab registry/engine/API foundation", "PostgreSQL migration layer", "Telegram integration layer", "CI smoke/type/build workflow"],
+    "partial": ["universal calculator product architecture", "dynamic DB-driven calculation configuration", "file storage UX", "Studio calculator editing UX", "public vs internal calculator modes", "enterprise RBAC", "quote/export", "saved calculations/sharing", "analytics"],
+    "in_development": ["Calculator Lab as isolated expansion path", "architecture documentation/AI map"],
+    "planned": ["universal Calculation Core", "DB-backed Parameters/Rates/Coefficients/Formulas/Scenarios", "versioned calculation models", "unit economics engine", "what-if analysis", "commercial proposal generation", "API-first standalone calculator", "embeddable widget", "AI parameter extraction", "multi-tenant enterprise layer"],
+    "deprecated": ["archived password module in _module-bank/auth-password", "legacy calculation fallback is compatibility behavior, not target architecture"]
+  },
+  "known_problems": [
+    "The target enterprise calculator model is substantially ahead of the current persisted data model.",
+    "Calculator business configuration is still partly local/config-based rather than fully database-managed.",
+    "Public preliminary and internal detailed calculation modes are not yet represented as a complete role-aware product boundary.",
+    "Unit economics entities and persistence are planned, not implemented.",
+    "Studio and calculator code have accumulated complexity and need continued domain decomposition without breaking current workflows.",
+    "Documentation has historically been distributed; this manifest is intended to become the AI entry point."
+  ],
+  "architecture_decisions": [
+    "PostgreSQL + SQL migrations are the active persistence model.",
+    "Studio is split into app/studio, components/studio and studio runtime/config/types.",
+    "Password authentication remains disabled unless explicitly restored from the module bank.",
+    "Calculator Lab is isolated from the legacy public calculator while the universal engine is developed.",
+    "Calculation logic must remain separate from UI and HTTP transport.",
+    "Documentation-only changes must not trigger unnecessary Vercel deployments."
+  ],
+  "change_rules": {
+    "before": ["READ project-map.json", "READ current-state.md", "READ related module contracts", "trace dependencies", "create backup/checkpoint", "identify risk and affected routes"],
+    "after": ["run targeted tests", "run npm run lint", "run npm run build for code changes", "verify affected UX/API", "update architecture docs if architecture/state changed", "create checkpoint"],
+    "rollback": "If verification fails, revert to the last known-good checkpoint before unrelated fixes.",
+    "documentation_only": "Do not deploy to Vercel for documentation-only changes."
+  }
+}
