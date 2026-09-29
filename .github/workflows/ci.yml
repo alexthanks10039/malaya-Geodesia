@@ -33,6 +33,12 @@ jobs:
       - name: Calculator Lab smoke tests
         run: npm run test:calculator-lab
 
+      - name: Calculation Engine smoke tests
+        run: npm run test:calculation-engine
+
+      - name: Calculation Config smoke tests
+        run: npm run test:calculation-config
+
       - name: TypeScript check
         run: npm run lint
 
