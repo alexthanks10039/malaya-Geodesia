@@ -1,3 +1,9 @@
+/**
+ * ARCHITECTURE: Calculator Lab domain definitions.
+ * Описывает технические калькуляторы, их inputs/outputs и метаданные для Registry/Engine.
+ * Определения не должны зависеть от React, API или БД.
+ */
+
 import type { CalculatorDefinition } from "@/lib/calculators-lab/types";
 import {
   normalizeAzimuth,
