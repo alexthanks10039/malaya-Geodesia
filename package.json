@@ -13,7 +13,8 @@
     "codespace": "bash scripts/codespace-preview.sh",
     "prebuild": "node scripts/db-migrate-if-configured.mjs",
     "test:cms": "tsx scripts/cms-smoke.ts",
-    "test:calculator-lab": "tsx scripts/calculator-lab-smoke.ts"
+    "test:calculator-lab": "tsx scripts/calculator-lab-smoke.ts",
+    "test:calculation-engine": "tsx scripts/calculation-engine-smoke.ts"
   },
   "engines": {
     "node": "24.x"
