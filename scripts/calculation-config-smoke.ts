@@ -9,7 +9,10 @@ import {
   runConfiguredCalculation,
   type CalculationResult,
 } from "@/lib/calculation-engine";
-import type { CalculationConfig } from "@/lib/calculation-engine/config";
+import {
+  validateCalculationConfig,
+  type CalculationConfig,
+} from "@/lib/calculation-engine/config";
 
 const config: CalculationConfig = {
   id: "topo-cost-configurable",
@@ -55,6 +58,35 @@ const config: CalculationConfig = {
   ],
   outputs: ["total"],
 };
+
+
+const validConfigDiagnostics = validateCalculationConfig(config);
+assert.deepEqual(validConfigDiagnostics, []);
+
+const duplicateNamespace = validateCalculationConfig({
+  ...config,
+  coefficients: [
+    ...(config.coefficients ?? []),
+    { key: "area", label: "Конфликт", value: 1 },
+  ],
+});
+assert.equal(duplicateNamespace.length, 1);
+assert.match(duplicateNamespace[0], /одновременно используется/);
+
+const duplicateRateKey = validateCalculationConfig({
+  ...config,
+  rates: [
+    ...(config.rates ?? []),
+    { key: "ratePerM2", label: "Дубликат", value: 40, unit: "₸/м²" },
+  ],
+});
+assert.match(duplicateRateKey[0], /Дублирующийся ключ тарифов/);
+
+const unknownOutput = validateCalculationConfig({
+  ...config,
+  outputs: ["missing"],
+});
+assert.match(unknownOutput[0], /Output "missing"/);
 
 const success = runConfiguredCalculation(config, {
   area: 5000,
