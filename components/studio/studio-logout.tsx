@@ -1,4 +1,9 @@
 "use client";
+/**
+ * ARCHITECTURE: Studio session UI control.
+ * Отвечает только за пользовательское действие выхода и не содержит модели авторизации.
+ */
+
 
 import { useRouter } from "next/navigation";
 import { LogOut } from "lucide-react";
