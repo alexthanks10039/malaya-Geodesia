@@ -1,1 +1,7 @@
+/**
+ * ARCHITECTURE: Next.js route entry point.
+ * Отвечает за конкретный URL, получение published/read-model данных и композицию UI.
+ * Mutations, SQL, расчётные правила и versioning выполняются в соответствующих lib/API слоях.
+ */
+
 import{notFound}from"next/navigation";import{getPublishedBySlug}from"@/lib/cms";import type{KnowledgeItem}from"@/lib/data";export const dynamic="force-dynamic";export default async function KnowledgeDetail({params}:{params:Promise<{slug:string}>}){const{slug}=await params,item=await getPublishedBySlug("knowledge",slug);if(!item?.publishedData)notFound();const i=item.publishedData as unknown as KnowledgeItem;return <article className="section page-content"><p className="eyebrow">{i.type}</p><h1>{i.title}</h1><p className="lead">{i.summary}</p><div className="article-body"><p>{i.body}</p><h2>Связанные понятия</h2><div className="tag-row">{i.related.map(x=><span className="tag" key={x}>{x}</span>)}</div></div></article>}
