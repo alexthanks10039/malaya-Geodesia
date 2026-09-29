@@ -1,4 +1,6 @@
 #!/usr/bin/env bash
+# ARCHITECTURE: Codespace preview automation.
+# Keeps environment/bootstrap concerns outside application runtime and domain logic.
 set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
