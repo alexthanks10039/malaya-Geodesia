@@ -1,3 +1,9 @@
+/**
+ * ARCHITECTURE: Integration API boundary.
+ * Принимает HTTP-запрос, валидирует его и вызывает доменную/integration логику из lib/.
+ * Route не должен содержать UI и не должен дублировать бизнес-правила.
+ */
+
 import { NextResponse } from "next/server";
 import { getCalculatorManifest } from "@/lib/calculators-lab/manifest";
 
