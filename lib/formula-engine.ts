@@ -40,6 +40,7 @@ export function isFormulaKey(value: string): boolean {
   return IDENTIFIER_RE.test(value);
 }
 
+// ARCHITECTURE: Parsing boundary. Ограничивает размер и набор допустимых токенов до построения выражения, чтобы пользовательская формула не стала произвольным кодом.
 function tokenize(expression: string): Token[] {
   if (expression.length > 600) {
     throw new Error('Формула слишком длинная: максимум 600 символов.');
@@ -105,6 +106,7 @@ function tokenize(expression: string): Token[] {
   return tokens;
 }
 
+// ARCHITECTURE: Recursive-descent parser. Превращает разрешённый expression в вычислимую структуру без eval/Function.
 class ExpressionParser {
   private index = 0;
   private lastValue = '';
@@ -240,6 +242,7 @@ class ExpressionParser {
   }
 }
 
+// ARCHITECTURE: Function allowlist. Только явно разрешённые математические операции могут быть вызваны из Studio formulas.
 function callFunction(name: string, args: number[]): number {
   if (!(FORMULA_FUNCTIONS as readonly string[]).includes(name)) {
     throw new Error('Неизвестная функция "' + name + '".');
@@ -278,6 +281,7 @@ function callFunction(name: string, args: number[]): number {
   throw new Error('Функция "' + name + '" не поддерживается.');
 }
 
+// ARCHITECTURE: Single-expression evaluator. Разделён от storage/UI, поэтому одинаково используется сервером, тестами и будущим Calculation Core adapter.
 export function evaluateExpression(
   expression: string,
   variables: Record<string, number>,
@@ -318,6 +322,7 @@ export function evaluateExpression(
   return new ExpressionParser(tokenize(expression), resolve).parse();
 }
 
+// ARCHITECTURE: Dependency evaluator. Разрешает ссылки formula→formula с cache и detection cycles, сохраняя deterministic order выполнения.
 export function evaluateFormulas(
   definitions: FormulaDefinition[],
   variables: Record<string, number>,
@@ -351,6 +356,7 @@ export function evaluateFormulas(
   return { values, order };
 }
 
+// ARCHITECTURE: Publish guard. Валидация запускается до публикации модели, чтобы невалидная формула не дошла до production calculation.
 export function validateFormulaDefinitions(
   definitions: FormulaDefinition[],
   variables: Record<string, number>,
