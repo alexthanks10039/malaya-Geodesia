@@ -1,3 +1,8 @@
+/**
+ * ARCHITECTURE: Pure mathematical primitives for Calculator Lab.
+ * Содержит маленькие детерминированные функции без side effects, чтобы доменные расчёты собирались из проверяемых примитивов.
+ */
+
 const RAD = Math.PI / 180;
 const DEG = 180 / Math.PI;
 
