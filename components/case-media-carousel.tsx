@@ -1,4 +1,10 @@
 "use client";
+/**
+ * ARCHITECTURE: Reusable presentation component.
+ * Отвечает за визуальный блок и локальное взаимодействие.
+ * Данные и доменные правила должны приходить через props/hooks/lib, а не через прямую БД-зависимость.
+ */
+
 
 import {useEffect, useMemo, useState} from "react";
 import {ChevronLeft, ChevronRight, Film, ImagePlus, Play, Plus, X} from "lucide-react";
