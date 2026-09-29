@@ -6,7 +6,7 @@ import { ArrowUpRight, Menu, X } from "lucide-react";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { StudioDevModeButton } from "@/components/studio/dev-mode";
 
-const nav = [["Услуги", "/services"], ["Калькулятор", "/calculator"], ["Кейсы", "/cases"], ["Справочник", "/knowledge"]] as const;
+const nav = [["Услуги", "/services"], ["Калькулятор", "/calculator"], ["Calculator Lab", "/calculators-lab"], ["Кейсы", "/cases"], ["Справочник", "/knowledge"]] as const;
 
 export function SiteHeader() {
   const pathname = usePathname();
