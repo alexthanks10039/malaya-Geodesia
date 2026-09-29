@@ -13,6 +13,7 @@ import {
   validateCalculationConfig,
   type CalculationConfig,
 } from "@/lib/calculation-engine/config";
+import { evaluateExpression } from "@/lib/formula-engine";
 
 const config: CalculationConfig = {
   id: "topo-cost-configurable",
@@ -59,7 +60,6 @@ const config: CalculationConfig = {
   outputs: ["total"],
 };
 
-
 const validConfigDiagnostics = validateCalculationConfig(config);
 assert.deepEqual(validConfigDiagnostics, []);
 
@@ -87,6 +87,16 @@ const unknownOutput = validateCalculationConfig({
   outputs: ["missing"],
 });
 assert.match(unknownOutput[0], /Output "missing"/);
+
+// Regression: unary +/− must work at every expression level.
+assert.equal(evaluateExpression("-5", {}), -5);
+assert.equal(evaluateExpression("+5", {}), 5);
+assert.equal(evaluateExpression("10 + -3", {}), 7);
+assert.equal(evaluateExpression("2 * -3", {}), -6);
+assert.equal(evaluateExpression("(-4 + 10) / 2", {}), 3);
+assert.equal(evaluateExpression("max(-5, 2)", {}), 2);
+assert.equal(evaluateExpression("2^-2", {}), 0.25);
+assert.equal(evaluateExpression("2^3^2", {}), 512);
 
 const success = runConfiguredCalculation(config, {
   area: 5000,
