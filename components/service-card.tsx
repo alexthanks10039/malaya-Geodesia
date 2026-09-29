@@ -1,3 +1,9 @@
+/**
+ * ARCHITECTURE: Reusable presentation component.
+ * Отвечает за конкретный UI-блок и пользовательское взаимодействие.
+ * Не хранит persistence и не дублирует доменные правила; данные приходят из props/lib.
+ */
+
 import Link from "next/link";
 import { ArrowUpRight, Building2, Box, Mountain, Plane, Scan, ScanLine } from "lucide-react";
 import type { Service } from "@/lib/data";
