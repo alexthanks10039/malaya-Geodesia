@@ -1,3 +1,9 @@
+/**
+ * ARCHITECTURE: Partner domain/read model.
+ * Преобразует опубликованные CMS-данные партнёров в типизированную форму для страниц.
+ * Не смешивает presentation и низкоуровневый SQL.
+ */
+
 export type Partner={slug:string;title:string;category:string;description:string};
 export const partners:Partner[]=[
 {slug:"oborudovanie",title:"Оборудование",category:"Network",description:"Производители и поставщики геодезического оборудования"},
