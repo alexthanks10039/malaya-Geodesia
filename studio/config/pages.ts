@@ -1,3 +1,9 @@
+/**
+ * ARCHITECTURE: Studio page configuration model.
+ * Описывает структуру editable pages отдельно от их React-rendering.
+ * Это промежуточный configuration layer до полного DB-backed CMS model.
+ */
+
 import type { StudioPage } from "@/studio/types";
 
 export const studioPages: StudioPage[] = [
