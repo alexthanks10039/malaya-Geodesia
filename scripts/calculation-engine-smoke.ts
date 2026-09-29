@@ -1,7 +1,7 @@
 /**
  * ARCHITECTURE: Smoke test for the domain Calculation Engine.
- * Проверяет именно engine contract, а не UI. Этот тест должен оставаться быстрым
- * и запускаться перед подключением нового calculator model.
+ * Проверяет engine contract и совместимость с declarative calculator schema.
+ * Этот тест должен оставаться быстрым и запускаться перед подключением нового model.
  */
 
 import assert from "node:assert/strict";
@@ -9,6 +9,18 @@ import {
   runCalculation,
   type CalculationModel,
 } from "@/lib/calculation-engine";
+import {
+  buildCalculatorSchema,
+  validateCalculatorSchema,
+} from "@/lib/calculator-schema";
+import { defaultCalculatorStudioConfig } from "@/studio/config/calculator";
+
+const schema = buildCalculatorSchema(defaultCalculatorStudioConfig);
+assert.equal(validateCalculatorSchema(schema).length, 0);
+assert.ok(schema.parameters.some((item) => item.key === "area"));
+assert.ok(schema.parameters.some((item) => item.key === "type"));
+assert.ok(schema.coefficients.some((item) => item.key === "siteVisitFee"));
+assert.ok(schema.formulas.some((item) => item.key === "price"));
 
 const model: CalculationModel = {
   id: "smoke",
@@ -53,4 +65,4 @@ const invalid = runCalculation(
 
 assert.equal(invalid.ok, false);
 
-console.log("Calculation Engine smoke test: OK");
+console.log("Calculation Engine + Calculator Schema smoke test: OK");
