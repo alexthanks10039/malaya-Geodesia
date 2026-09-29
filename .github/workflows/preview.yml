@@ -1,3 +1,5 @@
+# ARCHITECTURE: Preview deployment workflow.
+# Connects source changes to a disposable preview, keeping deployment concerns outside application code.
 name: Preview
 
 on:
