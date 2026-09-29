@@ -1,3 +1,9 @@
+/**
+ * ARCHITECTURE: Next.js Studio route entry point.
+ * Связывает URL с административным workspace/preview и его данными.
+ * Persistence, versioning и бизнес-правила не должны реализовываться внутри page.tsx.
+ */
+
 import { redirect } from "next/navigation";
 import { Render } from "@puckeditor/core";
 import config, { initialPuckData, type PuckSiteComponents, type PuckSiteRootProps } from "@/components/studio/puck/config";
