@@ -1,3 +1,10 @@
+/**
+ * ARCHITECTURE: Admin API boundary.
+ * Отвечает за HTTP-контракт Studio, валидацию входа, авторизацию и вызов backend/domain-слоя.
+ * Бизнес-правила и расчётная математика не должны жить в route.ts.
+ * Response формируется явно, чтобы внутренние поля БД не утекали в клиентский контур.
+ */
+
 import {NextResponse} from "next/server";
 import {CmsError,getContentVersion,isContentType,listContentVersions,rollbackContent} from "@/lib/cms";
 import {requireAdminApi} from "@/lib/admin-auth";
