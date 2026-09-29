@@ -1,3 +1,4 @@
+/* ARCHITECTURE: Service archive presentation layer. Controls visual layout for services archive; service data comes from components/lib. */
 
 .services-archive{max-width:1280px;margin:0 auto;padding:0 0 30px}
 .services-hero{display:grid;grid-template-columns:minmax(0,1fr) 250px;gap:48px;align-items:end;margin-bottom:34px}
