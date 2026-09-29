@@ -29,6 +29,7 @@ export function SiteHeader() {
   const close = () => setOpen(false);
 
   return (
+    <>
     <header className={"site-header" + (open ? " menu-open" : "")}>
       <div className="header-inner">
         <Link className="brand" href="/" onClick={close} aria-label="Малая геодезия">
@@ -105,5 +106,6 @@ export function SiteHeader() {
         </div>
       </nav>
     </div>
+    </>
   );
 }
