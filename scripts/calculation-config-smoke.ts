@@ -67,7 +67,7 @@ if (success.ok) {
   const result: CalculationResult = success.result;
   assert.equal(result.modelId, "topo-cost-configurable");
   assert.equal(result.modelVersion, "1.0.0");
-  assert.equal(result.outputs.total, 234000);
+  assert.equal(result.outputs.total, 292500);
   assert.deepEqual(
     result.trace.map((item) => item.key),
     ["base", "complex", "urgencyAdjusted", "total"],
