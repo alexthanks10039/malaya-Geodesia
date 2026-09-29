@@ -1,4 +1,10 @@
 "use client";
+/**
+ * ARCHITECTURE: Public calculator presentation/adapter.
+ * Отвечает за UX предварительной оценки и собирает user inputs.
+ * Цены и формулы постепенно выносятся в единый Calculation Core, чтобы не было второго engine.
+ */
+
 
 import { useEffect, useMemo, useState } from "react";
 import {
