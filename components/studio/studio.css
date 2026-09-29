@@ -1,3 +1,4 @@
+/* ARCHITECTURE: Shared Studio visual system. Keeps admin-specific styling separate from public site styling. */
 body:has(.studio-app){overflow:hidden}
 body:has(.studio-app) .site-header,body:has(.studio-app) .site-footer{display:none!important}
 body:has(.studio-app) main{margin:0!important;max-width:none!important;padding:0!important}
