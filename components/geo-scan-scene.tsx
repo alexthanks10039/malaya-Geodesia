@@ -1,4 +1,10 @@
 "use client";
+/**
+ * ARCHITECTURE: Reusable presentation component.
+ * Отвечает за визуальный блок и локальное взаимодействие.
+ * Данные и доменные правила должны приходить через props/hooks/lib, а не через прямую БД-зависимость.
+ */
+
 
 import { useEffect, useRef } from "react";
 import * as THREE from "three";
