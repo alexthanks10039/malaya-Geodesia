@@ -1,4 +1,10 @@
 "use client";
+/**
+ * ARCHITECTURE: Puck editor adapter.
+ * Связывает визуальный редактор Puck с моделью страницы и Studio workflow.
+ * Рендеринг и редактирование отделены от сохранения/публикации контента.
+ */
+
 
 import { Puck, Render, type Data } from "@puckeditor/core";
 import { useEffect, useRef, useState } from "react";
