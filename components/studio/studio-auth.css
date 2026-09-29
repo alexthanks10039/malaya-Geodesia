@@ -1,3 +1,4 @@
+/* ARCHITECTURE: Studio authentication screen styling only. Authentication decisions belong to the auth/API layer. */
 .studio-login{min-height:100dvh;display:grid;place-items:center;padding:24px;background:#10130f;color:#e7eee3}
 .studio-login-card{width:min(420px,100%);padding:28px;border:1px solid #2d352a;border-radius:14px;background:#0b0f0b;box-shadow:0 24px 80px rgba(0,0,0,.35)}
 .studio-login-kicker{display:block;margin-bottom:10px;color:#d9ff52;font:900 8px ui-monospace,SFMono-Regular,monospace;letter-spacing:.12em}
