@@ -1,4 +1,10 @@
 "use client";
+/**
+ * ARCHITECTURE: In-page Studio Dev Mode controller.
+ * Перехватывает UI-взаимодействия для выбора/инспекции элементов прямо на странице.
+ * Это presentation/dev tooling слой; он не должен менять доменные данные сам по себе.
+ */
+
 
 import Link from "next/link";
 import {
