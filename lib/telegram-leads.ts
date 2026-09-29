@@ -1,3 +1,9 @@
+/**
+ * ARCHITECTURE: Lead notification integration service.
+ * Отделяет бизнес-событие нового лида от конкретного транспорта Telegram.
+ * Ошибка внешнего уведомления не должна превращать Telegram API в источник истины лида.
+ */
+
 type LeadRecord=Record<string,any>;
 const leads=new Map<string,LeadRecord>();
 export const LEAD_STATUSES={NEW:"new",IN_WORK:"in_work",REASSIGNED:"reassigned",DONE:"done",CANCELLED:"cancelled"} as const;
