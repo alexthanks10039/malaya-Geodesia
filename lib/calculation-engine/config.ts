@@ -219,14 +219,14 @@ export function resolveCalculationConfig(
   inputs: Record<string, unknown>,
 ): ConfigResolution {
   try {
-    if (!config.id.trim()) fail("Calculation config id обязателен.");
-    if (!config.version.trim()) fail("Calculation config version обязателен.");
-    if (!config.formulas.length) fail("Calculation config должен содержать формулы.");
-
-    assertUniqueKeys("параметров", config.parameters.map((item) => item.key));
-    assertUniqueKeys("коэффициентов", (config.coefficients ?? []).map((item) => item.key));
-    assertUniqueKeys("тарифов", (config.rates ?? []).map((item) => item.key));
-    assertUniqueKeys("формул", config.formulas.map((item) => item.key));
+    const validationErrors = validateCalculationConfig(config);
+    if (validationErrors.length) {
+      return {
+        ok: false,
+        error: "Конфигурация расчёта не прошла валидацию.",
+        diagnostics: validationErrors,
+      };
+    }
 
     const parameterKeys = new Set(config.parameters.map((item) => item.key));
     for (const inputKey of Object.keys(inputs)) {
