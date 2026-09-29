@@ -2,7 +2,7 @@ name: CI
 
 on:
   push:
-    branches: [main, feature/studio-v4]
+    branches: [main, feature/studio-v4, feature/calculators-lab]
   pull_request:
     branches: [main]
 
@@ -26,6 +26,9 @@ jobs:
 
       - name: CMS smoke tests
         run: npm run test:cms
+
+      - name: Calculator Lab smoke tests
+        run: npm run test:calculator-lab
 
       - name: TypeScript check
         run: npm run lint
