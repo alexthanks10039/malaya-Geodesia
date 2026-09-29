@@ -41,7 +41,7 @@ Required CI checks:
 - TypeScript;
 - production build.
 
-Checkpoint is considered valid only when the CI status for this commit is successful.
+Checkpoint is considered valid only when the CI status for the latest Stage 05 commit is successful. The previous Vercel check is not a code-quality result and may fail independently because of the current deployment rate limit.
 
 ## Rollback
 Revert this checkpoint commit together with the immediately preceding Stage 05 implementation commits, or reset the working branch to the last known-good checkpoint before Stage 05.
