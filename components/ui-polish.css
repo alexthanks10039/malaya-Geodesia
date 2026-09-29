@@ -1,3 +1,4 @@
+/* ARCHITECTURE: Shared visual polish. This layer must not contain business or state logic. */
 /* Final UI cleanup: spacing, controls, mobile overflow and interaction states. */
 html, body { overflow-x: hidden; }
 body { -webkit-font-smoothing: antialiased; text-rendering: optimizeLegibility; }
