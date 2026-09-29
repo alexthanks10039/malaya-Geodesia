@@ -301,4 +301,3 @@ button,input,select{font:inherit}
   .mobile-nav-panel{padding-left:15px;padding-right:15px}
 }
 @media(prefers-reduced-motion:reduce){.mobile-nav-panel,.mobile-nav-backdrop,.mobile-menu,.mobile-nav-link{transition:none}.mobile-nav-status i{animation:none}}
-@media(prefers-reduced-motion:reduce){.mobile-nav-panel,.mobile-nav-backdrop,.mobile-menu,.mobile-nav-link{transition:none}.mobile-nav-status i{animation:none}}
