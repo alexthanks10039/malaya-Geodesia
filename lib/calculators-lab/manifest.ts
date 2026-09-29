@@ -1,3 +1,9 @@
+/**
+ * ARCHITECTURE: Public calculator catalog manifest.
+ * Формирует безопасное описание доступных технических калькуляторов для API/UI.
+ * Manifest не является самим engine и не должен содержать внутреннюю финансовую конфигурацию.
+ */
+
 import { calculatorRegistry } from "@/lib/calculators-lab/registry";
 
 export type CalculatorManifestItem = {
