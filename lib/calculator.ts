@@ -35,16 +35,19 @@ export type CalculatorEstimate = {
   formulaValues: Record<string, number>;
 };
 
+// ARCHITECTURE: Boundary guard. Нормализует пользовательский input до допустимого доменного диапазона, чтобы дальше engine работал с валидными значениями.
 function clamp(value: number, min: number, max: number): number {
   return Math.max(min, Math.min(max, value));
 }
 
+// ARCHITECTURE: Configuration adapter. Превращает Studio coefficients в плоский context variables для formula engine, не перенося Studio UI внутрь расчёта.
 function buildCoefficientVariables(config: CalculatorStudioConfig): Record<string, number> {
   return Object.fromEntries(
     config.pricing.coefficients.map((coefficient) => [coefficient.key, coefficient.value]),
   );
 }
 
+// ARCHITECTURE: Domain resolver. Здесь связывается выбранный пользователем режим срочности с нормализованным factor + ограничением срока.
 function resolveUrgency(input: CalculatorInput, config: CalculatorStudioConfig): {
   urgency: string;
   selectedUrgencyFactor: number;
@@ -121,6 +124,7 @@ export function buildCalculatorVariables(
   };
 }
 
+// ARCHITECTURE: Legacy fallback. Нужен только для backwards compatibility, когда текущая конфигурация формул не проходит диагностику.
 function legacyEstimate(input: CalculatorInput, config: CalculatorStudioConfig): CalculatorEstimate {
   const pricing = config.pricing;
   const variables = buildCalculatorVariables(input, config);
@@ -204,6 +208,7 @@ export function getFormulaDiagnostics(
   return Array.from(new Set(errors));
 }
 
+// ARCHITECTURE: Public calculation facade. Сначала проверяет model/config, затем вызывает безопасный formula engine и возвращает UI-compatible result.
 export function calculateEstimate(
   input: CalculatorInput,
   config: CalculatorStudioConfig = defaultCalculatorStudioConfig,
