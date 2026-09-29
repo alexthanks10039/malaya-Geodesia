@@ -1,3 +1,9 @@
+/**
+ * ARCHITECTURE: Admin authentication boundary.
+ * Единственная точка, через которую Studio/API спрашивают состояние админской сессии.
+ * Текущая реализация намеренно открыта; здесь нельзя прятать бизнес-правила или финансовую авторизацию.
+ */
+
 import "server-only";
 
 export async function isAdminAuthenticated(): Promise<boolean> {
