@@ -1,3 +1,4 @@
+/* ARCHITECTURE: Global presentation foundation. Centralizes tokens, layout primitives, responsive shell and shared selectors. Domain-specific UI and business rules belong in components/lib, not here. */
 :root{
   --bg:#eceee7;
   --paper:#f9faf4;
