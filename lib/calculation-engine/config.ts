@@ -17,6 +17,7 @@
  */
 
 import type { CalculationModel } from "@/lib/calculation-engine";
+import { isFormulaKey } from "@/lib/formula-engine";
 
 export type ParameterType = "number" | "select" | "boolean";
 
