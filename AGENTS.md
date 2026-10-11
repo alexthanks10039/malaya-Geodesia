@@ -9,7 +9,7 @@ This repository is **Малая геодезия**, a practical geodesy knowledg
 - TypeScript 5.9
 - CSS
 - Three.js + Motion + lucide-react
-- Node.js >= 20
+- Node.js 24.x (matches `package.json` engine)
 - Prisma schema is present for future/persistent data work
 
 ## Repository map
@@ -41,15 +41,21 @@ This repository is **Малая геодезия**, a practical geodesy knowledg
 9. Do not add a dependency when the existing stack can solve the task.
 10. For CSS changes, check for existing duplicate rules before adding more overrides.
 11. Treat calculator prices as preliminary product logic, not verified market prices.
-12. The lead API currently returns a synthetic lead ID and does not constitute durable lead storage unless persistence is explicitly implemented.
+12. Lead persistence uses PostgreSQL when `DATABASE_URL` is configured; verify the current route and fallback behavior before claiming production persistence.
 
 ## Verification
 Run:
-- `npm install`
+- `npm install --no-audit --no-fund` (the repository does not yet track a lockfile; generate one before switching to `npm ci`)
 - `npm run lint` (this is TypeScript `tsc --noEmit`)
 - `npm run build`
+- `npx playwright install chromium` once per local environment
+- `npm run test:e2e` (runs against the production build using Playwright)
 
 If a check fails, fix the actual reported error before doing unrelated refactors.
+
+13. For version-sensitive Next.js, React, Puck, Vercel, or Playwright APIs, consult current official documentation through Context7 or vendor docs before coding.
+14. Prefer a small plan, then implement, run the narrowest failing check, and finish with typecheck + build + relevant tests. Do not claim tests passed unless they were actually executed.
+15. Keep temporary public preview tunnels manually triggered and time-limited; do not expose them automatically on each push.
 
 ## Product roadmap
 1. Calculator polish and reliable lead conversion
