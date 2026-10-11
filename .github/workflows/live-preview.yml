@@ -1,8 +1,7 @@
 name: Live Preview
 
 on:
-  push:
-    branches: [main]
+  # Public dev tunnel is intentionally manual; never expose it automatically on push.
   workflow_dispatch:
 
 permissions:
