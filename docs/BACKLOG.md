@@ -9,6 +9,7 @@ Changes are in `chore/ci-stabilization-and-tooling`; treat as complete only afte
 - Live Preview runs only by manual dispatch and is limited to 60 minutes. The Quick Tunnel remains public to anyone with the URL.
 - Dependabot is configured for weekly npm and GitHub Actions update PRs.
 - README, AGENTS.md, and deployment documentation are aligned with the current workflow behavior.
+- **Vercel deployment investigation (11.10.2026):** `vercel.json` currently schedules `/api/cron/telegram-retry` every 5 minutes (`*/5 * * * *`). The failing Vercel status link redirects to Cron Jobs usage/pricing documentation. Vercel Hobby only supports daily cron schedules; the current team plan has not been confirmed because the connected Vercel scope returns 403. Do **not** silently change this to daily: the route drains a Telegram retry outbox. Verify the plan in Vercel, then either use an eligible plan or move retries to an external scheduler/queue before changing the cadence.
 - **Open:** generate and commit `package-lock.json` in a network-enabled environment; verify it; then switch CI to `npm ci` and cache against the lockfile. The current runner container could not resolve dependencies to generate it locally.
 - **Open:** restore/verify Vercel project scope, production env vars, production migrations, and real Telegram/Blob integration.
 - **Open:** enable branch protection and required CI checks if available in repository settings.
