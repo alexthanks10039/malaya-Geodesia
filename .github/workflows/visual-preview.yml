@@ -2,15 +2,6 @@ name: Visual preview
 
 on:
   workflow_dispatch:
-  push:
-    paths:
-      - "app/**"
-      - "components/**"
-      - "lib/**"
-      - "public/**"
-      - "package.json"
-      - "next.config.ts"
-      - ".github/workflows/visual-preview.yml"
 
 permissions:
   contents: read
