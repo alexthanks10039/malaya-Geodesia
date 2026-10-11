@@ -20,17 +20,17 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v5
+        uses: actions/checkout@v7
 
       - name: Setup Node.js
-        uses: actions/setup-node@v5
+        uses: actions/setup-node@v7
         with:
           node-version: 24
           cache: npm
           cache-dependency-path: package.json
 
       - name: Install dependencies
-        run: npm install
+        run: npm install --no-audit --no-fund
 
       - name: Build Next.js
         run: npm run build
@@ -47,20 +47,20 @@ jobs:
           curl -fsS http://127.0.0.1:3000/ > /dev/null
 
       - name: Install Playwright Chromium
-        run: npx playwright@1.55.0 install --with-deps chromium
+        run: npx playwright@1.64.0 install --with-deps chromium
 
       - name: Capture screenshots
         run: |
-          npx playwright@1.55.0 screenshot --full-page --viewport-size="1440,1100" --wait-for-timeout=3500 http://127.0.0.1:3000/ visual-home-desktop.png
-          npx playwright@1.55.0 screenshot --full-page --viewport-size="390,844" --wait-for-timeout=3500 http://127.0.0.1:3000/ visual-home-mobile.png
-          npx playwright@1.55.0 screenshot --full-page --viewport-size="1440,1100" --wait-for-timeout=2500 "http://127.0.0.1:3000/studio" visual-studio-desktop.png
-          npx playwright@1.55.0 screenshot --full-page --viewport-size="390,844" --wait-for-timeout=2500 "http://127.0.0.1:3000/studio" visual-studio-mobile.png
-          npx playwright@1.55.0 screenshot --full-page --viewport-size="1440,1100" --wait-for-timeout=2000 "http://127.0.0.1:3000/?dev=1" visual-dev-desktop.png
-          npx playwright@1.55.0 screenshot --full-page --viewport-size="390,844" --wait-for-timeout=2000 "http://127.0.0.1:3000/?dev=1" visual-dev-mobile.png
-          npx playwright@1.55.0 screenshot --full-page --viewport-size="1440,1100" --wait-for-timeout=2000 "http://127.0.0.1:3000/calculator?dev=1" visual-calculator-dev.png
+          npx playwright@1.64.0 screenshot --full-page --viewport-size="1440,1100" --wait-for-timeout=3500 http://127.0.0.1:3000/ visual-home-desktop.png
+          npx playwright@1.64.0 screenshot --full-page --viewport-size="390,844" --wait-for-timeout=3500 http://127.0.0.1:3000/ visual-home-mobile.png
+          npx playwright@1.64.0 screenshot --full-page --viewport-size="1440,1100" --wait-for-timeout=2500 "http://127.0.0.1:3000/studio" visual-studio-desktop.png
+          npx playwright@1.64.0 screenshot --full-page --viewport-size="390,844" --wait-for-timeout=2500 "http://127.0.0.1:3000/studio" visual-studio-mobile.png
+          npx playwright@1.64.0 screenshot --full-page --viewport-size="1440,1100" --wait-for-timeout=2000 "http://127.0.0.1:3000/?dev=1" visual-dev-desktop.png
+          npx playwright@1.64.0 screenshot --full-page --viewport-size="390,844" --wait-for-timeout=2000 "http://127.0.0.1:3000/?dev=1" visual-dev-mobile.png
+          npx playwright@1.64.0 screenshot --full-page --viewport-size="1440,1100" --wait-for-timeout=2000 "http://127.0.0.1:3000/calculator?dev=1" visual-calculator-dev.png
 
       - name: Upload visual preview
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: malaya-geodesia-visual-preview
           path: |
