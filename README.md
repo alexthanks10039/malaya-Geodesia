@@ -1,78 +1,59 @@
 # Малая геодезия
 
-P0 MVP цифрового продукта: многостраничный Next.js-сайт, интерактивный калькулятор, кейсы, справочник и подготовленная PostgreSQL/Prisma схема.
+Многостраничный Next.js-продукт для услуг малой геодезии: сайт, динамический калькулятор, кейсы, справочник и встроенная Studio/CMS.
 
-## Запуск
+## Стек
+
+- Node.js 24.x, Next.js 16 App Router, React 19, TypeScript
+- PostgreSQL через `pg` и SQL migrations
+- Vercel Blob для файлов
+- Telegram Bot API для уведомлений и рабочего процесса заявок
+- Puck для визуального редактирования страниц
+- Playwright Test для smoke/E2E-проверок
+
+## Локальный запуск
+
+Требуется Node.js 24.x.
 
 ```bash
 npm install
 npm run dev
 ```
 
-## Маршруты
-
-- / — главная
-- /services — услуги
-- /calculator — калькулятор
-- /cases — кейсы
-- /knowledge — справочник и поиск
-- /api/leads — endpoint заявок
-
-## Архитектура
-
-Контент пока находится в lib/data.ts, чтобы P0 запускался без внешней БД. prisma/schema.prisma готовит миграцию на PostgreSQL. Следующий этап: PostGIS, pgvector, карты, Three.js/R3F и AI search.
-
-## Design
-
-Визуальный язык: geospatial / engineering / digital twin. Motion используется для UI-анимаций; GSAP и React Three Fiber заложены в следующих этапах.
-
-
-## Live Preview
-
-### Вариант 1: автоматически через GitHub Actions
-
-Каждый push в `main` запускает отдельный live-preview:
-
-1. GitHub Actions запускает `next dev`.
-2. Cloudflare Quick Tunnel публикует его наружу.
-3. URL появляется в GitHub Actions в блоке **Live Preview** и в статусе коммита **Live Preview**.
-4. Новый push в `main` автоматически перезапускает preview на новом состоянии проекта.
-
-Это именно dev-preview, не production. Quick Tunnel генерирует временный публичный `trycloudflare.com` адрес. Для разработки это удобно, но ссылку нельзя считать закрытой.
-
-### Вариант 2: локально с одной командой
-
-После `npm install`:
+Перед запуском production-сервера и e2e-тестов:
 
 ```bash
-npm run live
+npm run build
+npx playwright install chromium
+npm run test:e2e
 ```
 
-Команда поднимает Next.js dev server и Cloudflare Quick Tunnel. В консоли появится:
+> В репозитории пока нет tracked `package-lock.json`. Пока lockfile не сгенерирован и не проверен, workflows используют `npm install`, а не `npm ci`.
 
-```
-LIVE PREVIEW: https://....trycloudflare.com
-```
+## Основные маршруты
 
-За счёт `next dev` изменения кода видны сразу после сохранения.
+- `/` — главная
+- `/calculator` — калькулятор
+- `/services` — услуги
+- `/cases` — кейсы
+- `/knowledge` — справочник
+- `/partners` — партнёры
+- `/studio` — встроенная Studio/CMS
+- `/api/leads` — API заявок
+- `/api/health` — health endpoint
 
-### Вариант 3: GitHub Codespaces
+## Данные и переменные окружения
 
-В репозитории подготовлен `.devcontainer/devcontainer.json`:
+Публичный контент может использовать статический fallback без базы. Запись CMS требует настроенного `DATABASE_URL`. Файловые загрузки зависят от Vercel Blob, Telegram-доставка — от конфигурации Telegram. Production-настройки и реальные webhook/DB-проверки следует подтверждать отдельно: успешная сборка сама по себе не доказывает работоспособность production-интеграций.
 
-- Node 24
-- автоматический `npm install`
-- порт 3000 пробрасывается автоматически
-- видимость порта по умолчанию приватная
-- изменения в `next dev` отображаются сразу после сохранения
+Studio auth временно отключена по текущему решению проекта. Перед production-запуском необходимо вернуть защиту через `ADMIN_PASSWORD` и проверить `STUDIO_AUTH_DISABLED`.
 
-Открывать Codespace можно прямо из GitHub для этого репозитория.
+## CI/CD
 
-### Почему здесь нет второго проекта
+- **CI** запускается на push/PR в `main`: TypeScript, production build и Playwright smoke tests.
+- **Preview** запускается вручную и создаёт artifact сборки.
+- **Visual preview** вручную снимает desktop/mobile screenshots и загружает artifact.
+- **Live Preview** запускается вручную через GitHub Actions. Это временный публичный dev-туннель, не production и не закрытая ссылка. Не вводите через него пароли, секреты и данные клиентов.
 
-Все три режима работают поверх текущего `malaya-Geodesia`. Отдельного фронтенда, отдельного API или отдельного репозитория не создаётся.
-
-<!-- deployment-heartbeat: 2026-09-23 -->
-## Документация
-
-Полная техническая документация проекта: [docs/PROJECT-DOCUMENTATION.md](docs/PROJECT-DOCUMENTATION.md)
+Подробная техническая документация: [docs/PROJECT-DOCUMENTATION.md](docs/PROJECT-DOCUMENTATION.md).  
+Текущий backend backlog: [docs/BACKLOG.md](docs/BACKLOG.md).

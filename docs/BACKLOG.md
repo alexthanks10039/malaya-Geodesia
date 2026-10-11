@@ -1,5 +1,20 @@
 # Малая геодезия — Backend Backlog
 
+## CI/tooling follow-up — 11.10.2026
+
+Changes are in `chore/ci-stabilization-and-tooling`; treat as complete only after CI passes and the pull request is merged.
+
+- JSX revision-history condition is explicitly narrowed before it is used in React rendering.
+- CI runs TypeScript, production build, and Playwright smoke tests for the core public routes.
+- Live Preview runs only by manual dispatch and is limited to 60 minutes. The Quick Tunnel remains public to anyone with the URL.
+- Dependabot is configured for weekly npm and GitHub Actions update PRs.
+- README, AGENTS.md, and deployment documentation are aligned with the current workflow behavior.
+- **Vercel cron mitigation (11.10.2026):** changed `/api/cron/telegram-retry` from every 5 minutes to daily at 09:00 UTC (`0 9 * * *`) to fit Vercel Hobby's daily Cron limit and unblock deployment. This is a compatibility workaround, not equivalent retry behavior: failed Telegram notifications can remain queued for up to roughly 24 hours. To restore fast retries, confirm the Vercel plan and either use a plan supporting five-minute cron or configure a separately secured external scheduler/queue. The current Vercel project scope still returns 403, so the next deployment must confirm whether the status turns green.
+- **Open:** generate and commit `package-lock.json` in a network-enabled environment; verify it; then switch CI to `npm ci` and cache against the lockfile. The current runner container could not resolve dependencies to generate it locally.
+- **Open:** restore/verify Vercel project scope, production env vars, production migrations, and real Telegram/Blob integration.
+- **Open:** enable branch protection and required CI checks if available in repository settings.
+
+
 Актуально на 23.09.2026.
 
 ## Статус проекта

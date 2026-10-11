@@ -1,7 +1,7 @@
 
 # Малая геодезия — полная техническая документация
 
-Дата актуализации: 23.09.2026  
+Дата актуализации: 11.10.2026  
 Репозиторий: alexthanks10039/malaya-Geodesia  
 Основная ветка: main  
 Тип продукта: многостраничный Next.js-сайт + интерактивный калькулятор + встроенный Studio/CMS.
@@ -862,39 +862,38 @@ CMS write operations без БД недоступны.
 
 ## 38. Deployment и CI
 
-CI:
-.github/workflows/ci.yml
+### CI
 
-Запускается на push и PR в main.
+Workflow: `.github/workflows/ci.yml`.
 
-Шаги:
-1. checkout
-2. Node 24
-3. npm install
-4. npm run lint
-5. npm run build
+Запускается на push и pull request в `main`. Имеет cancellation для устаревших запусков и ограничение времени.
 
-Preview:
-.github/workflows/preview.yml
+Проверки:
+1. Node.js 24;
+2. установка зависимостей через `npm install --no-audit --no-fund`;
+3. TypeScript check через `npm run lint`;
+4. production build через `npm run build`;
+5. Playwright Chromium;
+6. E2E smoke tests для главной, калькулятора, услуг, кейсов и справочника.
 
-Создаёт preview artifact.
+**Ограничение:** `package-lock.json` пока не хранится в репозитории. Пока lockfile не сгенерирован в сетевой среде, проверен и добавлен в Git, workflow обязан оставаться на `npm install`; переходить на `npm ci` без lockfile нельзя.
 
-Live Preview:
-.github/workflows/live-preview.yml
+### Preview workflows
 
-На push в main:
-1. запускает next dev;
-2. создаёт Cloudflare Quick Tunnel;
-3. публикует trycloudflare.com URL;
-4. проверяет публичный endpoint;
-5. держит preview в рамках workflow.
+- `.github/workflows/preview.yml`: ручной production-build artifact.
+- `.github/workflows/visual-preview.yml`: ручное создание desktop/mobile screenshot artifact.
+- `.github/workflows/live-preview.yml`: ручный запуск dev-сервера с Cloudflare Quick Tunnel, timeout 60 минут.
 
-Это dev-preview, не production.
+Live Preview — временный **публичный** URL: доступен всем, кто знает ссылку, и не предназначен для секретов, реальных клиентских данных или production-трафика. Он не запускается автоматически на push.
 
-Visual Preview:
-.github/workflows/visual-preview.yml
+### Production status
 
-Снимает desktop/mobile screenshots homepage, Studio и calculator.
+**Cron deployment mitigation:** `vercel.json` schedules `/api/cron/telegram-retry` daily at 09:00 UTC (`0 9 * * *`) to fit Vercel Hobby's daily Cron limit. This can delay failed Telegram notification retries for up to roughly 24 hours. To restore the previous five-minute retry cadence, confirm the Vercel plan or configure a secured external scheduler/queue. The linked Vercel project could not be inspected due to a scope 403; verify the next deployment's status.
+
+
+Зелёный CI не подтверждает наличие production secrets, доступ к Vercel, состояние production database, применение миграций, Telegram webhook/delivery или работу Vercel Blob. Эти интеграции проверяются отдельно после восстановления необходимых scopes и конфигурации.
+
+Studio auth временно отключена решением проекта; перед открытием production-трафика нужно вернуть её через `ADMIN_PASSWORD` и проверить `STUDIO_AUTH_DISABLED`.
 
 ## 39. Local / Codespaces
 
