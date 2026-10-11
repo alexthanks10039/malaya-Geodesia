@@ -888,7 +888,7 @@ Live Preview — временный **публичный** URL: доступен
 
 ### Production status
 
-**Cron deployment blocker to verify:** `vercel.json` configures `/api/cron/telegram-retry` on `*/5 * * * *`. The failing Vercel status target redirects to Cron Jobs usage/pricing documentation. On Vercel Hobby, intervals more frequent than once per day fail deployment; the actual project plan could not be confirmed because the connected Vercel scope returns 403. Do not change this cron to daily without redesigning retry delivery: it drains the Telegram notification outbox. Confirm the plan, then retain the five-minute cadence on an eligible plan or move retries to an external scheduler/queue.
+**Cron deployment mitigation:** `vercel.json` schedules `/api/cron/telegram-retry` daily at 09:00 UTC (`0 9 * * *`) to fit Vercel Hobby's daily Cron limit. This can delay failed Telegram notification retries for up to roughly 24 hours. To restore the previous five-minute retry cadence, confirm the Vercel plan or configure a secured external scheduler/queue. The linked Vercel project could not be inspected due to a scope 403; verify the next deployment's status.
 
 
 Зелёный CI не подтверждает наличие production secrets, доступ к Vercel, состояние production database, применение миграций, Telegram webhook/delivery или работу Vercel Blob. Эти интеграции проверяются отдельно после восстановления необходимых scopes и конфигурации.
