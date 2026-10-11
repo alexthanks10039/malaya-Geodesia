@@ -1,5 +1,19 @@
 # Малая геодезия — Backend Backlog
 
+## CI/tooling follow-up — 11.10.2026
+
+Changes are in `chore/ci-stabilization-and-tooling`; treat as complete only after CI passes and the pull request is merged.
+
+- JSX revision-history condition is explicitly narrowed before it is used in React rendering.
+- CI runs TypeScript, production build, and Playwright smoke tests for the core public routes.
+- Live Preview runs only by manual dispatch and is limited to 60 minutes. The Quick Tunnel remains public to anyone with the URL.
+- Dependabot is configured for weekly npm and GitHub Actions update PRs.
+- README, AGENTS.md, and deployment documentation are aligned with the current workflow behavior.
+- **Open:** generate and commit `package-lock.json` in a network-enabled environment; verify it; then switch CI to `npm ci` and cache against the lockfile. The current runner container could not resolve dependencies to generate it locally.
+- **Open:** restore/verify Vercel project scope, production env vars, production migrations, and real Telegram/Blob integration.
+- **Open:** enable branch protection and required CI checks if available in repository settings.
+
+
 Актуально на 23.09.2026.
 
 ## Статус проекта
