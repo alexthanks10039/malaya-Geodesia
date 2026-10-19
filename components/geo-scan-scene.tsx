@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { CircleDot, Layers3, Mountain, Pause, Play, RotateCcw } from "lucide-react";
+import { CircleDot, Layers3, Minus, Mountain, Pause, Play, Plus, RotateCcw } from "lucide-react";
 import * as THREE from "three";
 
 type TerrainSource = "dem" | "synthetic";
@@ -13,7 +13,7 @@ type TerrainSceneProps = {
   onSourceChange?: (source: TerrainSource) => void;
   onViewModeChange?: (mode: TerrainViewMode) => void;
 };
-type SceneControls = { play: () => void; stop: () => void; render: () => void };
+type SceneControls = { play: () => void; stop: () => void; render: () => void; zoomIn: () => void; zoomOut: () => void };
 
 const VIEW_MODES: { value: TerrainViewMode; label: string; title: string }[] = [
   { value: "surface", label: "SURFACE", title: "Рельеф без облака точек" },
@@ -343,7 +343,7 @@ export function GeoScanScene({
   const [isPlaying, setIsPlaying] = useState(true);
   const [viewMode, setViewMode] = useState<TerrainViewMode>("hybrid");
   const [resetVersion, setResetVersion] = useState(0);
-  const controlsRef = useRef<SceneControls>({ play: () => {}, stop: () => {}, render: () => {} });
+  const controlsRef = useRef<SceneControls>({ play: () => {}, stop: () => {}, render: () => {}, zoomIn: () => {}, zoomOut: () => {} });
   const runningRef = useRef(true);
   const viewModeRef = useRef<TerrainViewMode>("hybrid");
   const resetRef = useRef(0);
@@ -832,7 +832,7 @@ export function GeoScanScene({
     };
 
     const pointer = { x: 0, y: 0, targetX: 0, targetY: 0 };
-    const drag = { active: false, lastX: 0, lastY: 0, moved: false };
+    const drag = { active: false, lastX: 0, lastY: 0 };
     let rotationX = 0;
     let rotationY = 0;
     let zoom = 1;
@@ -945,12 +945,11 @@ export function GeoScanScene({
       raf = 0;
     };
     const renderCurrentFrame = () => renderScene(clock.getElapsedTime());
-    controlsRef.current = { play: startAnimation, stop: stopAnimation, render: renderCurrentFrame };
+    controlsRef.current = { play: startAnimation, stop: stopAnimation, render: renderCurrentFrame, zoomIn: () => {}, zoomOut: () => {} };
 
     const onPointerDown = (event: PointerEvent) => {
       if (event.pointerType === "mouse" && event.button !== 0) return;
       drag.active = true;
-      drag.moved = false;
       drag.lastX = event.clientX;
       drag.lastY = event.clientY;
       host.dataset.dragging = "true";
@@ -962,7 +961,6 @@ export function GeoScanScene({
         const dy = event.clientY - drag.lastY;
         drag.lastX = event.clientX;
         drag.lastY = event.clientY;
-        if (Math.abs(dx) + Math.abs(dy) > 1) drag.moved = true;
         rotationY = THREE.MathUtils.clamp(rotationY + dx * 0.006, -1.5, 1.5);
         rotationX = THREE.MathUtils.clamp(rotationX + dy * 0.0035, -0.3, 0.3);
         if (reducedMotion || !runningRef.current) renderScene(clock.getElapsedTime());
@@ -981,13 +979,18 @@ export function GeoScanScene({
       } catch {}
       if (reducedMotion || !runningRef.current) renderScene(clock.getElapsedTime());
     };
-    const onWheel = (event: WheelEvent) => {
-      event.preventDefault();
-      targetZoom = THREE.MathUtils.clamp(targetZoom + event.deltaY * 0.001, 0.72, 1.58);
+    const adjustZoom = (delta: number) => {
+      targetZoom = THREE.MathUtils.clamp(targetZoom + delta, 0.72, 1.58);
       if (reducedMotion || !runningRef.current) {
         zoom = targetZoom;
         renderScene(clock.getElapsedTime());
       }
+    };
+    controlsRef.current.zoomIn = () => adjustZoom(-0.14);
+    controlsRef.current.zoomOut = () => adjustZoom(0.14);
+    const onWheel = (event: WheelEvent) => {
+      event.preventDefault();
+      adjustZoom(event.deltaY * 0.001);
     };
     const onPointerLeave = () => {
       if (drag.active) return;
@@ -1060,7 +1063,7 @@ export function GeoScanScene({
       host.removeEventListener("pointerleave", onPointerLeave);
       host.removeEventListener("wheel", onWheel);
       document.removeEventListener("visibilitychange", onVisibilityChange);
-      controlsRef.current = { play: () => {}, stop: () => {}, render: () => {} };
+      controlsRef.current = { play: () => {}, stop: () => {}, render: () => {}, zoomIn: () => {}, zoomOut: () => {} };
 
       terrainGeometry.dispose();
       pointGeometry.dispose();
@@ -1108,6 +1111,25 @@ export function GeoScanScene({
             })}
           </div>
         ) : null}
+        <span className="geo-scene-tool-divider" aria-hidden="true" />
+        <button
+          type="button"
+          className="geo-scene-tool"
+          aria-label="Приблизить рельеф"
+          title="Приблизить"
+          onClick={() => controlsRef.current.zoomIn()}
+        >
+          <Plus size={14} />
+        </button>
+        <button
+          type="button"
+          className="geo-scene-tool"
+          aria-label="Отдалить рельеф"
+          title="Отдалить"
+          onClick={() => controlsRef.current.zoomOut()}
+        >
+          <Minus size={14} />
+        </button>
         <span className="geo-scene-tool-divider" aria-hidden="true" />
         <button
           type="button"
