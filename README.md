@@ -20,7 +20,7 @@ npm run dev
 
 ## Архитектура
 
-Контент пока находится в lib/data.ts, чтобы P0 запускался без внешней БД. prisma/schema.prisma готовит миграцию на PostgreSQL. Следующий этап: PostGIS, pgvector, карты, Three.js/R3F и AI search.
+Приложение разворачивается единым Next.js-проектом. Статические seed-данные для витрины находятся в lib/data.ts; редактируемый CMS, версии, журнал изменений, метаданные файлов, очередь Telegram и постоянный rate limit используют PostgreSQL через lib/db.ts и SQL-миграции из scripts/db-migrate.mjs. Без DATABASE_URL витрина может показывать seed-данные, но запись/публикация в Studio, долговременный журнал и файловый каталог работать не будут.
 
 ## Design
 
@@ -76,3 +76,25 @@ LIVE PREVIEW: https://....trycloudflare.com
 ## Документация
 
 Полная техническая документация проекта: [docs/PROJECT-DOCUMENTATION.md](docs/PROJECT-DOCUMENTATION.md)
+
+## Переменные окружения
+
+Настрой их в Vercel → Project → Settings → Environment Variables для Production и Preview:
+
+- DATABASE_URL — PostgreSQL connection string. Обязателен для CMS CRUD, публикаций, версий, аудита и устойчивой очереди уведомлений.
+- ADMIN_PASSWORD и ADMIN_SESSION_SECRET — вход в Studio; секрет сессии должен быть не короче 32 символов.
+- BLOB_READ_WRITE_TOKEN — загрузка файлов в Vercel Blob.
+- TG_KEY, OWNER_ID, TG_WEBHOOK_SECRET, CRON_SECRET — Telegram-уведомления, webhook и cron-повтор отправки.
+- DATABASE_SSL=false — только для локальной PostgreSQL без TLS.
+
+Полный шаблон находится в .env.example. Не коммить реальные секреты. STUDIO_AUTH_DISABLED действует только вне production.
+
+## Проверка перед релизом
+
+```bash
+npm install
+npm run lint
+npm run build
+```
+
+После деплоя проверь статус Vercel Ready, форму заявки, вход в Studio, создание/сохранение/публикацию черновика, загрузку файла и доставку Telegram. Успешная сборка сама по себе не подтверждает, что переменные окружения и внешние сервисы настроены.
