@@ -1,14 +1,25 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
+import { CircleDot, Layers3, Minus, Mountain, Pause, Play, Plus, RotateCcw } from "lucide-react";
 import * as THREE from "three";
 
 type TerrainSource = "dem" | "synthetic";
+export type TerrainViewMode = "surface" | "cloud" | "hybrid";
 type TerrainSceneProps = {
   variant?: "terrain" | "index";
   layers?: { points?: boolean; grid?: boolean; scan?: boolean };
+  focusIndex?: number;
   onSourceChange?: (source: TerrainSource) => void;
+  onViewModeChange?: (mode: TerrainViewMode) => void;
 };
+type SceneControls = { play: () => void; stop: () => void; render: () => void; zoomIn: () => void; zoomOut: () => void };
+
+const VIEW_MODES: { value: TerrainViewMode; label: string; title: string }[] = [
+  { value: "surface", label: "SURFACE", title: "Рельеф без облака точек" },
+  { value: "cloud", label: "POINTS", title: "Облако точек без поверхности" },
+  { value: "hybrid", label: "HYBRID", title: "Рельеф и облако точек" },
+];
 
 type ElevationRaster = {
   data: Float32Array;
@@ -324,9 +335,19 @@ function getBoundaryIndices(size: number) {
 export function GeoScanScene({
   variant = "terrain",
   layers,
+  focusIndex = 0,
   onSourceChange,
+  onViewModeChange,
 }: TerrainSceneProps) {
   const hostRef = useRef<HTMLDivElement>(null);
+  const [isPlaying, setIsPlaying] = useState(true);
+  const [viewMode, setViewMode] = useState<TerrainViewMode>("hybrid");
+  const [resetVersion, setResetVersion] = useState(0);
+  const controlsRef = useRef<SceneControls>({ play: () => {}, stop: () => {}, render: () => {}, zoomIn: () => {}, zoomOut: () => {} });
+  const runningRef = useRef(true);
+  const viewModeRef = useRef<TerrainViewMode>("hybrid");
+  const resetRef = useRef(0);
+  const focusIndexRef = useRef(focusIndex);
   const layersRef = useRef({
     points: layers?.points ?? true,
     grid: layers?.grid ?? true,
@@ -340,11 +361,34 @@ export function GeoScanScene({
       grid: layers?.grid ?? true,
       scan: layers?.scan ?? true,
     };
+    controlsRef.current.render();
   }, [layers?.points, layers?.grid, layers?.scan]);
 
   useEffect(() => {
     sourceChangeRef.current = onSourceChange;
   }, [onSourceChange]);
+
+  useEffect(() => {
+    runningRef.current = isPlaying;
+    if (isPlaying) controlsRef.current.play();
+    else controlsRef.current.stop();
+  }, [isPlaying]);
+
+  useEffect(() => {
+    viewModeRef.current = viewMode;
+    controlsRef.current.render();
+    onViewModeChange?.(viewMode);
+  }, [viewMode, onViewModeChange]);
+
+  useEffect(() => {
+    resetRef.current = resetVersion;
+    controlsRef.current.render();
+  }, [resetVersion]);
+
+  useEffect(() => {
+    focusIndexRef.current = THREE.MathUtils.clamp(Math.floor(focusIndex), 0, 4);
+    controlsRef.current.render();
+  }, [focusIndex]);
 
   useEffect(() => {
     const host = hostRef.current;
@@ -486,7 +530,7 @@ export function GeoScanScene({
         [0.79, 0.67],
       ];
       for (const [u, v] of markerLocations) {
-        const marker = new THREE.Mesh(markerGeometry, markerMaterial);
+        const marker = new THREE.Mesh(markerGeometry, markerMaterial.clone());
         marker.position.set(
           (u - 0.5) * WORLD_WIDTH,
           fieldSample(field, size, u, v) + 0.06,
@@ -504,6 +548,7 @@ export function GeoScanScene({
         );
         markersGroup.add(stem);
       }
+      markerMaterial.dispose();
     }
 
     const scanSegments = 120;
@@ -787,6 +832,12 @@ export function GeoScanScene({
     };
 
     const pointer = { x: 0, y: 0, targetX: 0, targetY: 0 };
+    const drag = { active: false, lastX: 0, lastY: 0 };
+    let rotationX = 0;
+    let rotationY = 0;
+    let zoom = 1;
+    let targetZoom = 1;
+    let appliedReset = resetRef.current;
     let raf = 0;
     let onScreen = true;
     let pageVisible = !document.hidden;
@@ -802,46 +853,90 @@ export function GeoScanScene({
     };
 
     const renderScene = (elapsed: number) => {
+      if (resetRef.current !== appliedReset) {
+        appliedReset = resetRef.current;
+        rotationX = 0;
+        rotationY = 0;
+        zoom = 1;
+        targetZoom = 1;
+        pointer.targetX = 0;
+        pointer.targetY = 0;
+      }
+
       pointer.x += (pointer.targetX - pointer.x) * 0.045;
       pointer.y += (pointer.targetY - pointer.y) * 0.045;
-      terrainGroup.rotation.y = (variant === "terrain" ? -0.08 : 0.02) + pointer.x * 0.085 + Math.sin(elapsed * 0.11) * 0.014;
-      terrainGroup.rotation.x = pointer.y * 0.022;
-      camera.position.x += (baseCamera.x + pointer.x * 0.38 - camera.position.x) * 0.035;
-      camera.position.y += (baseCamera.y - pointer.y * 0.19 - camera.position.y) * 0.035;
-      camera.position.z += (baseCamera.z + pointer.x * 0.12 - camera.position.z) * 0.035;
+      zoom += (targetZoom - zoom) * 0.12;
+
+      terrainGroup.rotation.y =
+        (variant === "terrain" ? -0.08 : 0.02) +
+        rotationY +
+        pointer.x * 0.085 +
+        (runningRef.current ? Math.sin(elapsed * 0.11) * 0.014 : 0);
+      terrainGroup.rotation.x = rotationX + pointer.y * 0.022;
+      camera.position.x += (baseCamera.x * zoom + pointer.x * 0.38 - camera.position.x) * 0.055;
+      camera.position.y += (baseCamera.y * zoom - pointer.y * 0.19 - camera.position.y) * 0.055;
+      camera.position.z += (baseCamera.z * zoom + pointer.x * 0.12 - camera.position.z) * 0.055;
       camera.lookAt(0, 0.16, 0);
-      pointMaterial.opacity = 0.69 + (Math.sin(elapsed * 0.74) + 1) * 0.035;
-      scanLineMaterial.opacity = 0.82 + Math.sin(elapsed * 2.6) * 0.12;
+      pointMaterial.opacity = viewModeRef.current === "cloud"
+        ? 0.92
+        : 0.69 + (runningRef.current ? (Math.sin(elapsed * 0.74) + 1) * 0.035 : 0);
+      pointMaterial.size = viewModeRef.current === "cloud"
+        ? (resolution < 110 ? 0.052 : 0.04)
+        : (resolution < 110 ? 0.037 : 0.029);
+      scanLineMaterial.opacity = 0.82 + (runningRef.current ? Math.sin(elapsed * 2.6) * 0.12 : 0);
+
       if (variant === "index") {
-        if (layersRef.current.scan) {
-          const scanPosition = (elapsed * 0.075) % 1;
-          updateScan(scanPosition);
+        if (layersRef.current.scan && runningRef.current) {
+          updateScan((elapsed * 0.075) % 1);
         }
         gridGroup.visible = layersRef.current.grid;
         contourGroup.visible = layersRef.current.grid;
         scanGroup.visible = layersRef.current.scan;
         markersGroup.visible = layersRef.current.points;
         pointCloud.visible = layersRef.current.points;
+
+        let markerIndex = 0;
+        for (const marker of markersGroup.children) {
+          if (marker instanceof THREE.Mesh) {
+            const focused = markerIndex === focusIndexRef.current;
+            const pulse = focused && runningRef.current ? (Math.sin(elapsed * 2.5) + 1) * 0.12 : 0;
+            marker.scale.setScalar(focused ? 1.38 + pulse : 1);
+            const material = marker.material;
+            if (material instanceof THREE.MeshBasicMaterial) {
+              material.color.set(focused ? "#efffb5" : "#d9ff52");
+            }
+            markerIndex += 1;
+          } else if (marker instanceof THREE.Line) {
+            const material = marker.material;
+            if (material instanceof THREE.LineBasicMaterial) {
+              material.opacity = markerIndex - 1 === focusIndexRef.current ? 0.98 : 0.56;
+            }
+          }
+        }
       } else {
-        // The hero remains a clean DTM surface and point cloud: no decorative scan or overlay layers.
+        // Keep the hero restrained: users choose surface, point cloud, or a hybrid DTM.
         gridGroup.visible = false;
         contourGroup.visible = false;
         scanGroup.visible = false;
         markersGroup.visible = false;
-        pointCloud.visible = true;
+        const mode = viewModeRef.current;
+        terrainSurface.visible = mode !== "cloud";
+        skirtMesh.visible = mode !== "cloud";
+        base.visible = mode !== "cloud";
+        pointCloud.visible = mode !== "surface";
       }
       renderer.render(scene, camera);
     };
 
     const animate = () => {
       raf = 0;
-      if (!onScreen || !pageVisible || reducedMotion) return;
+      if (!onScreen || !pageVisible || reducedMotion || !runningRef.current) return;
       renderScene(clock.getElapsedTime());
       raf = window.requestAnimationFrame(animate);
     };
 
     const startAnimation = () => {
-      if (!reducedMotion && onScreen && pageVisible && !raf) {
+      if (runningRef.current && !reducedMotion && onScreen && pageVisible && !raf) {
         raf = window.requestAnimationFrame(animate);
       }
     };
@@ -849,17 +944,59 @@ export function GeoScanScene({
       if (raf) window.cancelAnimationFrame(raf);
       raf = 0;
     };
+    const renderCurrentFrame = () => renderScene(clock.getElapsedTime());
+    controlsRef.current = { play: startAnimation, stop: stopAnimation, render: renderCurrentFrame, zoomIn: () => {}, zoomOut: () => {} };
 
+    const onPointerDown = (event: PointerEvent) => {
+      if (event.pointerType === "mouse" && event.button !== 0) return;
+      drag.active = true;
+      drag.lastX = event.clientX;
+      drag.lastY = event.clientY;
+      host.dataset.dragging = "true";
+      try { host.setPointerCapture(event.pointerId); } catch {}
+    };
     const onPointerMove = (event: PointerEvent) => {
+      if (drag.active) {
+        const dx = event.clientX - drag.lastX;
+        const dy = event.clientY - drag.lastY;
+        drag.lastX = event.clientX;
+        drag.lastY = event.clientY;
+        rotationY = THREE.MathUtils.clamp(rotationY + dx * 0.006, -1.5, 1.5);
+        rotationX = THREE.MathUtils.clamp(rotationX + dy * 0.0035, -0.3, 0.3);
+        if (reducedMotion || !runningRef.current) renderScene(clock.getElapsedTime());
+        return;
+      }
       const rect = host.getBoundingClientRect();
       pointer.targetX = THREE.MathUtils.clamp(((event.clientX - rect.left) / rect.width - 0.5) * 1.8, -0.9, 0.9);
       pointer.targetY = THREE.MathUtils.clamp(((event.clientY - rect.top) / rect.height - 0.5) * 1.25, -0.7, 0.7);
-      if (reducedMotion) renderScene(0);
+      if (reducedMotion || !runningRef.current) renderScene(clock.getElapsedTime());
+    };
+    const finishDrag = (event: PointerEvent) => {
+      drag.active = false;
+      delete host.dataset.dragging;
+      try {
+        if (host.hasPointerCapture(event.pointerId)) host.releasePointerCapture(event.pointerId);
+      } catch {}
+      if (reducedMotion || !runningRef.current) renderScene(clock.getElapsedTime());
+    };
+    const adjustZoom = (delta: number) => {
+      targetZoom = THREE.MathUtils.clamp(targetZoom + delta, 0.72, 1.58);
+      if (reducedMotion || !runningRef.current) {
+        zoom = targetZoom;
+        renderScene(clock.getElapsedTime());
+      }
+    };
+    controlsRef.current.zoomIn = () => adjustZoom(-0.14);
+    controlsRef.current.zoomOut = () => adjustZoom(0.14);
+    const onWheel = (event: WheelEvent) => {
+      event.preventDefault();
+      adjustZoom(event.deltaY * 0.001);
     };
     const onPointerLeave = () => {
+      if (drag.active) return;
       pointer.targetX = 0;
       pointer.targetY = 0;
-      if (reducedMotion) renderScene(0);
+      if (reducedMotion || !runningRef.current) renderScene(clock.getElapsedTime());
     };
     const onVisibilityChange = () => {
       pageVisible = !document.hidden;
@@ -879,8 +1016,12 @@ export function GeoScanScene({
       }
     }, { rootMargin: "120px 0px", threshold: 0.01 });
 
+    host.addEventListener("pointerdown", onPointerDown);
     host.addEventListener("pointermove", onPointerMove);
+    host.addEventListener("pointerup", finishDrag);
+    host.addEventListener("pointercancel", finishDrag);
     host.addEventListener("pointerleave", onPointerLeave);
+    host.addEventListener("wheel", onWheel, { passive: false });
     document.addEventListener("visibilitychange", onVisibilityChange);
     intersectionObserver.observe(host);
 
@@ -915,9 +1056,14 @@ export function GeoScanScene({
       stopAnimation();
       resizeObserver.disconnect();
       intersectionObserver.disconnect();
+      host.removeEventListener("pointerdown", onPointerDown);
       host.removeEventListener("pointermove", onPointerMove);
+      host.removeEventListener("pointerup", finishDrag);
+      host.removeEventListener("pointercancel", finishDrag);
       host.removeEventListener("pointerleave", onPointerLeave);
+      host.removeEventListener("wheel", onWheel);
       document.removeEventListener("visibilitychange", onVisibilityChange);
+      controlsRef.current = { play: () => {}, stop: () => {}, render: () => {}, zoomIn: () => {}, zoomOut: () => {} };
 
       terrainGeometry.dispose();
       pointGeometry.dispose();
@@ -936,7 +1082,81 @@ export function GeoScanScene({
     };
   }, [variant]);
 
-  return <div ref={hostRef} className="geo-scene" />;
+  return (
+    <div className={`geo-scene-shell geo-scene-shell--${variant}`}>
+      <div
+        ref={hostRef}
+        className="geo-scene"
+        aria-label="Интерактивная трёхмерная модель рельефа"
+      />
+      <div className="geo-scene-toolbar" role="group" aria-label="Управление 3D-сценой">
+        {variant === "terrain" ? (
+          <div className="geo-scene-modes" role="group" aria-label="Режим визуализации">
+            {VIEW_MODES.map((mode) => {
+              const active = viewMode === mode.value;
+              const Icon = mode.value === "surface" ? Mountain : mode.value === "cloud" ? CircleDot : Layers3;
+              return (
+                <button
+                  key={mode.value}
+                  type="button"
+                  className={active ? "geo-scene-mode is-active" : "geo-scene-mode"}
+                  aria-pressed={active}
+                  title={mode.title}
+                  onClick={() => setViewMode(mode.value)}
+                >
+                  <Icon size={12} aria-hidden="true" />
+                  <span>{mode.label}</span>
+                </button>
+              );
+            })}
+          </div>
+        ) : null}
+        <span className="geo-scene-tool-divider" aria-hidden="true" />
+        <button
+          type="button"
+          className="geo-scene-tool"
+          aria-label="Приблизить рельеф"
+          title="Приблизить"
+          onClick={() => controlsRef.current.zoomIn()}
+        >
+          <Plus size={14} />
+        </button>
+        <button
+          type="button"
+          className="geo-scene-tool"
+          aria-label="Отдалить рельеф"
+          title="Отдалить"
+          onClick={() => controlsRef.current.zoomOut()}
+        >
+          <Minus size={14} />
+        </button>
+        <span className="geo-scene-tool-divider" aria-hidden="true" />
+        <button
+          type="button"
+          className="geo-scene-tool"
+          aria-label={isPlaying ? "Приостановить анимацию" : "Продолжить анимацию"}
+          aria-pressed={isPlaying}
+          title={isPlaying ? "Пауза" : "Продолжить"}
+          onClick={() => setIsPlaying((value) => !value)}
+        >
+          {isPlaying ? <Pause size={14} /> : <Play size={14} />}
+        </button>
+        <button
+          type="button"
+          className="geo-scene-tool"
+          aria-label="Сбросить ракурс и масштаб"
+          title="Сбросить ракурс"
+          onClick={() => setResetVersion((value) => value + 1)}
+        >
+          <RotateCcw size={14} />
+        </button>
+      </div>
+      <div className="geo-scene-hint" aria-hidden="true">
+        <span className="geo-scene-hint-dot" />
+        DRAG TO ROTATE <span>·</span> SCROLL TO ZOOM
+      </div>
+    </div>
+  );
 }
 
 function markerMaterialCleanup(group: THREE.Group) {
