@@ -361,6 +361,7 @@ export function GeoScanScene({
       grid: layers?.grid ?? true,
       scan: layers?.scan ?? true,
     };
+    controlsRef.current.render();
   }, [layers?.points, layers?.grid, layers?.scan]);
 
   useEffect(() => {
@@ -983,7 +984,10 @@ export function GeoScanScene({
     const onWheel = (event: WheelEvent) => {
       event.preventDefault();
       targetZoom = THREE.MathUtils.clamp(targetZoom + event.deltaY * 0.001, 0.72, 1.58);
-      if (reducedMotion || !runningRef.current) renderScene(clock.getElapsedTime());
+      if (reducedMotion || !runningRef.current) {
+        zoom = targetZoom;
+        renderScene(clock.getElapsedTime());
+      }
     };
     const onPointerLeave = () => {
       if (drag.active) return;
@@ -1109,6 +1113,7 @@ export function GeoScanScene({
           type="button"
           className="geo-scene-tool"
           aria-label={isPlaying ? "Приостановить анимацию" : "Продолжить анимацию"}
+          aria-pressed={isPlaying}
           title={isPlaying ? "Пауза" : "Продолжить"}
           onClick={() => setIsPlaying((value) => !value)}
         >
