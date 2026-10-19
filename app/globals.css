@@ -311,7 +311,7 @@ button,input,select{font:inherit}
 .geo-scene-tool{width:30px;min-width:30px;padding:0;color:#dce9de}
 .geo-scene-tool:active,.geo-scene-mode:active{transform:scale(.96)}
 .geo-scene-tool-divider{width:1px;height:20px;margin:0 2px;background:rgba(177,205,199,.18)}
-.geo-scene-hint{position:absolute;z-index:10;right:17px;bottom:16px;display:flex;align-items:center;gap:7px;color:rgba(195,214,205,.72);font:800 8px ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:.075em;pointer-events:none;text-shadow:0 1px 5px rgba(0,0,0,.5)}
+.geo-scene-hint{position:absolute;z-index:10;left:50%;right:auto;bottom:16px;transform:translateX(-50%);display:flex;align-items:center;gap:7px;color:rgba(195,214,205,.72);font:800 8px ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:.075em;pointer-events:none;text-shadow:0 1px 5px rgba(0,0,0,.5)}
 .geo-scene-hint>span:not(.geo-scene-hint-dot){color:var(--acid);opacity:.8}
 .geo-scene-hint-dot{width:5px;height:5px;display:inline-block;border-radius:50%;background:var(--acid);box-shadow:0 0 9px rgba(217,255,82,.7)}
 .geo-scene-shell--index .geo-scene-toolbar{top:auto;right:14px;bottom:55px}
@@ -324,7 +324,7 @@ button,input,select{font:inherit}
   .geo-scene-mode{min-height:27px;padding:0 6px;font-size:7px;gap:4px}
   .geo-scene-tool{width:28px;min-width:28px;min-height:27px}
   .geo-scene-tool-divider{height:17px;margin:0 1px}
-  .geo-scene-hint{right:11px;bottom:47px;font-size:7px;gap:5px}
+  .geo-scene-hint{left:50%;right:auto;bottom:47px;font-size:7px;gap:5px}
   .geo-scene-shell--index .geo-scene-toolbar{top:auto;right:10px;bottom:57px}
 }
 @media(max-width:390px){
