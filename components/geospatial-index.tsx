@@ -77,7 +77,7 @@ export function GeospatialIndex({
           <span className="geo-index-status"><i /> DEMO INDEX</span>
         </div>
 
-        <h2>Участок читается как массив пространственных данных.</h2>
+        <h2>{title}</h2>
         <p className="geo-index-lead">{lead}</p>
 
         <div className="geo-index-controls">
