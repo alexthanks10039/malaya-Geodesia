@@ -167,7 +167,7 @@ export function GeospatialIndex({
       </div>
 
       <div className="geo-index-visual">
-        <GeoScanScene variant="index" layers={layers} onSourceChange={onTerrainSourceChange} />
+        <GeoScanScene variant="index" layers={layers} focusIndex={Math.max(0, records.findIndex((item) => item.id === selected.id))} onSourceChange={onTerrainSourceChange} />
         <div className="photo-hud photo-hud-top">
           <span><i /> TIAN SHAN / RELIEF MODEL</span>
           <b>{sourceLabel}</b>
