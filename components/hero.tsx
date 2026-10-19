@@ -1,5 +1,7 @@
 "use client";
+
 import Link from "next/link";
+import { useCallback, useState } from "react";
 import { motion } from "motion/react";
 import { ArrowRight, ArrowDownRight, Crosshair, ScanLine } from "lucide-react";
 import { GeoScanScene } from "@/components/geo-scan-scene";
@@ -15,6 +17,8 @@ export type HeroProps = {
   secondaryHref?: string;
 };
 
+type TerrainSource = "loading" | "dem" | "synthetic";
+
 export function Hero({
   eyebrow = "GEOSPATIAL / ENGINEERING / 2026",
   title = "Точная геодезия",
@@ -25,27 +29,38 @@ export function Hero({
   secondaryLabel = "Все услуги",
   secondaryHref = "/services",
 }: HeroProps = {}) {
+  const [terrainSource, setTerrainSource] = useState<TerrainSource>("loading");
+  const onTerrainSourceChange = useCallback((source: "dem" | "synthetic") => {
+    setTerrainSource(source);
+  }, []);
+
+  const sourceLabel = terrainSource === "dem"
+    ? "OPEN ELEVATION / DTM"
+    : terrainSource === "synthetic"
+      ? "PROCEDURAL SIMULATION"
+      : "LOADING ELEVATION DATA";
+
   return (
     <section className="hero">
       <div className="hero-copy">
-        <motion.p className="eyebrow" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: .5 }}>
+        <motion.p className="eyebrow" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: .45 }}>
           {eyebrow}
         </motion.p>
         <motion.h1
-          initial={{ opacity: 0, y: 34, filter: "blur(10px)" }}
+          initial={{ opacity: 0, y: 22, filter: "blur(6px)" }}
           animate={{ opacity: 1, y: 0, filter: "blur(0px)" }}
-          transition={{ duration: .85, ease: [0.22, 1, .36, 1], delay: .06 }}
+          transition={{ duration: .72, ease: [0.22, 1, .36, 1], delay: .05 }}
         >
           {title}<br /><span>{accentTitle}</span>
         </motion.h1>
-        <motion.p className="hero-lead" initial={{ opacity: 0, y: 18 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: .65, delay: .18 }}>
+        <motion.p className="hero-lead" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: .58, delay: .15 }}>
           {lead}
         </motion.p>
-        <motion.div className="hero-actions" initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: .6, delay: .28 }}>
+        <motion.div className="hero-actions" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: .52, delay: .24 }}>
           <Link className="button button-dark" href={primaryHref}>{primaryLabel} <ArrowRight size={18} /></Link>
           <Link className="button button-ghost" href={secondaryHref}>{secondaryLabel} <ArrowDownRight size={18} /></Link>
         </motion.div>
-        <motion.div className="hero-meta" initial={{ opacity: 0, y: 18 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: .7, delay: .4 }} aria-label="Ключевые характеристики">
+        <motion.div className="hero-meta" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: .58, delay: .34 }} aria-label="Ключевые характеристики">
           <div><strong>GNSS · RTK</strong><span>Координаты и высотная привязка</span></div>
           <div><strong>LiDAR · 3D</strong><span>Объекты, рельеф и point cloud</span></div>
           <div><strong>DWG · E57</strong><span>Данные в рабочем формате</span></div>
@@ -54,36 +69,35 @@ export function Hero({
 
       <div className="hero-visual">
         <div className="geo-scene-frame">
-          <GeoScanScene />
+          <GeoScanScene onSourceChange={onTerrainSourceChange} />
           <div className="geo-vignette" />
-          <div className="geo-grid-overlay" />
           <div className="geo-crosshair"><span /><span /></div>
 
-          <motion.div className="geo-hud hud-top" initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: .7 }}>
-            <span><i className="status-dot" /> FIELD / ALMATY</span>
-            <b>SIMULATION 04</b>
+          <motion.div className="geo-hud hud-top" initial={{ opacity: 0, y: -6 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: .55 }}>
+            <span><i className="status-dot" /> TIAN SHAN / ALMATY REGION</span>
+            <b>{terrainSource === "dem" ? "OPEN DEM" : terrainSource === "synthetic" ? "SIMULATION" : "LOADING DEM"}</b>
           </motion.div>
 
-          <motion.div className="geo-hud hud-left" initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: .82 }}>
-            <span>POINT CLOUD</span>
-            <strong>1.84M</strong>
-            <small>POINTS</small>
+          <motion.div className="geo-hud hud-left" initial={{ opacity: 0, x: -7 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: .68 }}>
+            <span>TERRAIN MODEL</span>
+            <strong>DTM / 3D</strong>
+            <small>{terrainSource === "dem" ? "OPEN ELEVATION GRID" : "SHADED RELIEF PREVIEW"}</small>
           </motion.div>
 
-          <motion.div className="geo-hud hud-right" initial={{ opacity: 0, x: 10 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: .92 }}>
-            <span>RMSE</span>
-            <strong>0.018 m</strong>
-            <small>QUALITY CHECK</small>
+          <motion.div className="geo-hud hud-right" initial={{ opacity: 0, x: 7 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: .76 }}>
+            <span>RENDER MODE</span>
+            <strong>HILLSHADE</strong>
+            <small>HEIGHT + SURFACE NORMALS</small>
           </motion.div>
 
-          <motion.div className="geo-chip chip-bottom-left" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 1 }}>
+          <motion.div className="geo-chip chip-bottom-left" initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: .84 }}>
             <Crosshair size={13} />
-            <span>43.2382° N / 76.9456° E</span>
+            <span>43.10° N / 77.00° E</span>
           </motion.div>
 
-          <motion.div className="geo-chip chip-bottom-right" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 1.08 }}>
+          <motion.div className="geo-chip chip-bottom-right" title={sourceLabel} initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: .9 }}>
             <ScanLine size={13} />
-            <span>SCAN 09:42:18</span>
+            <span>{terrainSource === "dem" ? "OPEN DEM / Z13" : terrainSource === "synthetic" ? "FALLBACK / SIM" : "DETECTING SOURCE"}</span>
           </motion.div>
         </div>
       </div>
