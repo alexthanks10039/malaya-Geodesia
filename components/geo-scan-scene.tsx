@@ -449,6 +449,7 @@ export function GeoScanScene({
     pointGeometry.setAttribute("position", new THREE.BufferAttribute(new Float32Array(vertexCount * 3), 3));
     pointGeometry.setAttribute("color", new THREE.BufferAttribute(new Float32Array(vertexCount * 3), 3));
     const pointCloud = new THREE.Points(pointGeometry, pointMaterial);
+    pointCloud.position.y = 0.018;
     pointCloud.frustumCulled = false;
     terrainGroup.add(pointCloud);
 
@@ -888,7 +889,8 @@ export function GeoScanScene({
     startAnimation();
 
     void getOpenElevation().then((raster) => {
-      if (!raster || !host.isConnected) {
+      if (!host.isConnected) return;
+      if (!raster) {
         sourceChangeRef.current?.("synthetic");
         return;
       }
