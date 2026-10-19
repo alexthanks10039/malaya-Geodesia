@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useCallback, useState } from "react";
 import { motion } from "motion/react";
 import { ArrowRight, ArrowDownRight, Crosshair, ScanLine } from "lucide-react";
-import { GeoScanScene } from "@/components/geo-scan-scene";
+import { GeoScanScene, type TerrainViewMode } from "@/components/geo-scan-scene";
 
 export type HeroProps = {
   eyebrow?: string;
@@ -30,6 +30,7 @@ export function Hero({
   secondaryHref = "/services",
 }: HeroProps = {}) {
   const [terrainSource, setTerrainSource] = useState<TerrainSource>("loading");
+  const [viewMode, setViewMode] = useState<TerrainViewMode>("hybrid");
   const onTerrainSourceChange = useCallback((source: "dem" | "synthetic") => {
     setTerrainSource(source);
   }, []);
@@ -69,7 +70,7 @@ export function Hero({
 
       <div className="hero-visual">
         <div className="geo-scene-frame">
-          <GeoScanScene onSourceChange={onTerrainSourceChange} />
+          <GeoScanScene onSourceChange={onTerrainSourceChange} onViewModeChange={setViewMode} />
           <div className="geo-vignette" />
           <div className="geo-crosshair"><span /><span /></div>
 
@@ -86,8 +87,8 @@ export function Hero({
 
           <motion.div className="geo-hud hud-right" initial={{ opacity: 0, x: 7 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: .76 }}>
             <span>RENDER MODE</span>
-            <strong>HILLSHADE</strong>
-            <small>HEIGHT + SURFACE NORMALS</small>
+            <strong>{viewMode === "surface" ? "HILLSHADE" : viewMode === "cloud" ? "POINT CLOUD" : "HYBRID DTM"}</strong>
+            <small>{viewMode === "surface" ? "HEIGHT + SURFACE NORMALS" : viewMode === "cloud" ? "ELEVATION SAMPLE CLOUD" : "SURFACE + POINT RETURNS"}</small>
           </motion.div>
 
           <motion.div className="geo-chip chip-bottom-left" initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: .84 }}>
