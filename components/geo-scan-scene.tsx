@@ -740,7 +740,7 @@ export function GeoScanScene({
       skirtPosition.needsUpdate = true;
       skirtGeometry.computeVertexNormals();
       skirtGeometry.computeBoundingSphere();
-      buildOverlays();
+      if (variant === "index") buildOverlays();
 
       for (const marker of markersGroup.children) {
         if (marker instanceof THREE.Mesh) {
@@ -812,8 +812,10 @@ export function GeoScanScene({
       pointMaterial.opacity = 0.69 + (Math.sin(elapsed * 0.74) + 1) * 0.035;
       scanLineMaterial.opacity = 0.82 + Math.sin(elapsed * 2.6) * 0.12;
       if (variant === "index") {
-        const scanPosition = (elapsed * 0.075) % 1;
-        updateScan(scanPosition);
+        if (layersRef.current.scan) {
+          const scanPosition = (elapsed * 0.075) % 1;
+          updateScan(scanPosition);
+        }
         gridGroup.visible = layersRef.current.grid;
         contourGroup.visible = layersRef.current.grid;
         scanGroup.visible = layersRef.current.scan;
