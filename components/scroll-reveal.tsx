@@ -74,14 +74,18 @@ export function StaggerItem({
     <motion.div
       className={className}
       variants={{
-        hidden: reduceMotion ? {} : { opacity: 0, y: 14, scale: 0.99 },
+        hidden: reduceMotion ? {} : { opacity: 0, y: 18, scale: 0.985, filter: "blur(3px)" },
         show: {
           opacity: 1,
           y: 0,
           scale: 1,
-          transition: reduceMotion ? { duration: 0 } : { duration: 0.5, ease: EASE },
+          filter: "blur(0px)",
+          transition: reduceMotion ? { duration: 0 } : { duration: 0.56, ease: EASE },
         },
       }}
+      whileHover={reduceMotion ? undefined : { y: -4, transition: { duration: 0.2, ease: EASE } }}
+      whileTap={reduceMotion ? undefined : { scale: 0.99 }}
+      style={{ transformOrigin: "center" }}
     >
       {children}
     </motion.div>
