@@ -1,25 +1,30 @@
 "use client";
-import { motion } from "motion/react";
+
+import { motion, useReducedMotion } from "motion/react";
 import type { ReactNode } from "react";
+
+const EASE = [0.22, 1, 0.36, 1] as const;
 
 export function Reveal({
   children,
   className = "",
   delay = 0,
-  distance = 28,
+  distance = 18,
 }: {
   children: ReactNode;
   className?: string;
   delay?: number;
   distance?: number;
 }) {
+  const reduceMotion = useReducedMotion();
+
   return (
     <motion.div
       className={className}
-      initial={{ opacity: 0, y: distance, filter: "blur(8px)" }}
+      initial={reduceMotion ? false : { opacity: 0, y: distance, filter: "blur(4px)" }}
       whileInView={{ opacity: 1, y: 0, filter: "blur(0px)" }}
-      viewport={{ once: true, amount: 0.18 }}
-      transition={{ duration: 0.72, delay, ease: [0.22, 1, 0.36, 1] }}
+      viewport={{ once: true, amount: 0.14 }}
+      transition={reduceMotion ? { duration: 0 } : { duration: 0.68, delay, ease: EASE }}
     >
       {children}
     </motion.div>
@@ -33,15 +38,22 @@ export function Stagger({
   children: ReactNode;
   className?: string;
 }) {
+  const reduceMotion = useReducedMotion();
+
   return (
     <motion.div
       className={className}
-      initial="hidden"
+      initial={reduceMotion ? false : "hidden"}
       whileInView="show"
-      viewport={{ once: true, amount: 0.12 }}
+      viewport={{ once: true, amount: 0.1 }}
       variants={{
         hidden: {},
-        show: { transition: { staggerChildren: 0.08 } },
+        show: {
+          transition: {
+            staggerChildren: reduceMotion ? 0 : 0.055,
+            delayChildren: reduceMotion ? 0 : 0.02,
+          },
+        },
       }}
     >
       {children}
@@ -56,15 +68,18 @@ export function StaggerItem({
   children: ReactNode;
   className?: string;
 }) {
+  const reduceMotion = useReducedMotion();
+
   return (
     <motion.div
       className={className}
       variants={{
-        hidden: { opacity: 0, y: 22 },
+        hidden: reduceMotion ? {} : { opacity: 0, y: 14, scale: 0.99 },
         show: {
           opacity: 1,
           y: 0,
-          transition: { duration: 0.62, ease: [0.22, 1, 0.36, 1] },
+          scale: 1,
+          transition: reduceMotion ? { duration: 0 } : { duration: 0.5, ease: EASE },
         },
       }}
     >
