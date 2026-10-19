@@ -401,11 +401,15 @@
 .geo-index-actions{display:flex;align-items:center;gap:15px;flex-wrap:wrap;margin-top:18px}
 .geo-index-actions .button{min-height:42px;padding:11px 14px}
 .geo-index-actions .text-link{color:#a0aba2;font-size:11px}
-.geo-index-visual{position:relative;min-height:650px;overflow:hidden;background:radial-gradient(circle at 52% 48%,#1b281e,#080c09 75%)}
+.geo-index-visual{position:relative;min-height:650px;overflow:hidden;background:radial-gradient(ellipse at 52% 42%,#173039 0%,#0b1a20 52%,#061014 100%);isolation:isolate}
 .geo-index-visual .geo-scene{position:absolute;inset:0}
+.geo-index-visual .geo-scene canvas{display:block;width:100%;height:100%}
 .geo-index-visual .photo-hud{z-index:5}
-.geo-index-axis{position:absolute;z-index:5;right:20px;top:57px;color:#69776d;font:700 8px ui-monospace,monospace;letter-spacing:.06em}
-.geo-index-visual:after{content:"";position:absolute;inset:0;pointer-events:none;background:linear-gradient(90deg,rgba(8,12,9,.08),transparent 34%),radial-gradient(circle at 50% 50%,transparent 38%,rgba(4,7,5,.38) 100%)}
+.geo-index-visual .photo-hud-top{display:flex;justify-content:space-between;align-items:center;gap:12px}
+.geo-index-visual .photo-hud-top span{min-width:0}
+.geo-index-visual .photo-hud-top b{float:none;flex:none;max-width:48%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;text-align:right}
+.geo-index-axis{position:absolute;z-index:5;right:20px;top:57px;color:#8ba09c;font:700 8px ui-monospace,monospace;letter-spacing:.06em}
+.geo-index-visual:after{content:"";position:absolute;inset:0;pointer-events:none;background:linear-gradient(180deg,rgba(5,12,16,.06),transparent 22%,transparent 78%,rgba(5,12,16,.12)),radial-gradient(ellipse at 50% 50%,transparent 42%,rgba(4,9,12,.44) 100%)}
 
 @media(max-width:850px){
   .geo-index{grid-template-columns:1fr;min-height:auto}
@@ -425,10 +429,12 @@
   .geo-record-list{max-height:160px}
   .geo-index-actions{align-items:stretch}
   .geo-index-actions .button,.geo-index-actions .text-link{width:100%;justify-content:center}
-  .geo-index-visual{min-height:350px}
-  .geo-index-axis{top:48px;right:12px;font-size:7px}
+  .geo-index-visual{min-height:390px}
+  .geo-index-axis{top:48px;right:12px;font-size:7px;max-width:64%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
   .photo-hud-top{left:14px;right:14px;top:14px}
   .photo-hud-bottom{left:14px;right:14px;bottom:14px}
+  .geo-index-visual .photo-hud-top span{font-size:8px}
+  .geo-index-visual .photo-hud-top b{font-size:8px}
 }
 
 
