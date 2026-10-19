@@ -120,20 +120,28 @@ function loadTile(x: number, y: number) {
       "https://s3.amazonaws.com/elevation-tiles-prod/terrarium/" + TILE_ZOOM + "/" + x + "/" + y + ".png",
     ];
     let attempt = 0;
+    let settled = false;
     const timeout = window.setTimeout(() => {
-      image.src = "";
+      if (settled) return;
+      settled = true;
+      image.onload = null;
+      image.onerror = null;
       reject(new Error("Elevation tile request timed out"));
     }, 6500);
 
     image.onload = () => {
+      if (settled) return;
+      settled = true;
       window.clearTimeout(timeout);
       resolve(image);
     };
     image.onerror = () => {
+      if (settled) return;
       attempt += 1;
       if (attempt < urls.length) {
         image.src = urls[attempt];
       } else {
+        settled = true;
         window.clearTimeout(timeout);
         reject(new Error("Elevation tile could not be loaded"));
       }
@@ -437,7 +445,10 @@ export function GeoScanScene({
       sizeAttenuation: true,
       blending: THREE.NormalBlending,
     });
-    const pointCloud = new THREE.Points(terrainGeometry, pointMaterial);
+    const pointGeometry = new THREE.BufferGeometry();
+    pointGeometry.setAttribute("position", new THREE.BufferAttribute(new Float32Array(vertexCount * 3), 3));
+    pointGeometry.setAttribute("color", new THREE.BufferAttribute(new Float32Array(vertexCount * 3), 3));
+    const pointCloud = new THREE.Points(pointGeometry, pointMaterial);
     pointCloud.frustumCulled = false;
     terrainGroup.add(pointCloud);
 
@@ -595,45 +606,43 @@ export function GeoScanScene({
       for (let levelIndex = 0; levelIndex < levels.length; levelIndex += 1) {
         const level = levels[levelIndex];
         const linePositions: number[] = [];
+
+        const addCrossing = (hits: number[], from: number, to: number) => {
+          const h0 = field[from];
+          const h1 = field[to];
+          if (!((h0 < level && h1 >= level) || (h1 < level && h0 >= level))) return;
+          const t = (level - h0) / (h1 - h0);
+          const x0 = from % size;
+          const z0 = Math.floor(from / size);
+          const x1 = to % size;
+          const z1 = Math.floor(to / size);
+          hits.push(
+            THREE.MathUtils.lerp(x0, x1, t) / (size - 1) * WORLD_WIDTH - WORLD_WIDTH / 2,
+            level + 0.025,
+            THREE.MathUtils.lerp(z0, z1, t) / (size - 1) * WORLD_DEPTH - WORLD_DEPTH / 2
+          );
+        };
+
         for (let z = 0; z < size - 1; z += 1) {
           for (let x = 0; x < size - 1; x += 1) {
             const a = z * size + x;
             const b = a + 1;
             const c = a + size;
             const d = c + 1;
-            const triangles = [
-              [a, c, b],
-              [b, c, d],
-            ];
-            for (const triangle of triangles) {
-              const hits: THREE.Vector3[] = [];
-              for (let edge = 0; edge < 3; edge += 1) {
-                const from = triangle[edge];
-                const to = triangle[(edge + 1) % 3];
-                const h0 = field[from];
-                const h1 = field[to];
-                if ((h0 < level && h1 >= level) || (h1 < level && h0 >= level)) {
-                  const t = (level - h0) / (h1 - h0);
-                  const x0 = from % size;
-                  const z0 = Math.floor(from / size);
-                  const x1 = to % size;
-                  const z1 = Math.floor(to / size);
-                  hits.push(new THREE.Vector3(
-                    THREE.MathUtils.lerp(x0, x1, t) / (size - 1) * WORLD_WIDTH - WORLD_WIDTH / 2,
-                    level + 0.025,
-                    THREE.MathUtils.lerp(z0, z1, t) / (size - 1) * WORLD_DEPTH - WORLD_DEPTH / 2
-                  ));
-                }
-              }
-              if (hits.length >= 2) {
-                linePositions.push(
-                  hits[0].x, hits[0].y, hits[0].z,
-                  hits[1].x, hits[1].y, hits[1].z
-                );
-              }
+            const hits: number[] = [];
+            addCrossing(hits, a, b);
+            addCrossing(hits, b, d);
+            addCrossing(hits, d, c);
+            addCrossing(hits, c, a);
+            if (hits.length >= 6) {
+              linePositions.push(hits[0], hits[1], hits[2], hits[3], hits[4], hits[5]);
+            }
+            if (hits.length >= 12) {
+              linePositions.push(hits[6], hits[7], hits[8], hits[9], hits[10], hits[11]);
             }
           }
         }
+
         const contourGeometry = new THREE.BufferGeometry();
         contourGeometry.setAttribute(
           "position",
@@ -698,6 +707,13 @@ export function GeoScanScene({
         colors.setXYZ(index, color.r, color.g, color.b);
       }
       colors.needsUpdate = true;
+      const pointPositions = pointGeometry.getAttribute("position") as THREE.BufferAttribute;
+      const pointColors = pointGeometry.getAttribute("color") as THREE.BufferAttribute;
+      pointPositions.copyArray(positions.array as Float32Array);
+      pointPositions.needsUpdate = true;
+      pointColors.copyArray(colors.array as Float32Array);
+      pointColors.needsUpdate = true;
+      pointGeometry.computeBoundingSphere();
       terrainGeometry.computeBoundingSphere();
 
       let cursor = 0;
@@ -767,7 +783,6 @@ export function GeoScanScene({
       }
       (bandGeometry.getAttribute("position") as THREE.BufferAttribute).needsUpdate = true;
       (scanLineGeometry.getAttribute("position") as THREE.BufferAttribute).needsUpdate = true;
-      bandGeometry.computeVertexNormals();
     };
 
     const pointer = { x: 0, y: 0, targetX: 0, targetY: 0 };
@@ -901,6 +916,7 @@ export function GeoScanScene({
       document.removeEventListener("visibilitychange", onVisibilityChange);
 
       terrainGeometry.dispose();
+      pointGeometry.dispose();
       terrainMaterial.dispose();
       pointMaterial.dispose();
       skirtGeometry.dispose();
