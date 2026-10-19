@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { ArrowRight, Crosshair, Database, Grid3X3, Layers3, Search, ScanLine, X } from "lucide-react";
-import { useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { GeoScanScene } from "@/components/geo-scan-scene";
 
 type GeoRecord = {
@@ -29,9 +29,11 @@ const filters = [
   { key: "scan", label: "SCAN", icon: ScanLine },
 ] as const;
 
+type TerrainSource = "loading" | "dem" | "synthetic";
+
 export function GeospatialIndex({
   title = "Участок читается как массив пространственных данных.",
-  lead = "Здесь можно быстро переключать слои, искать набор данных и выбирать объект. Архитектура блока уже готова к подключению реального каталога PostGIS.",
+  lead = "Переключайте слои рельефа, просматривайте демонстрационные наборы и выбирайте объект. Текущая поверхность показывает открытые высотные данные района Тянь-Шаня, если источник доступен.",
 }: {
   title?: string;
   lead?: string;
@@ -39,6 +41,10 @@ export function GeospatialIndex({
   const [query, setQuery] = useState("");
   const [selectedId, setSelectedId] = useState(records[0].id);
   const [layers, setLayers] = useState({ points: true, grid: true, scan: true });
+  const [terrainSource, setTerrainSource] = useState<TerrainSource>("loading");
+  const onTerrainSourceChange = useCallback((source: "dem" | "synthetic") => {
+    setTerrainSource(source);
+  }, []);
 
   const result = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -57,6 +63,12 @@ export function GeospatialIndex({
     setQuery("");
   };
 
+  const sourceLabel = terrainSource === "dem"
+    ? "OPEN DEM"
+    : terrainSource === "synthetic"
+      ? "SIMULATION"
+      : "LOADING";
+
   return (
     <div className="geo-index">
       <div className="geo-index-copy">
@@ -66,9 +78,7 @@ export function GeospatialIndex({
         </div>
 
         <h2>Участок читается как массив пространственных данных.</h2>
-        <p className="geo-index-lead">
-          {lead}
-        </p>
+        <p className="geo-index-lead">{lead}</p>
 
         <div className="geo-index-controls">
           <label className="geo-index-search">
@@ -140,7 +150,7 @@ export function GeospatialIndex({
         <div className="geo-selected">
           <div className="geo-selected-top">
             <span>SELECTED / {selected.id}</span>
-            <span className="geo-quality"><i /> QA {selected.coverage}</span>
+            <span className="geo-quality"><i /> SAMPLE {selected.coverage}</span>
           </div>
           <strong>{selected.name}</strong>
           <p>{selected.note}</p>
@@ -157,16 +167,16 @@ export function GeospatialIndex({
       </div>
 
       <div className="geo-index-visual">
-        <GeoScanScene variant="index" layers={layers} />
+        <GeoScanScene variant="index" layers={layers} onSourceChange={onTerrainSourceChange} />
         <div className="photo-hud photo-hud-top">
-          <span><i /> DATA INDEX / {selected.type}</span>
-          <b>LIVE</b>
+          <span><i /> TIAN SHAN / RELIEF MODEL</span>
+          <b>{sourceLabel}</b>
         </div>
         <div className="geo-index-axis">{selected.coordinates} · Z {selected.elevation}</div>
         <div className="photo-hud photo-hud-bottom">
-          <span>SPATIAL INDEX</span>
-          <strong>{selected.points}</strong>
-          <small>XYZ / {selected.coverage} COVERAGE</small>
+          <span>ACTIVE LAYERS</span>
+          <strong>{[layers.points, layers.grid, layers.scan].filter(Boolean).length}/3</strong>
+          <small>POINT CLOUD / CONTOURS / SCAN</small>
         </div>
       </div>
     </div>
