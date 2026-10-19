@@ -3,212 +3,793 @@
 import { useEffect, useRef } from "react";
 import * as THREE from "three";
 
+type TerrainSource = "dem" | "synthetic";
+type TerrainSceneProps = {
+  variant?: "terrain" | "index";
+  layers?: { points?: boolean; grid?: boolean; scan?: boolean };
+  onSourceChange?: (source: TerrainSource) => void;
+};
+
+type ElevationRaster = {
+  data: Float32Array;
+  width: number;
+  height: number;
+};
+
+const TILE_ZOOM = 13;
+const TILE_SIZE = 256;
+const TILE_COUNT = 4;
+const WORLD_WIDTH = 10.4;
+const WORLD_DEPTH = 10.4;
+const BASE_HEIGHT = -1.06;
+const NOISE_SEED = 8719;
+let elevationPromise: Promise<ElevationRaster | null> | null = null;
+
 function seeded(seed: number) {
-  const x = Math.sin(seed * 12.9898) * 43758.5453;
-  return x - Math.floor(x);
+  const value = Math.sin(seed * 12.9898) * 43758.5453;
+  return value - Math.floor(value);
 }
 
-// LEGACY CODE: terrain hero animation (Animation 1).
-// Kept intentionally as a point-only DTM-style visualization. Do not extend
-// this legacy scene with decorative grid/contour/scan layers.
-export function GeoScanScene({ variant = "terrain", layers }: { variant?: "terrain" | "index"; layers?: { points?: boolean; grid?: boolean; scan?: boolean } }) {
+function hash2(x: number, z: number) {
+  return seeded(x * 374761393 + z * 668265263 + NOISE_SEED);
+}
+
+function smooth(value: number) {
+  return value * value * (3 - 2 * value);
+}
+
+function valueNoise(x: number, z: number) {
+  const x0 = Math.floor(x);
+  const z0 = Math.floor(z);
+  const tx = smooth(x - x0);
+  const tz = smooth(z - z0);
+  const a = THREE.MathUtils.lerp(hash2(x0, z0), hash2(x0 + 1, z0), tx);
+  const b = THREE.MathUtils.lerp(hash2(x0, z0 + 1), hash2(x0 + 1, z0 + 1), tx);
+  return THREE.MathUtils.lerp(a, b, tz) * 2 - 1;
+}
+
+function fbm(x: number, z: number) {
+  let value = 0;
+  let amplitude = 0.52;
+  let total = 0;
+  let frequency = 1;
+  for (let octave = 0; octave < 5; octave += 1) {
+    value += valueNoise(x * frequency, z * frequency) * amplitude;
+    total += amplitude;
+    frequency *= 2.03;
+    amplitude *= 0.49;
+  }
+  return value / total;
+}
+
+function syntheticElevation(u: number, v: number) {
+  const x = (u - 0.5) * 2;
+  const z = (v - 0.5) * 2;
+  const spine = 0.13 * Math.sin(x * 3.8) + 0.12 * x - 0.03;
+  const primaryRidge = Math.exp(-Math.pow(z - spine, 2) * 24);
+  const secondaryRidge = Math.exp(-Math.pow(z - spine - 0.34, 2) * 38) * 0.48;
+  const foothill = Math.exp(-Math.pow(z + 0.48 + x * 0.08, 2) * 7) * 0.34;
+
+  const summitSpecs = [
+    [-0.72, -0.06, 0.76, 0.105],
+    [-0.43, 0.1, 1.02, 0.14],
+    [-0.08, -0.04, 1.12, 0.12],
+    [0.22, 0.13, 0.82, 0.12],
+    [0.53, 0.02, 0.92, 0.1],
+    [0.78, 0.2, 0.56, 0.12],
+  ] as const;
+
+  let summits = 0;
+  for (const [peakX, peakZ, strength, radius] of summitSpecs) {
+    const dx = x - peakX;
+    const dz = z - peakZ;
+    summits += strength * Math.exp(-((dx * dx) / (radius * 4) + (dz * dz) / radius));
+  }
+
+  const broadMassif = primaryRidge * (0.68 + 0.18 * fbm(x * 2.4 + 4, z * 2.4 - 2));
+  const brokenRock = (1 - Math.abs(fbm(x * 5.2 - 1, z * 5.2 + 3))) * 0.19;
+  const localRelief = fbm(x * 8.5 + 2, z * 8.5 - 4) * 0.075;
+  const erosion = Math.abs(fbm(x * 2.1 + 9, z * 2.1 + 1)) * 0.16;
+
+  return (
+    broadMassif +
+    secondaryRidge +
+    foothill +
+    summits +
+    brokenRock * (0.28 + primaryRidge) +
+    localRelief -
+    erosion * (0.35 + primaryRidge * 0.5)
+  );
+}
+
+function lonLatToTile(lon: number, lat: number, zoom: number) {
+  const scale = 2 ** zoom;
+  const latitude = THREE.MathUtils.clamp(lat, -85.0511, 85.0511) * Math.PI / 180;
+  return {
+    x: Math.floor(((lon + 180) / 360) * scale),
+    y: Math.floor(((1 - Math.asinh(Math.tan(latitude)) / Math.PI) / 2) * scale),
+  };
+}
+
+function loadTile(x: number, y: number) {
+  return new Promise<HTMLImageElement>((resolve, reject) => {
+    const image = new Image();
+    image.crossOrigin = "anonymous";
+    const urls = [
+      "https://elevation-tiles-prod.s3.amazonaws.com/terrarium/" + TILE_ZOOM + "/" + x + "/" + y + ".png",
+      "https://s3.amazonaws.com/elevation-tiles-prod/terrarium/" + TILE_ZOOM + "/" + x + "/" + y + ".png",
+    ];
+    let attempt = 0;
+    let settled = false;
+    const timeout = window.setTimeout(() => {
+      if (settled) return;
+      settled = true;
+      image.onload = null;
+      image.onerror = null;
+      reject(new Error("Elevation tile request timed out"));
+    }, 6500);
+
+    image.onload = () => {
+      if (settled) return;
+      settled = true;
+      window.clearTimeout(timeout);
+      resolve(image);
+    };
+    image.onerror = () => {
+      if (settled) return;
+      attempt += 1;
+      if (attempt < urls.length) {
+        image.src = urls[attempt];
+      } else {
+        settled = true;
+        window.clearTimeout(timeout);
+        reject(new Error("Elevation tile could not be loaded"));
+      }
+    };
+    image.src = urls[0];
+  });
+}
+
+async function loadOpenElevation(): Promise<ElevationRaster | null> {
+  try {
+    // A 4 × 4 open elevation-tile mosaic centred south of Almaty, over the Tian Shan foothills.
+    // Terrarium RGB encodes metre elevation; the synthetic terrain remains a safe offline fallback.
+    const center = lonLatToTile(77.0, 43.1, TILE_ZOOM);
+    const startX = center.x - 2;
+    const startY = center.y - 2;
+    const canvas = document.createElement("canvas");
+    canvas.width = TILE_SIZE * TILE_COUNT;
+    canvas.height = TILE_SIZE * TILE_COUNT;
+    const context = canvas.getContext("2d", { willReadFrequently: true });
+    if (!context) return null;
+
+    const requests: Array<{ x: number; y: number }> = [];
+    for (let row = 0; row < TILE_COUNT; row += 1) {
+      for (let column = 0; column < TILE_COUNT; column += 1) {
+        requests.push({ x: startX + column, y: startY + row });
+      }
+    }
+
+    const results = await Promise.allSettled(
+      requests.map((tile) => loadTile(tile.x, tile.y))
+    );
+    if (results.some((result) => result.status !== "fulfilled")) return null;
+
+    results.forEach((result, index) => {
+      if (result.status !== "fulfilled") return;
+      const column = index % TILE_COUNT;
+      const row = Math.floor(index / TILE_COUNT);
+      context.drawImage(
+        result.value,
+        column * TILE_SIZE,
+        row * TILE_SIZE,
+        TILE_SIZE,
+        TILE_SIZE
+      );
+    });
+
+    const pixels = context.getImageData(0, 0, canvas.width, canvas.height).data;
+    const values = new Float32Array(canvas.width * canvas.height);
+    let valid = 0;
+    for (let index = 0; index < values.length; index += 1) {
+      const offset = index * 4;
+      const alpha = pixels[offset + 3];
+      const encoded = (pixels[offset] * 256) + pixels[offset + 1] + pixels[offset + 2] / 256;
+      const elevation = encoded - 32768;
+      if (alpha === 0 || elevation <= -32768) {
+        values[index] = Number.NaN;
+      } else {
+        values[index] = elevation;
+        valid += 1;
+      }
+    }
+
+    if (valid < values.length * 0.7) return null;
+    return { data: values, width: canvas.width, height: canvas.height };
+  } catch {
+    // Cross-origin restrictions, offline previews, or tile failures should never blank the hero.
+    return null;
+  }
+}
+
+function getOpenElevation() {
+  if (!elevationPromise) elevationPromise = loadOpenElevation();
+  return elevationPromise;
+}
+
+function sampleRaster(raster: ElevationRaster, u: number, v: number) {
+  const x = THREE.MathUtils.clamp(u, 0, 1) * (raster.width - 1);
+  const y = THREE.MathUtils.clamp(v, 0, 1) * (raster.height - 1);
+  const x0 = Math.floor(x);
+  const y0 = Math.floor(y);
+  const x1 = Math.min(x0 + 1, raster.width - 1);
+  const y1 = Math.min(y0 + 1, raster.height - 1);
+  const tx = x - x0;
+  const ty = y - y0;
+  const samples = [
+    { value: raster.data[y0 * raster.width + x0], weight: (1 - tx) * (1 - ty) },
+    { value: raster.data[y0 * raster.width + x1], weight: tx * (1 - ty) },
+    { value: raster.data[y1 * raster.width + x0], weight: (1 - tx) * ty },
+    { value: raster.data[y1 * raster.width + x1], weight: tx * ty },
+  ];
+  let sum = 0;
+  let weight = 0;
+  for (const sample of samples) {
+    if (Number.isFinite(sample.value)) {
+      sum += sample.value * sample.weight;
+      weight += sample.weight;
+    }
+  }
+  if (weight > 0.001) return sum / weight;
+  return raster.data[y0 * raster.width + x0] || 0;
+}
+
+function getSyntheticField(size: number) {
+  const raw = new Float32Array(size * size);
+  let min = Infinity;
+  let max = -Infinity;
+  for (let z = 0; z < size; z += 1) {
+    for (let x = 0; x < size; x += 1) {
+      const value = syntheticElevation(x / (size - 1), z / (size - 1));
+      raw[z * size + x] = value;
+      min = Math.min(min, value);
+      max = Math.max(max, value);
+    }
+  }
+  return normalizeField(raw, min, max);
+}
+
+function getDemField(raster: ElevationRaster, size: number) {
+  const raw = new Float32Array(size * size);
+  for (let z = 0; z < size; z += 1) {
+    for (let x = 0; x < size; x += 1) {
+      raw[z * size + x] = sampleRaster(raster, x / (size - 1), z / (size - 1));
+    }
+  }
+
+  const sorted = raw.slice();
+  sorted.sort();
+  const low = sorted[Math.floor(sorted.length * 0.025)];
+  const high = sorted[Math.floor(sorted.length * 0.975)];
+  if (!Number.isFinite(low) || !Number.isFinite(high) || high - low < 20) return null;
+  return normalizeField(raw, low, high);
+}
+
+function normalizeField(raw: Float32Array, low: number, high: number) {
+  const field = new Float32Array(raw.length);
+  const range = Math.max(high - low, 0.001);
+  for (let index = 0; index < raw.length; index += 1) {
+    const normalized = THREE.MathUtils.clamp((raw[index] - low) / range, 0, 1);
+    field[index] = -0.72 + Math.pow(normalized, 0.94) * 2.35;
+  }
+  return field;
+}
+
+function fieldSample(field: Float32Array, size: number, u: number, v: number) {
+  const x = THREE.MathUtils.clamp(u, 0, 1) * (size - 1);
+  const z = THREE.MathUtils.clamp(v, 0, 1) * (size - 1);
+  const x0 = Math.floor(x);
+  const z0 = Math.floor(z);
+  const x1 = Math.min(x0 + 1, size - 1);
+  const z1 = Math.min(z0 + 1, size - 1);
+  const tx = x - x0;
+  const tz = z - z0;
+  const a = THREE.MathUtils.lerp(field[z0 * size + x0], field[z0 * size + x1], tx);
+  const b = THREE.MathUtils.lerp(field[z1 * size + x0], field[z1 * size + x1], tx);
+  return THREE.MathUtils.lerp(a, b, tz);
+}
+
+function disposeGroup(group: THREE.Group) {
+  for (const child of [...group.children]) {
+    const object = child as THREE.Object3D & {
+      geometry?: THREE.BufferGeometry;
+      material?: THREE.Material | THREE.Material[];
+    };
+    object.geometry?.dispose();
+    if (Array.isArray(object.material)) object.material.forEach((material) => material.dispose());
+    else object.material?.dispose();
+  }
+  group.clear();
+}
+
+function getBoundaryIndices(size: number) {
+  const indices: number[] = [];
+  for (let x = 0; x < size; x += 1) indices.push(x);
+  for (let z = 1; z < size; z += 1) indices.push(z * size + size - 1);
+  for (let x = size - 2; x >= 0; x -= 1) indices.push((size - 1) * size + x);
+  for (let z = size - 2; z > 0; z -= 1) indices.push(z * size);
+  return indices;
+}
+
+export function GeoScanScene({
+  variant = "terrain",
+  layers,
+  onSourceChange,
+}: TerrainSceneProps) {
   const hostRef = useRef<HTMLDivElement>(null);
-  const layerPoints = layers?.points ?? true;
-  const layerGrid = layers?.grid ?? true;
-  const layerScan = layers?.scan ?? true;
+  const layersRef = useRef({
+    points: layers?.points ?? true,
+    grid: layers?.grid ?? true,
+    scan: layers?.scan ?? true,
+  });
+  const sourceChangeRef = useRef(onSourceChange);
+
+  useEffect(() => {
+    layersRef.current = {
+      points: layers?.points ?? true,
+      grid: layers?.grid ?? true,
+      scan: layers?.scan ?? true,
+    };
+  }, [layers?.points, layers?.grid, layers?.scan]);
+
+  useEffect(() => {
+    sourceChangeRef.current = onSourceChange;
+  }, [onSourceChange]);
 
   useEffect(() => {
     const host = hostRef.current;
     if (!host) return;
 
-    const canvas = document.createElement("canvas");
-    canvas.setAttribute("aria-hidden", "true");
-    host.appendChild(canvas);
+    const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    const resolution = Math.max(
+      88,
+      Math.min(164, Math.floor(Math.min(host.clientWidth || 420, host.clientHeight || 420) / 3.7))
+    );
+    const size = resolution;
+    const vertexCount = size * size;
+    let field = getSyntheticField(size);
+    let source: TerrainSource = "synthetic";
 
     const scene = new THREE.Scene();
-    scene.fog = new THREE.FogExp2(0x0a0e0b, 0.035);
+    scene.fog = new THREE.FogExp2(0x081116, 0.023);
 
-    const camera = new THREE.PerspectiveCamera(38, 1, 0.1, 100);
-    camera.position.set(variant === "index" ? 0.1 : 7.2, variant === "index" ? 9.8 : 5.2, variant === "index" ? 0.1 : 10.5);
+    const camera = new THREE.PerspectiveCamera(33, 1, 0.1, 120);
+    const baseCamera = variant === "index"
+      ? new THREE.Vector3(7.5, 8.9, 10.4)
+      : new THREE.Vector3(8.4, 6.8, 10.8);
+    camera.position.copy(baseCamera);
+    camera.lookAt(0, 0.18, 0);
 
     const renderer = new THREE.WebGLRenderer({
-      canvas,
+      canvas: document.createElement("canvas"),
       antialias: true,
       alpha: true,
       powerPreference: "high-performance",
     });
-    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.75));
+    renderer.domElement.setAttribute("aria-hidden", "true");
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 1.5));
     renderer.setClearColor(0x000000, 0);
+    renderer.outputColorSpace = THREE.SRGBColorSpace;
+    renderer.toneMapping = THREE.ACESFilmicToneMapping;
+    renderer.toneMappingExposure = 1.12;
+    host.appendChild(renderer.domElement);
+
+    const hemisphere = new THREE.HemisphereLight(0xd6eff0, 0x102329, 2.0);
+    scene.add(hemisphere);
+    const keyLight = new THREE.DirectionalLight(0xf1f4dc, 2.8);
+    keyLight.position.set(-7, 12, 6);
+    scene.add(keyLight);
+    const rimLight = new THREE.DirectionalLight(0x42c6c7, 1.1);
+    rimLight.position.set(6, 4, -8);
+    scene.add(rimLight);
 
     const terrainGroup = new THREE.Group();
     scene.add(terrainGroup);
 
-    const gridSize = 110;
-    const count = gridSize * gridSize;
-    const positions = new Float32Array(count * 3);
-    const colors = new Float32Array(count * 3);
-    const high = new THREE.Color("#d6e2d2");
-    const mid = new THREE.Color("#718777");
-    const low = new THREE.Color("#26372e");
+    const baseMaterial = new THREE.MeshStandardMaterial({
+      color: 0x0b1b21,
+      metalness: 0.38,
+      roughness: 0.68,
+    });
+    const base = new THREE.Mesh(
+      new THREE.BoxGeometry(WORLD_WIDTH + 0.12, 0.14, WORLD_DEPTH + 0.12),
+      baseMaterial
+    );
+    base.position.y = BASE_HEIGHT - 0.07;
+    terrainGroup.add(base);
 
-    let cursor = 0;
-    for (let z = 0; z < gridSize; z += 1) {
-      for (let x = 0; x < gridSize; x += 1) {
-        const nx = x / (gridSize - 1) - 0.5;
-        const nz = z / (gridSize - 1) - 0.5;
-        const ridgeA = Math.exp(-(((nx + 0.08) ** 2) * 16 + ((nz + 0.02) ** 2) * 6)) * 2.2;
-        const ridgeB = Math.exp(-(((nx - 0.2) ** 2) * 35 + ((nz - 0.05) ** 2) * 18)) * 0.7;
-        const saddle = Math.sin((nx - nz) * 8) * 0.08 * Math.exp(-(nx * nx + nz * nz) * 3);
-        const noise = (seeded(x * gridSize + z) - 0.5) * 0.08;
-        const y = ridgeA + ridgeB + saddle + noise - 0.72;
-
-        positions[cursor * 3] = nx * 8.2;
-        positions[cursor * 3 + 1] = y - 0.65;
-        positions[cursor * 3 + 2] = nz * 6.8;
-
-        const t = THREE.MathUtils.clamp((y + 0.72) / 2.65, 0, 1);
-        const c = low.clone().lerp(mid, t).lerp(high, Math.max(0, t - 0.62) / 0.38);
-        colors[cursor * 3] = c.r;
-        colors[cursor * 3 + 1] = c.g;
-        colors[cursor * 3 + 2] = c.b;
-        cursor += 1;
+    const indices: number[] = [];
+    for (let z = 0; z < size - 1; z += 1) {
+      for (let x = 0; x < size - 1; x += 1) {
+        const a = z * size + x;
+        const b = a + 1;
+        const c = a + size;
+        const d = c + 1;
+        indices.push(a, c, b, b, c, d);
       }
     }
 
-    const pointGeometry = new THREE.BufferGeometry();
-    pointGeometry.setAttribute("position", new THREE.BufferAttribute(positions, 3));
-    pointGeometry.setAttribute("color", new THREE.BufferAttribute(colors, 3));
+    const positionArray = new Float32Array(vertexCount * 3);
+    const colorArray = new Float32Array(vertexCount * 3);
+    const terrainGeometry = new THREE.BufferGeometry();
+    terrainGeometry.setAttribute("position", new THREE.BufferAttribute(positionArray, 3));
+    terrainGeometry.setAttribute("color", new THREE.BufferAttribute(colorArray, 3));
+    terrainGeometry.setIndex(indices);
+
+    const terrainMaterial = new THREE.MeshStandardMaterial({
+      vertexColors: true,
+      roughness: 0.94,
+      metalness: 0.02,
+      side: THREE.DoubleSide,
+    });
+    const terrainSurface = new THREE.Mesh(terrainGeometry, terrainMaterial);
+    terrainSurface.frustumCulled = false;
+    terrainGroup.add(terrainSurface);
 
     const pointMaterial = new THREE.PointsMaterial({
-      size: variant === "terrain" ? 0.043 : 0.055,
+      size: resolution < 110 ? 0.037 : 0.029,
       vertexColors: true,
       transparent: true,
-      opacity: variant === "terrain" ? 0.9 : 0.86,
+      opacity: 0.76,
       depthWrite: false,
+      sizeAttenuation: true,
       blending: THREE.NormalBlending,
     });
+    const pointGeometry = new THREE.BufferGeometry();
+    pointGeometry.setAttribute("position", new THREE.BufferAttribute(new Float32Array(vertexCount * 3), 3));
+    pointGeometry.setAttribute("color", new THREE.BufferAttribute(new Float32Array(vertexCount * 3), 3));
+    const pointCloud = new THREE.Points(pointGeometry, pointMaterial);
+    pointCloud.position.y = 0.018;
+    pointCloud.frustumCulled = false;
+    terrainGroup.add(pointCloud);
 
-    const points = new THREE.Points(pointGeometry, pointMaterial);
-    points.rotation.x = variant === "terrain" ? -0.58 : -0.32;
-    points.rotation.y = variant === "terrain" ? 0.02 : 0.08;
-    terrainGroup.add(points);
-    // Animation 1 / LEGACY CODE: points are the only visible layer.
-    points.visible = variant === "terrain" ? true : layerPoints;
+    const skirtIndices = getBoundaryIndices(size);
+    const skirtPositions = new Float32Array(skirtIndices.length * 6 * 3);
+    const skirtGeometry = new THREE.BufferGeometry();
+    skirtGeometry.setAttribute("position", new THREE.BufferAttribute(skirtPositions, 3));
+    const skirtMaterial = new THREE.MeshStandardMaterial({
+      color: 0x122a30,
+      metalness: 0.24,
+      roughness: 0.76,
+      side: THREE.DoubleSide,
+    });
+    const skirtMesh = new THREE.Mesh(skirtGeometry, skirtMaterial);
+    terrainGroup.add(skirtMesh);
 
-    const photogrammetryGrid = new THREE.Group();
-    photogrammetryGrid.rotation.x = -0.38;
-    photogrammetryGrid.rotation.y = 0.08;
-    terrainGroup.add(photogrammetryGrid);
-    photogrammetryGrid.visible = variant === "index" && layerGrid;
-
-    for (let line = 0; line < 13; line += 1) {
-      const geometry = new THREE.BufferGeometry();
-      const pts: THREE.Vector3[] = [];
-      const y = -0.58 + line * 0.075;
-      for (let i = 0; i < 70; i += 1) {
-        const x = (i / 69 - 0.5) * 8.8;
-        pts.push(new THREE.Vector3(x, y, Math.sin(i * 0.13 + line) * 0.05));
-      }
-      geometry.setFromPoints(pts);
-      photogrammetryGrid.add(
-        new THREE.Line(
-          geometry,
-          new THREE.LineBasicMaterial({
-            color: 0x91a294,
-            transparent: true,
-            opacity: 0.09,
-          })
-        )
-      );
-    }
-
+    const gridGroup = new THREE.Group();
     const contourGroup = new THREE.Group();
-    contourGroup.visible = false;
-    contourGroup.rotation.x = -0.32;
-    contourGroup.rotation.y = 0.08;
-    terrainGroup.add(contourGroup);
+    const scanGroup = new THREE.Group();
+    const markersGroup = new THREE.Group();
+    terrainGroup.add(gridGroup, contourGroup, scanGroup, markersGroup);
 
-    for (let ring = 0; ring < 10; ring += 1) {
-      const radiusX = 0.8 + ring * 0.41;
-      const radiusZ = 0.55 + ring * 0.34;
-      const ringPoints: THREE.Vector3[] = [];
-
-      for (let i = 0; i <= 160; i += 1) {
-        const a = (i / 160) * Math.PI * 2;
-        const wobble =
-          1 +
-          0.08 * Math.sin(a * 3 + ring * 0.8) +
-          0.035 * Math.cos(a * 7 - ring);
-        const x = Math.cos(a) * radiusX * wobble;
-        const z = Math.sin(a) * radiusZ * wobble;
-        const y = 0.18 + ring * 0.08 + Math.sin(a * 2 + ring) * 0.05;
-        ringPoints.push(new THREE.Vector3(x, y, z));
-      }
-
-      const geometry = new THREE.BufferGeometry().setFromPoints(ringPoints);
-      const material = new THREE.LineBasicMaterial({
-        color: ring === 3 || ring === 7 ? 0xd9ff52 : 0x66786a,
-        transparent: true,
-        opacity: ring === 3 || ring === 7 ? 0.62 : 0.2,
+    if (variant === "index") {
+      const markerMaterial = new THREE.MeshBasicMaterial({
+        color: 0xd9ff52,
+        toneMapped: false,
       });
-      contourGroup.add(new THREE.LineLoop(geometry, material));
+      const markerGeometry = new THREE.SphereGeometry(0.036, 10, 8);
+      const markerLocations = [
+        [0.18, 0.32],
+        [0.35, 0.62],
+        [0.52, 0.4],
+        [0.68, 0.24],
+        [0.79, 0.67],
+      ];
+      for (const [u, v] of markerLocations) {
+        const marker = new THREE.Mesh(markerGeometry, markerMaterial);
+        marker.position.set(
+          (u - 0.5) * WORLD_WIDTH,
+          fieldSample(field, size, u, v) + 0.06,
+          (v - 0.5) * WORLD_DEPTH
+        );
+        markersGroup.add(marker);
+
+        const stemGeometry = new THREE.BufferGeometry().setFromPoints([
+          new THREE.Vector3(marker.position.x, marker.position.y + 0.015, marker.position.z),
+          new THREE.Vector3(marker.position.x, marker.position.y + 0.2, marker.position.z),
+        ]);
+        const stem = new THREE.Line(
+          stemGeometry,
+          new THREE.LineBasicMaterial({ color: 0xd9ff52, transparent: true, opacity: 0.72 })
+        );
+        markersGroup.add(stem);
+      }
     }
 
-    const grid = new THREE.GridHelper(13, 26, 0x66786a, 0x223128);
-    grid.visible = false;
-    grid.position.y = -1.38;
-    grid.material.transparent = true;
-    grid.material.opacity = 0.28;
-    scene.add(grid);
+    const scanSegments = 120;
+    const bandPositions = new Float32Array(scanSegments * 2 * 3);
+    const bandIndices: number[] = [];
+    for (let i = 0; i < scanSegments - 1; i += 1) {
+      const a = i * 2;
+      const b = a + 1;
+      const c = a + 2;
+      const d = a + 3;
+      bandIndices.push(a, c, b, b, c, d);
+    }
+    const bandGeometry = new THREE.BufferGeometry();
+    bandGeometry.setAttribute("position", new THREE.BufferAttribute(bandPositions, 3));
+    bandGeometry.setIndex(bandIndices);
+    const bandMaterial = new THREE.MeshBasicMaterial({
+      color: 0xd9ff52,
+      transparent: true,
+      opacity: 0.09,
+      side: THREE.DoubleSide,
+      depthWrite: false,
+      toneMapped: false,
+    });
+    const scanBand = new THREE.Mesh(bandGeometry, bandMaterial);
+    scanGroup.add(scanBand);
 
-    const scanPlane = new THREE.Mesh(
-      new THREE.PlaneGeometry(11.5, 8.3),
-      new THREE.MeshBasicMaterial({
-        color: 0xd9ff52,
-        transparent: true,
-        opacity: 0.045,
-        side: THREE.DoubleSide,
-        blending: THREE.AdditiveBlending,
-        depthWrite: false,
-      })
-    );
-    scanPlane.rotation.x = variant === "index" ? 0 : Math.PI / 2 - 0.32;
-    scanPlane.position.y = 1.05;
-    scene.add(scanPlane);
+    const scanLinePositions = new Float32Array(scanSegments * 3);
+    const scanLineGeometry = new THREE.BufferGeometry();
+    scanLineGeometry.setAttribute("position", new THREE.BufferAttribute(scanLinePositions, 3));
+    const scanLineMaterial = new THREE.LineBasicMaterial({
+      color: 0xe7ff8a,
+      transparent: true,
+      opacity: 0.96,
+      toneMapped: false,
+    });
+    const scanLine = new THREE.Line(scanLineGeometry, scanLineMaterial);
+    scanGroup.add(scanLine);
 
-    const scanLine = new THREE.Mesh(
-      new THREE.BoxGeometry(11.8, 0.025, 0.025),
-      new THREE.MeshBasicMaterial({
-        color: 0xd9ff52,
-        transparent: true,
-        opacity: 0.9,
-        blending: THREE.AdditiveBlending,
-      })
-    );
-    scanLine.rotation.y = -0.04;
-    scanLine.position.set(0, 0.78, -1.7);
-    scene.add(scanLine);
-    scanLine.visible = variant === "index" && layerScan;
-    scanPlane.visible = variant === "index" && layerScan;
+    const contourLevels = 13;
+    const buildOverlays = () => {
+      disposeGroup(gridGroup);
+      disposeGroup(contourGroup);
 
-    const pointer = { x: 0, y: 0 };
-    let targetX = 0;
-    let targetY = 0;
+      const gridPositions: number[] = [];
+      const crossCount = Math.max(60, Math.floor(size * 0.62));
+      const gridLines = 13;
+
+      for (let line = 1; line < gridLines; line += 1) {
+        const u = line / gridLines;
+        for (let step = 0; step < crossCount - 1; step += 1) {
+          const v0 = step / (crossCount - 1);
+          const v1 = (step + 1) / (crossCount - 1);
+          gridPositions.push(
+            (u - 0.5) * WORLD_WIDTH,
+            fieldSample(field, size, u, v0) + 0.018,
+            (v0 - 0.5) * WORLD_DEPTH,
+            (u - 0.5) * WORLD_WIDTH,
+            fieldSample(field, size, u, v1) + 0.018,
+            (v1 - 0.5) * WORLD_DEPTH
+          );
+        }
+      }
+      for (let line = 1; line < gridLines; line += 1) {
+        const v = line / gridLines;
+        for (let step = 0; step < crossCount - 1; step += 1) {
+          const u0 = step / (crossCount - 1);
+          const u1 = (step + 1) / (crossCount - 1);
+          gridPositions.push(
+            (u0 - 0.5) * WORLD_WIDTH,
+            fieldSample(field, size, u0, v) + 0.018,
+            (v - 0.5) * WORLD_DEPTH,
+            (u1 - 0.5) * WORLD_WIDTH,
+            fieldSample(field, size, u1, v) + 0.018,
+            (v - 0.5) * WORLD_DEPTH
+          );
+        }
+      }
+      const gridGeometry = new THREE.BufferGeometry();
+      gridGeometry.setAttribute("position", new THREE.Float32BufferAttribute(gridPositions, 3));
+      gridGroup.add(new THREE.LineSegments(
+        gridGeometry,
+        new THREE.LineBasicMaterial({
+          color: 0x9cc6c1,
+          transparent: true,
+          opacity: 0.22,
+          depthWrite: false,
+        })
+      ));
+
+      let fieldMin = Infinity;
+      let fieldMax = -Infinity;
+      for (const height of field) {
+        fieldMin = Math.min(fieldMin, height);
+        fieldMax = Math.max(fieldMax, height);
+      }
+      const levels: number[] = [];
+      for (let level = 1; level <= contourLevels; level += 1) {
+        levels.push(THREE.MathUtils.lerp(fieldMin, fieldMax, level / (contourLevels + 1)));
+      }
+
+      for (let levelIndex = 0; levelIndex < levels.length; levelIndex += 1) {
+        const level = levels[levelIndex];
+        const linePositions: number[] = [];
+
+        const addCrossing = (hits: number[], from: number, to: number) => {
+          const h0 = field[from];
+          const h1 = field[to];
+          if (!((h0 < level && h1 >= level) || (h1 < level && h0 >= level))) return;
+          const t = (level - h0) / (h1 - h0);
+          const x0 = from % size;
+          const z0 = Math.floor(from / size);
+          const x1 = to % size;
+          const z1 = Math.floor(to / size);
+          hits.push(
+            THREE.MathUtils.lerp(x0, x1, t) / (size - 1) * WORLD_WIDTH - WORLD_WIDTH / 2,
+            level + 0.025,
+            THREE.MathUtils.lerp(z0, z1, t) / (size - 1) * WORLD_DEPTH - WORLD_DEPTH / 2
+          );
+        };
+
+        for (let z = 0; z < size - 1; z += 1) {
+          for (let x = 0; x < size - 1; x += 1) {
+            const a = z * size + x;
+            const b = a + 1;
+            const c = a + size;
+            const d = c + 1;
+            const hits: number[] = [];
+            addCrossing(hits, a, b);
+            addCrossing(hits, b, d);
+            addCrossing(hits, d, c);
+            addCrossing(hits, c, a);
+            if (hits.length >= 6) {
+              linePositions.push(hits[0], hits[1], hits[2], hits[3], hits[4], hits[5]);
+            }
+            if (hits.length >= 12) {
+              linePositions.push(hits[6], hits[7], hits[8], hits[9], hits[10], hits[11]);
+            }
+          }
+        }
+
+        const contourGeometry = new THREE.BufferGeometry();
+        contourGeometry.setAttribute(
+          "position",
+          new THREE.Float32BufferAttribute(linePositions, 3)
+        );
+        const major = levelIndex % 4 === 3;
+        contourGroup.add(new THREE.LineSegments(
+          contourGeometry,
+          new THREE.LineBasicMaterial({
+            color: major ? 0xd9ff52 : 0x90b8b5,
+            transparent: true,
+            opacity: major ? 0.58 : 0.26,
+            depthWrite: false,
+            toneMapped: false,
+          })
+        ));
+      }
+    };
+
+    const updateTerrain = () => {
+      const positions = terrainGeometry.getAttribute("position") as THREE.BufferAttribute;
+      for (let z = 0; z < size; z += 1) {
+        for (let x = 0; x < size; x += 1) {
+          const index = z * size + x;
+          positions.setXYZ(
+            index,
+            (x / (size - 1) - 0.5) * WORLD_WIDTH,
+            field[index],
+            (z / (size - 1) - 0.5) * WORLD_DEPTH
+          );
+        }
+      }
+      positions.needsUpdate = true;
+      terrainGeometry.computeVertexNormals();
+
+      const normals = terrainGeometry.getAttribute("normal") as THREE.BufferAttribute;
+      const colors = terrainGeometry.getAttribute("color") as THREE.BufferAttribute;
+      const low = new THREE.Color("#153642");
+      const basin = new THREE.Color("#245b61");
+      const foothill = new THREE.Color("#4c8069");
+      const alpine = new THREE.Color("#93a880");
+      const rock = new THREE.Color("#c5cbb2");
+      const snow = new THREE.Color("#e6e9db");
+      const steepRock = new THREE.Color("#9dafb0");
+      const lightDirection = new THREE.Vector3(-0.48, 0.8, 0.36).normalize();
+
+      for (let index = 0; index < vertexCount; index += 1) {
+        const t = THREE.MathUtils.clamp((field[index] + 0.72) / 2.35, 0, 1);
+        const color = new THREE.Color();
+        if (t < 0.22) color.copy(low).lerp(basin, t / 0.22);
+        else if (t < 0.48) color.copy(basin).lerp(foothill, (t - 0.22) / 0.26);
+        else if (t < 0.72) color.copy(foothill).lerp(alpine, (t - 0.48) / 0.24);
+        else if (t < 0.91) color.copy(alpine).lerp(rock, (t - 0.72) / 0.19);
+        else color.copy(rock).lerp(snow, (t - 0.91) / 0.09);
+
+        const normal = new THREE.Vector3().fromBufferAttribute(normals, index).normalize();
+        const illumination = 0.68 + Math.max(0, normal.dot(lightDirection)) * 0.42;
+        color.multiplyScalar(illumination);
+        if (1 - Math.abs(normal.y) > 0.48) {
+          color.lerp(steepRock, THREE.MathUtils.clamp((1 - Math.abs(normal.y) - 0.48) * 0.7, 0, 0.36));
+        }
+        colors.setXYZ(index, color.r, color.g, color.b);
+      }
+      colors.needsUpdate = true;
+      const pointPositions = pointGeometry.getAttribute("position") as THREE.BufferAttribute;
+      const pointColors = pointGeometry.getAttribute("color") as THREE.BufferAttribute;
+      pointPositions.copyArray(positions.array as Float32Array);
+      pointPositions.needsUpdate = true;
+      pointColors.copyArray(colors.array as Float32Array);
+      pointColors.needsUpdate = true;
+      pointGeometry.computeBoundingSphere();
+      terrainGeometry.computeBoundingSphere();
+
+      let cursor = 0;
+      for (let edge = 0; edge < skirtIndices.length; edge += 1) {
+        const from = skirtIndices[edge];
+        const to = skirtIndices[(edge + 1) % skirtIndices.length];
+        const fromX = (from % size) / (size - 1) * WORLD_WIDTH - WORLD_WIDTH / 2;
+        const fromZ = Math.floor(from / size) / (size - 1) * WORLD_DEPTH - WORLD_DEPTH / 2;
+        const toX = (to % size) / (size - 1) * WORLD_WIDTH - WORLD_WIDTH / 2;
+        const toZ = Math.floor(to / size) / (size - 1) * WORLD_DEPTH - WORLD_DEPTH / 2;
+        const fromY = field[from];
+        const toY = field[to];
+        const values = [
+          fromX, fromY, fromZ,
+          fromX, BASE_HEIGHT, fromZ,
+          toX, toY, toZ,
+          fromX, BASE_HEIGHT, fromZ,
+          toX, BASE_HEIGHT, toZ,
+          toX, toY, toZ,
+        ];
+        for (const value of values) skirtPositions[cursor++] = value;
+      }
+      const skirtPosition = skirtGeometry.getAttribute("position") as THREE.BufferAttribute;
+      skirtPosition.needsUpdate = true;
+      skirtGeometry.computeVertexNormals();
+      skirtGeometry.computeBoundingSphere();
+      if (variant === "index") buildOverlays();
+
+      for (const marker of markersGroup.children) {
+        if (marker instanceof THREE.Mesh) {
+          const u = (marker.position.x + WORLD_WIDTH / 2) / WORLD_WIDTH;
+          const v = (marker.position.z + WORLD_DEPTH / 2) / WORLD_DEPTH;
+          marker.position.y = fieldSample(field, size, u, v) + 0.06;
+        } else if (marker instanceof THREE.Line) {
+          const first = marker.geometry.getAttribute("position") as THREE.BufferAttribute;
+          const u = (first.getX(0) + WORLD_WIDTH / 2) / WORLD_WIDTH;
+          const v = (first.getZ(0) + WORLD_DEPTH / 2) / WORLD_DEPTH;
+          const ground = fieldSample(field, size, u, v) + 0.075;
+          first.setY(0, ground);
+          first.setY(1, ground + 0.2);
+          first.needsUpdate = true;
+        }
+      }
+    };
+
+    updateTerrain();
+
+    const updateScan = (normalizedZ: number) => {
+      const halfBand = 0.018;
+      for (let index = 0; index < scanSegments; index += 1) {
+        const u = index / (scanSegments - 1);
+        const x = (u - 0.5) * WORLD_WIDTH;
+        const vNear = THREE.MathUtils.clamp(normalizedZ - halfBand, 0, 1);
+        const vFar = THREE.MathUtils.clamp(normalizedZ + halfBand, 0, 1);
+        const nearY = fieldSample(field, size, u, vNear) + 0.04;
+        const farY = fieldSample(field, size, u, vFar) + 0.04;
+        bandPositions[index * 6] = x;
+        bandPositions[index * 6 + 1] = nearY;
+        bandPositions[index * 6 + 2] = (vNear - 0.5) * WORLD_DEPTH;
+        bandPositions[index * 6 + 3] = x;
+        bandPositions[index * 6 + 4] = farY;
+        bandPositions[index * 6 + 5] = (vFar - 0.5) * WORLD_DEPTH;
+
+        scanLinePositions[index * 3] = x;
+        scanLinePositions[index * 3 + 1] = (nearY + farY) * 0.5 + 0.018;
+        scanLinePositions[index * 3 + 2] = ((vNear + vFar) * 0.5 - 0.5) * WORLD_DEPTH;
+      }
+      (bandGeometry.getAttribute("position") as THREE.BufferAttribute).needsUpdate = true;
+      (scanLineGeometry.getAttribute("position") as THREE.BufferAttribute).needsUpdate = true;
+    };
+
+    const pointer = { x: 0, y: 0, targetX: 0, targetY: 0 };
     let raf = 0;
-    let visible = true;
-
-    const onPointerMove = (event: PointerEvent) => {
-      const rect = host.getBoundingClientRect();
-      targetX = ((event.clientX - rect.left) / rect.width - 0.5) * 0.45;
-      targetY = ((event.clientY - rect.top) / rect.height - 0.5) * 0.32;
-    };
-    const onVisibility = () => {
-      visible = !document.hidden;
-    };
-
-    host.addEventListener("pointermove", onPointerMove);
-    document.addEventListener("visibilitychange", onVisibility);
-
+    let onScreen = true;
+    let pageVisible = !document.hidden;
     const clock = new THREE.Clock();
 
     const resize = () => {
@@ -217,78 +798,159 @@ export function GeoScanScene({ variant = "terrain", layers }: { variant?: "terra
       camera.aspect = width / height;
       camera.updateProjectionMatrix();
       renderer.setSize(width, height, false);
+      if (reducedMotion) renderer.render(scene, camera);
     };
 
-    resize();
-    const resizeObserver = new ResizeObserver(resize);
-    resizeObserver.observe(host);
-
-    const animate = () => {
-      raf = requestAnimationFrame(animate);
-      if (!visible) return;
-
-      const elapsed = clock.getElapsedTime();
-      pointer.x += (targetX - pointer.x) * 0.035;
-      pointer.y += (targetY - pointer.y) * 0.035;
-
-      terrainGroup.rotation.y = (variant === "terrain" ? 0.02 : 0.08) + pointer.x * (variant === "terrain" ? 0.08 : 0.18);
-      terrainGroup.rotation.x = (variant === "terrain" ? -0.02 : 0) + pointer.y * (variant === "terrain" ? 0.04 : 0.08);
-      const baseCameraX = variant === "index" ? 0.1 : 6.4;
-      const baseCameraY = variant === "index" ? 9.8 : 7.4;
-      camera.position.x += (baseCameraX + (variant === "index" ? pointer.x * 0.7 : pointer.x * 1.9) - camera.position.x) * 0.02;
-      camera.position.y += (baseCameraY - pointer.y * (variant === "index" ? 0.7 : 1.5) - camera.position.y) * 0.02;
-      camera.lookAt(0, 0.2, 0);
-
-      points.rotation.z = 0;
-      pointMaterial.opacity = variant === "terrain"
-        ? 0.86 + Math.sin(elapsed * 0.9) * 0.045
-        : 0.78 + Math.sin(elapsed * 1.4) * 0.08;
+    const renderScene = (elapsed: number) => {
+      pointer.x += (pointer.targetX - pointer.x) * 0.045;
+      pointer.y += (pointer.targetY - pointer.y) * 0.045;
+      terrainGroup.rotation.y = (variant === "terrain" ? -0.08 : 0.02) + pointer.x * 0.085 + Math.sin(elapsed * 0.11) * 0.014;
+      terrainGroup.rotation.x = pointer.y * 0.022;
+      camera.position.x += (baseCamera.x + pointer.x * 0.38 - camera.position.x) * 0.035;
+      camera.position.y += (baseCamera.y - pointer.y * 0.19 - camera.position.y) * 0.035;
+      camera.position.z += (baseCamera.z + pointer.x * 0.12 - camera.position.z) * 0.035;
+      camera.lookAt(0, 0.16, 0);
+      pointMaterial.opacity = 0.69 + (Math.sin(elapsed * 0.74) + 1) * 0.035;
+      scanLineMaterial.opacity = 0.82 + Math.sin(elapsed * 2.6) * 0.12;
       if (variant === "index") {
-        photogrammetryGrid.rotation.z = elapsed * 0.012;
-        contourGroup.rotation.z = elapsed * 0.018;
+        if (layersRef.current.scan) {
+          const scanPosition = (elapsed * 0.075) % 1;
+          updateScan(scanPosition);
+        }
+        gridGroup.visible = layersRef.current.grid;
+        contourGroup.visible = layersRef.current.grid;
+        scanGroup.visible = layersRef.current.scan;
+        markersGroup.visible = layersRef.current.points;
+        pointCloud.visible = layersRef.current.points;
+      } else {
+        // The hero remains a clean DTM surface and point cloud: no decorative scan or overlay layers.
+        gridGroup.visible = false;
+        contourGroup.visible = false;
+        scanGroup.visible = false;
+        markersGroup.visible = false;
+        pointCloud.visible = true;
       }
-
-      const scanY = -2.35 + ((elapsed * 0.7) % 4.8);
-      scanLine.position.y = scanY;
-      scanPlane.position.y = scanY + 0.2;
-      scanLine.material.opacity = variant === "index" ? 0.72 : 0.35 + Math.sin(elapsed * 5) * 0.2;
-
       renderer.render(scene, camera);
     };
 
-    animate();
+    const animate = () => {
+      raf = 0;
+      if (!onScreen || !pageVisible || reducedMotion) return;
+      renderScene(clock.getElapsedTime());
+      raf = window.requestAnimationFrame(animate);
+    };
+
+    const startAnimation = () => {
+      if (!reducedMotion && onScreen && pageVisible && !raf) {
+        raf = window.requestAnimationFrame(animate);
+      }
+    };
+    const stopAnimation = () => {
+      if (raf) window.cancelAnimationFrame(raf);
+      raf = 0;
+    };
+
+    const onPointerMove = (event: PointerEvent) => {
+      const rect = host.getBoundingClientRect();
+      pointer.targetX = THREE.MathUtils.clamp(((event.clientX - rect.left) / rect.width - 0.5) * 1.8, -0.9, 0.9);
+      pointer.targetY = THREE.MathUtils.clamp(((event.clientY - rect.top) / rect.height - 0.5) * 1.25, -0.7, 0.7);
+      if (reducedMotion) renderScene(0);
+    };
+    const onPointerLeave = () => {
+      pointer.targetX = 0;
+      pointer.targetY = 0;
+      if (reducedMotion) renderScene(0);
+    };
+    const onVisibilityChange = () => {
+      pageVisible = !document.hidden;
+      if (pageVisible) startAnimation();
+      else stopAnimation();
+    };
+
+    const resizeObserver = new ResizeObserver(resize);
+    resizeObserver.observe(host);
+    const intersectionObserver = new IntersectionObserver((entries) => {
+      onScreen = entries.some((entry) => entry.isIntersecting);
+      if (onScreen) {
+        renderScene(reducedMotion ? 0 : clock.getElapsedTime());
+        startAnimation();
+      } else {
+        stopAnimation();
+      }
+    }, { rootMargin: "120px 0px", threshold: 0.01 });
+
+    host.addEventListener("pointermove", onPointerMove);
+    host.addEventListener("pointerleave", onPointerLeave);
+    document.addEventListener("visibilitychange", onVisibilityChange);
+    intersectionObserver.observe(host);
+
+    resize();
+    renderScene(0);
+    startAnimation();
+
+    void getOpenElevation().then((raster) => {
+      if (!host.isConnected) return;
+      if (!raster) {
+        sourceChangeRef.current?.("synthetic");
+        return;
+      }
+      const demField = getDemField(raster, size);
+      if (!demField) {
+        sourceChangeRef.current?.("synthetic");
+        return;
+      }
+      field = demField;
+      updateTerrain();
+      source = "dem";
+      host.dataset.terrainSource = source;
+      sourceChangeRef.current?.(source);
+      renderScene(clock.getElapsedTime());
+    }).catch(() => {
+      sourceChangeRef.current?.("synthetic");
+    });
+
+    host.dataset.terrainSource = source;
 
     return () => {
-      cancelAnimationFrame(raf);
+      stopAnimation();
       resizeObserver.disconnect();
+      intersectionObserver.disconnect();
       host.removeEventListener("pointermove", onPointerMove);
-      document.removeEventListener("visibilitychange", onVisibility);
+      host.removeEventListener("pointerleave", onPointerLeave);
+      document.removeEventListener("visibilitychange", onVisibilityChange);
 
+      terrainGeometry.dispose();
       pointGeometry.dispose();
+      terrainMaterial.dispose();
       pointMaterial.dispose();
-
-      photogrammetryGrid.children.forEach((child) => {
-        const line = child as THREE.Line;
-        line.geometry.dispose();
-        (line.material as THREE.Material).dispose();
-      });
-
-      contourGroup.children.forEach((child) => {
-        const line = child as THREE.LineLoop;
-        line.geometry.dispose();
-        (line.material as THREE.Material).dispose();
-      });
-
-      grid.geometry.dispose();
-      (grid.material as THREE.Material).dispose();
-      scanPlane.geometry.dispose();
-      (scanPlane.material as THREE.Material).dispose();
-      scanLine.geometry.dispose();
-      (scanLine.material as THREE.Material).dispose();
+      skirtGeometry.dispose();
+      skirtMaterial.dispose();
+      base.geometry.dispose();
+      baseMaterial.dispose();
+      markerMaterialCleanup(markersGroup);
+      disposeGroup(gridGroup);
+      disposeGroup(contourGroup);
+      disposeGroup(scanGroup);
       renderer.dispose();
-      canvas.remove();
+      renderer.domElement.remove();
     };
-  }, [variant, layerPoints, layerGrid, layerScan]);
+  }, [variant]);
 
   return <div ref={hostRef} className="geo-scene" />;
+}
+
+function markerMaterialCleanup(group: THREE.Group) {
+  const materials = new Set<THREE.Material>();
+  const geometries = new Set<THREE.BufferGeometry>();
+  for (const child of group.children) {
+    const object = child as THREE.Object3D & {
+      geometry?: THREE.BufferGeometry;
+      material?: THREE.Material | THREE.Material[];
+    };
+    if (object.geometry) geometries.add(object.geometry);
+    if (Array.isArray(object.material)) object.material.forEach((material) => materials.add(material));
+    else if (object.material) materials.add(object.material);
+  }
+  geometries.forEach((geometry) => geometry.dispose());
+  materials.forEach((material) => material.dispose());
 }
