@@ -321,8 +321,9 @@ button,input,select{font:inherit}
 .geo-scene-shell--terrain .geo-scene[data-dragging="true"]{cursor:grabbing}
 @media(max-width:650px){
   .geo-scene-toolbar{top:55px;right:9px;gap:3px;padding:4px;border-radius:12px}
-  .geo-scene-mode{min-height:27px;padding:0 6px;font-size:7px;gap:4px}
-  .geo-scene-tool{width:28px;min-width:28px;min-height:27px}
+  .geo-scene-mode{width:27px;min-width:27px;min-height:27px;padding:0;font-size:7px;gap:0}
+  .geo-scene-mode span{display:none}
+  .geo-scene-tool{width:27px;min-width:27px;min-height:27px}
   .geo-scene-tool-divider{height:17px;margin:0 1px}
   .geo-scene-hint{left:50%;right:auto;bottom:47px;font-size:7px;gap:5px}
   .geo-scene-shell--index .geo-scene-toolbar{top:auto;right:10px;bottom:57px}
