@@ -6,7 +6,7 @@ const COOKIE_NAME = "malaya_studio_session";
 const SESSION_TTL_SECONDS = 60 * 60 * 12;
 
 // Emergency development switch. Keep false/undefined in production.
-export const STUDIO_AUTH_DISABLED = process.env.STUDIO_AUTH_DISABLED === "true";
+export const STUDIO_AUTH_DISABLED = process.env.NODE_ENV !== "production" && process.env.STUDIO_AUTH_DISABLED === "true";
 
 function secret(): string {
   const value = process.env.ADMIN_SESSION_SECRET;
