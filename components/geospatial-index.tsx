@@ -4,6 +4,7 @@ import Link from "next/link";
 import { ArrowRight, Crosshair, Database, Grid3X3, Layers3, Search, ScanLine, X } from "lucide-react";
 import { useCallback, useMemo, useState } from "react";
 import { GeoScanScene } from "@/components/geo-scan-scene";
+import { TerrainInspector } from "@/components/terrain-inspector";
 
 type GeoRecord = {
   id: string;
@@ -168,6 +169,7 @@ export function GeospatialIndex({
 
       <div className="geo-index-visual">
         <GeoScanScene variant="index" layers={layers} focusIndex={Math.max(0, records.findIndex((item) => item.id === selected.id))} onSourceChange={onTerrainSourceChange} />
+        <TerrainInspector activeIndex={Math.max(0, records.findIndex((item) => item.id === selected.id))} onSelect={(index) => selectRecord(records[index] ?? records[0])} source={terrainSource} />
         <div className="photo-hud photo-hud-top">
           <span><i /> TIAN SHAN / RELIEF MODEL</span>
           <b>{sourceLabel}</b>
