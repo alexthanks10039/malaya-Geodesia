@@ -19,4 +19,4 @@
 @media(prefers-reduced-motion:reduce){.toggle,.chevron,.chevronOpen,.panel{transition:none;animation:none}}
 
 :global(.geo-index-visual) .photo-hud-bottom{left:auto;right:18px;max-width:calc(100% - 330px);justify-content:flex-end;text-align:right}
-@media(max-width:650px){:global(.geo-index-visual) .photo-hud-bottom{right:10px;max-width:calc(100% - 275px);gap:6px}.photo-hud-bottom small{display:none}}
+@media(max-width:650px){:global(.geo-index-visual) .photo-hud-bottom{right:10px;max-width:calc(100% - 275px);gap:6px}:global(.geo-index-visual) .photo-hud-bottom :global(small){display:none}}
