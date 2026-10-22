@@ -17,3 +17,6 @@
 @keyframes panelIn{from{opacity:0;transform:translateY(5px)}to{opacity:1;transform:translateY(0)}}
 @media(max-width:650px){.console{left:10px;bottom:58px;width:min(260px,calc(100% - 20px))}.toggle{min-height:43px;padding:7px 9px}.toggleText strong{font-size:7px}.toggleText small{font-size:6px}.panel{padding:10px}.chart{height:82px}.readoutText strong{font-size:16px}.stationList button{padding:6px 4px}}
 @media(prefers-reduced-motion:reduce){.toggle,.chevron,.chevronOpen,.panel{transition:none;animation:none}}
+
+:global(.geo-index-visual) .photo-hud-bottom{left:auto;right:18px;max-width:calc(100% - 330px);justify-content:flex-end;text-align:right}
+@media(max-width:650px){:global(.geo-index-visual) .photo-hud-bottom{right:10px;max-width:calc(100% - 275px);gap:6px}.photo-hud-bottom small{display:none}}
