@@ -11,8 +11,10 @@ if (!connectionString) {
 }
 
 const isLocal = /localhost|127\.0\.0\.1/.test(connectionString);
+const parsedConnection = new URL(connectionString);
+for (const key of ["sslmode", "ssl", "sslrootcert", "sslcert", "sslkey"]) parsedConnection.searchParams.delete(key);
 const pool = new Pool({
-  connectionString,
+  connectionString: parsedConnection.toString(),
   max: 2,
   ssl: isLocal || process.env.DATABASE_SSL === "false" ? false : { rejectUnauthorized: false },
 });
