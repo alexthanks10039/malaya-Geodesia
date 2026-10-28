@@ -21,7 +21,6 @@ export function CaseMediaCarousel({slug, items}: Props) {
   const [active, setActive] = useState(0);
 
   const safeActive = Math.min(active, Math.max(media.length - 1, 0));
-  const current = media[safeActive];
   const total = media.length;
 
   const positions = useMemo(() => {
@@ -105,21 +104,3 @@ export function CaseMediaCarousel({slug, items}: Props) {
   );
 }
 
-function MediaDialog({kind,setKind,url,setUrl,onUrl,onFile,onClose}:{kind:CaseMedia["type"];setKind:(v:CaseMedia["type"])=>void;url:string;setUrl:(v:string)=>void;onUrl:()=>void;onFile:(f:File)=>void;onClose:()=>void}) {
-  return (
-    <div className="case-media-dialog" role="dialog" aria-modal="true">
-      <div className="case-media-dialog-card">
-        <div className="case-media-dialog-head"><div><p className="eyebrow">Media studio</p><h3>Добавить материал</h3></div><button onClick={onClose} aria-label="Закрыть"><X/></button></div>
-        <div className="case-media-kind">
-          <button className={kind === "image" ? "active" : ""} onClick={() => setKind("image")}><ImagePlus size={16}/> Фото</button>
-          <button className={kind === "video" ? "active" : ""} onClick={() => setKind("video")}><Film size={16}/> Видео</button>
-        </div>
-        <label className="case-media-url"><span>URL материала</span><input value={url} onChange={e => setUrl(e.target.value)} placeholder={kind === "image" ? "https://.../photo.jpg" : "https://.../video.mp4"} onKeyDown={e => e.key === "Enter" && onUrl()}/></label>
-        <button className="button button-dark full" onClick={onUrl}>Добавить по URL</button>
-        <div className="case-media-or"><span>или</span></div>
-        <label className="case-file-button"><input type="file" accept={kind === "image" ? "image/*" : "video/*"} onChange={e => e.target.files?.[0] && onFile(e.target.files[0])}/><ImagePlus size={17}/><span>Выбрать файл с устройства</span></label>
-        <p className="case-media-note">Файл доступен в текущем браузере. Для постоянного хранения на сайте материалы нужно загрузить в хранилище проекта.</p>
-      </div>
-    </div>
-  );
-}
