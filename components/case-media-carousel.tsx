@@ -1,7 +1,7 @@
 "use client";
 
-import {useEffect, useMemo, useState} from "react";
-import {ChevronLeft, ChevronRight, Film, ImagePlus, Play, Plus, X} from "lucide-react";
+import {useMemo, useState} from "react";
+import {ChevronLeft, ChevronRight, Film, ImagePlus, Play} from "lucide-react";
 
 export type CaseMedia = {
   id: string;
@@ -17,22 +17,8 @@ type Props = {
 };
 
 export function CaseMediaCarousel({slug, items}: Props) {
-  const storageKey = `case-media:${slug}`;
-  const [media, setMedia] = useState<CaseMedia[]>(items);
+  const [media] = useState<CaseMedia[]>(items);
   const [active, setActive] = useState(0);
-  const [adding, setAdding] = useState(false);
-  const [url, setUrl] = useState("");
-  const [kind, setKind] = useState<CaseMedia["type"]>("image");
-
-  useEffect(() => {
-    try {
-      const saved = localStorage.getItem(storageKey);
-      if (saved) {
-        const parsed = JSON.parse(saved) as CaseMedia[];
-        if (Array.isArray(parsed)) setMedia([...items, ...parsed]);
-      }
-    } catch {}
-  }, [storageKey]);
 
   const safeActive = Math.min(active, Math.max(media.length - 1, 0));
   const current = media[safeActive];
@@ -48,60 +34,10 @@ export function CaseMediaCarousel({slug, items}: Props) {
     });
   }, [media, safeActive, total]);
 
-  function persistCustom(next: CaseMedia[]) {
-    try {
-      localStorage.setItem(storageKey, JSON.stringify(next));
-    } catch {}
-  }
-
-  function addUrl() {
-    const src = url.trim();
-    if (!src) return;
-    const custom = {
-      id: `custom-${Date.now()}`,
-      type: kind,
-      src,
-      alt: "Материал кейса",
-    } satisfies CaseMedia;
-    const next = [...media, custom];
-    setMedia(next);
-    persistCustom(next.filter(item => item.id.startsWith("custom-")));
-    setActive(next.length - 1);
-    setUrl("");
-    setAdding(false);
-  }
-
-  function addFile(file: File) {
-    const objectUrl = URL.createObjectURL(file);
-    const isVideo = file.type.startsWith("video/");
-    const custom = {
-      id: `local-${Date.now()}`,
-      type: isVideo ? "video" : "image",
-      src: objectUrl,
-      alt: file.name,
-    } satisfies CaseMedia;
-    setMedia(current => {
-      const next = [...current, custom];
-      setActive(next.length - 1);
-      return next;
-    });
-    setAdding(false);
-  }
-
-  function removeCurrent() {
-    if (!current?.id.startsWith("custom-") && !current?.id.startsWith("local-")) return;
-    const next = media.filter(item => item.id !== current.id);
-    setMedia(next);
-    persistCustom(next.filter(item => item.id.startsWith("custom-")));
-    setActive(Math.max(0, safeActive - 1));
-  }
-
   if (!media.length) {
     return (
-      <div className="case-media-empty">
-        <div><ImagePlus size={24}/><strong>Добавьте материалы проекта</strong><span>Фото, видео или ссылку на медиа.</span></div>
-        <button className="button button-dark" onClick={() => setAdding(true)}><Plus size={17}/> Добавить медиа</button>
-        {adding && <MediaDialog kind={kind} setKind={setKind} url={url} setUrl={setUrl} onUrl={addUrl} onFile={addFile} onClose={() => setAdding(false)}/>}
+      <div className="case-media-empty" aria-label="Материалы кейса">
+        <div><ImagePlus size={24}/><strong>Материалы этого проекта пока не опубликованы</strong><span>Галерея появится здесь после публикации фотографий или видео проекта.</span></div>
       </div>
     );
   }
@@ -115,7 +51,6 @@ export function CaseMediaCarousel({slug, items}: Props) {
         </div>
         <div className="case-media-tools">
           <span>{String(safeActive + 1).padStart(2, "0")} / {String(total).padStart(2, "0")}</span>
-          <button className="case-media-add" onClick={() => setAdding(true)}><Plus size={15}/> Добавить</button>
         </div>
       </div>
 
@@ -164,13 +99,8 @@ export function CaseMediaCarousel({slug, items}: Props) {
       </div>
 
       <div className="case-media-foot">
-        <span>← / → для навигации · свайп на телефоне</span>
-        {current?.id.startsWith("custom-") || current?.id.startsWith("local-") ? (
-          <button className="case-remove" onClick={removeCurrent}><X size={13}/> Удалить добавленный материал</button>
-        ) : null}
+        <span>← / → для навигации</span>
       </div>
-
-      {adding && <MediaDialog kind={kind} setKind={setKind} url={url} setUrl={setUrl} onUrl={addUrl} onFile={addFile} onClose={() => setAdding(false)}/>}
     </section>
   );
 }
