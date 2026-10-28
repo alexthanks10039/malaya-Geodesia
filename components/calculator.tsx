@@ -77,11 +77,14 @@ export function Calculator() {
       : calculatorConfig.urgencies[0];
     if (nextUrgency && nextUrgency !== urgency) setUrgency(nextUrgency);
 
-    setArea((current) => {
-      const clamped = Math.max(calculatorConfig.pricing.minArea, Math.min(calculatorConfig.pricing.maxArea, current));
-      setAreaInput(String(clamped));
-      return clamped;
-    });
+    setArea((current) => Math.max(
+      calculatorConfig.pricing.minArea,
+      Math.min(calculatorConfig.pricing.maxArea, current),
+    ));
+    setAreaInput(String(Math.max(
+      calculatorConfig.pricing.minArea,
+      Math.min(calculatorConfig.pricing.maxArea, area),
+    )));
     setComplexity((current) => current.filter((item) => calculatorConfig.conditions.includes(item)));
   }, [
     calculatorConfig,
