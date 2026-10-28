@@ -4,9 +4,9 @@ import process from "node:process";
 import pg from "pg";
 
 const { Pool } = pg;
-const connectionString = process.env.DATABASE_URL;
+const connectionString = process.env.DATABASE_URL || process.env.POSTGRES_PRISMA_URL || process.env.POSTGRES_URL;
 if (!connectionString) {
-  console.error("DATABASE_URL is not configured.");
+  console.error("Postgres connection is not configured (DATABASE_URL, POSTGRES_PRISMA_URL, or POSTGRES_URL).");
   process.exit(1);
 }
 
