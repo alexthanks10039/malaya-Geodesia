@@ -10,10 +10,10 @@ import { Render, type Data } from "@puckeditor/core";
 import puckConfig, { type PuckSiteComponents, type PuckSiteRootProps } from "@/components/studio/puck/config";
 
 const scenarios = [
-  ["Построить дом", "Топография + высоты + данные для проекта"],
-  ["Подготовить участок", "Рельеф, существующие объекты и данные для проекта"],
-  ["Получить 3D", "Фотограмметрия, point cloud или лазерное сканирование"],
-  ["Посчитать объём", "Карьер, котлован, насыпь или стройплощадка"],
+  ["Построить дом", "Топография + высоты + данные для проекта", "topography"],
+  ["Подготовить участок", "Рельеф, существующие объекты и данные для проекта", "topography"],
+  ["Получить 3D", "Фотограмметрия, point cloud или лазерное сканирование", "model3d"],
+  ["Посчитать объём", "Карьер, котлован, насыпь или стройплощадка", "volume"],
 ] as const;
 
 const pipeline = [
@@ -81,9 +81,9 @@ export default async function Home() {
           <Link className="text-link" href="/calculator">Открыть калькулятор <ArrowRight size={16} /></Link>
         </div>
         <Stagger className="scenario-grid">
-          {scenarios.map(([title, text], i) => (
+          {scenarios.map(([title, text, type], i) => (
             <StaggerItem key={title}>
-              <Link className="scenario-card" href="/calculator">
+              <Link className="scenario-card" href={`/calculator?type=${type}`}>
                 <span className="scenario-index">0{i + 1}</span>
                 <div><h3>{title}</h3><p>{text}</p></div>
                 <ArrowRight size={19} />

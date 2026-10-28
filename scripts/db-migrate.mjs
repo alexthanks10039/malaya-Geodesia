@@ -4,15 +4,17 @@ import process from "node:process";
 import pg from "pg";
 
 const { Pool } = pg;
-const connectionString = process.env.DATABASE_URL;
+const connectionString = process.env.DATABASE_URL || process.env.POSTGRES_PRISMA_URL || process.env.POSTGRES_URL;
 if (!connectionString) {
-  console.error("DATABASE_URL is not configured.");
+  console.error("Postgres connection is not configured (DATABASE_URL, POSTGRES_PRISMA_URL, or POSTGRES_URL).");
   process.exit(1);
 }
 
 const isLocal = /localhost|127\.0\.0\.1/.test(connectionString);
+const parsedConnection = new URL(connectionString);
+for (const key of ["sslmode", "ssl", "sslrootcert", "sslcert", "sslkey"]) parsedConnection.searchParams.delete(key);
 const pool = new Pool({
-  connectionString,
+  connectionString: parsedConnection.toString(),
   max: 2,
   ssl: isLocal || process.env.DATABASE_SSL === "false" ? false : { rejectUnauthorized: false },
 });

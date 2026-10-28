@@ -29,6 +29,7 @@ export function Calculator() {
   const [step, setStep] = useState(1);
   const [type, setType] = useState(defaultCalculatorStudioConfig.types[0].name);
   const [area, setArea] = useState(defaultCalculatorStudioConfig.areaPresets[0]?.value ?? defaultCalculatorStudioConfig.pricing.minArea);
+  const [areaInput, setAreaInput] = useState(String(defaultCalculatorStudioConfig.areaPresets[0]?.value ?? defaultCalculatorStudioConfig.pricing.minArea));
   const [complexity, setComplexity] = useState<string[]>([]);
   const [output, setOutput] = useState(defaultCalculatorStudioConfig.outputs[0]);
   const [urgency, setUrgency] = useState(defaultCalculatorStudioConfig.urgencies[0]);
@@ -39,6 +40,21 @@ export function Calculator() {
   const [error, setError] = useState("");
 
   useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const requestedType = params.get("type");
+    const typeByKey: Record<string, string> = {
+      topography: "Топографическая съёмка",
+      execution: "Исполнительная съёмка",
+      aerial: "Аэрофотосъёмка",
+      lidar: "Лазерное сканирование",
+      model3d: "3D-моделирование",
+      volume: "Расчёт объёмов",
+    };
+    const requestedName = requestedType ? typeByKey[requestedType] : undefined;
+    if (requestedName && calculatorConfig.types.some((item) => item.name === requestedName)) {
+      setType(requestedName);
+    }
+
     if (window.sessionStorage.getItem(STUDIO_MODE_KEY) !== "1") return;
 
     const stored = readCalculatorConfig();
@@ -65,6 +81,10 @@ export function Calculator() {
       calculatorConfig.pricing.minArea,
       Math.min(calculatorConfig.pricing.maxArea, current),
     ));
+    setAreaInput(String(Math.max(
+      calculatorConfig.pricing.minArea,
+      Math.min(calculatorConfig.pricing.maxArea, area),
+    )));
     setComplexity((current) => current.filter((item) => calculatorConfig.conditions.includes(item)));
   }, [
     calculatorConfig,
@@ -90,14 +110,21 @@ export function Calculator() {
 
   const changeArea = (delta: number) => {
     const { minArea, maxArea } = calculatorConfig.pricing;
-    setArea((current) => Math.max(minArea, Math.min(maxArea, current + delta)));
+    const nextArea = Math.max(minArea, Math.min(maxArea, area + delta));
+    setArea(nextArea);
+    setAreaInput(String(nextArea));
   };
 
   const next = () => {
     setError("");
-    if (step === 2 && (!Number.isFinite(area) || area < calculatorConfig.pricing.minArea)) {
-      setError("Укажите допустимую площадь объекта.");
-      return;
+    if (step === 2) {
+      const parsedArea = Number(areaInput);
+      if (!areaInput.trim() || !Number.isFinite(parsedArea) || parsedArea < calculatorConfig.pricing.minArea || parsedArea > calculatorConfig.pricing.maxArea) {
+        setError(`Укажите площадь от ${calculatorConfig.pricing.minArea.toLocaleString("ru-RU")} до ${calculatorConfig.pricing.maxArea.toLocaleString("ru-RU")} м².`);
+        return;
+      }
+      setArea(parsedArea);
+      setAreaInput(String(parsedArea));
     }
     setStep((current) => Math.min(4, current + 1));
   };
@@ -110,7 +137,9 @@ export function Calculator() {
   function reset() {
     setStep(1);
     setType(calculatorConfig.types[0]?.name ?? defaultCalculatorStudioConfig.types[0].name);
-    setArea(calculatorConfig.areaPresets[0]?.value ?? calculatorConfig.pricing.minArea);
+    const initialArea = calculatorConfig.areaPresets[0]?.value ?? calculatorConfig.pricing.minArea;
+    setArea(initialArea);
+    setAreaInput(String(initialArea));
     setComplexity([]);
     setOutput(calculatorConfig.outputs[0] ?? defaultCalculatorStudioConfig.outputs[0]);
     setUrgency(calculatorConfig.urgencies[0] ?? defaultCalculatorStudioConfig.urgencies[0]);
@@ -143,6 +172,9 @@ export function Calculator() {
           output,
           urgency,
           estimate,
+          sourcePage: new URLSearchParams(window.location.search).get("case")
+            ? `/cases/${new URLSearchParams(window.location.search).get("case")}`
+            : "/calculator",
         }),
       });
 
@@ -279,18 +311,20 @@ export function Calculator() {
                   max={calculatorConfig.pricing.maxArea}
                   step={calculatorConfig.pricing.areaStep}
                   inputMode="numeric"
-                  value={area}
+                  value={areaInput}
                   onChange={(event) => {
-                    const raw = Number(event.target.value);
-                    setArea(
-                      Number.isFinite(raw)
-                        ? Math.max(
-                            calculatorConfig.pricing.minArea,
-                            Math.min(calculatorConfig.pricing.maxArea, raw),
-                          )
-                        : calculatorConfig.pricing.minArea,
-                    );
+                    setAreaInput(event.target.value);
+                    setError("");
                   }}
+                  onBlur={() => {
+                    if (!areaInput.trim()) return;
+                    const raw = Number(areaInput);
+                    if (!Number.isFinite(raw)) return;
+                    const clamped = Math.max(calculatorConfig.pricing.minArea, Math.min(calculatorConfig.pricing.maxArea, raw));
+                    setArea(clamped);
+                    setAreaInput(String(clamped));
+                  }}
+                  aria-describedby="area-help"
                 />
               </label>
               <button type="button" onClick={() => changeArea(calculatorConfig.pricing.areaStep)} aria-label="Увеличить площадь">
@@ -298,12 +332,14 @@ export function Calculator() {
               </button>
             </div>
 
+            <p id="area-help" className="calc-intro">Допустимо от {calculatorConfig.pricing.minArea.toLocaleString("ru-RU")} до {calculatorConfig.pricing.maxArea.toLocaleString("ru-RU")} м². Можно полностью заменить число.</p>
+
             <div className="area-presets">
               {calculatorConfig.areaPresets.map((preset) => (
                 <button
                   type="button"
                   className={area === preset.value ? "area-preset active" : "area-preset"}
-                  onClick={() => setArea(preset.value)}
+                  onClick={() => { setArea(preset.value); setAreaInput(String(preset.value)); setError(""); }}
                   key={preset.label}
                 >
                   {preset.label}
@@ -318,7 +354,7 @@ export function Calculator() {
                 max={calculatorConfig.pricing.maxArea}
                 step={calculatorConfig.pricing.areaStep}
                 value={area}
-                onChange={(event) => setArea(Number(event.target.value))}
+                onChange={(event) => { const value = Number(event.target.value); setArea(value); setAreaInput(String(value)); setError(""); }}
                 aria-label="Площадь объекта"
               />
               <div><small>{calculatorConfig.pricing.minArea.toLocaleString("ru-RU")} м²</small><small>{calculatorConfig.pricing.maxArea.toLocaleString("ru-RU")} м²</small></div>

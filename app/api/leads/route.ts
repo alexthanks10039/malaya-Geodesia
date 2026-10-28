@@ -133,7 +133,7 @@ export async function POST(request: Request) {
       leadId: lead.id,
       message: "Заявка принята",
       telegram,
-      persisted: Boolean(process.env.DATABASE_URL),
+      persisted: isDatabaseConfigured(),
       requestId,
     });
   } catch (error) {

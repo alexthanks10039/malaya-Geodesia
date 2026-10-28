@@ -84,12 +84,12 @@ button,input,select{font:inherit}
 .scenario-card h3{font-size:18px;letter-spacing:-.03em}
 .scenario-card p,.service-card p,.knowledge-card p{font-size:13px;line-height:1.5;color:var(--muted);margin-bottom:0}
 .scenario-index{font:700 10px ui-monospace,monospace;color:var(--muted)}
-.pipeline{grid-template-columns:repeat(4,1fr);background:#293028;gap:1px}
-.pipeline-item{background:var(--dark);padding:28px;min-height:230px;transition:.25s ease}
-.pipeline-item:hover{background:#151b15}
-.pipeline-item svg{margin:38px 0 18px;color:var(--acid)}
-.pipeline-item h3{font-size:27px;letter-spacing:-.04em;margin-bottom:8px}
-.pipeline-item p{color:#aab2a5;font-size:13px;line-height:1.5}
+.pipeline{grid-template-columns:repeat(4,1fr);gap:1px;padding:1px;background:linear-gradient(135deg,#58634f,#252e25 55%,#414b3b);border:1px solid #30392e;border-radius:18px;overflow:hidden}
+.pipeline-item{position:relative;background:linear-gradient(145deg,#171e17 0%,#101410 78%);padding:28px;min-height:230px;transition:background .25s ease,transform .25s ease;isolation:isolate}
+.pipeline-item:before{content:"";position:absolute;inset:0 0 auto;height:3px;background:linear-gradient(90deg,var(--acid),rgba(217,255,82,.08));opacity:.55;transition:opacity .25s ease}.pipeline-item:hover{background:linear-gradient(145deg,#20291f 0%,#151b15 78%)}.pipeline-item:hover:before{opacity:1}
+.pipeline-item>span{display:inline-block;color:#9ba78f;font:800 10px ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:.16em}.pipeline-item svg{display:block;margin:35px 0 18px;color:var(--acid);filter:drop-shadow(0 0 9px rgba(217,255,82,.16))}
+.pipeline-item h3{color:#f1f4e9;font-size:27px;letter-spacing:-.04em;margin-bottom:8px}
+.pipeline-item p{color:#b8c2b3;font-size:13px;line-height:1.55;max-width:28ch}
 .service-grid{grid-template-columns:repeat(3,1fr)}
 .service-card{min-height:270px;background:var(--paper);border:1px solid var(--line);padding:22px;display:flex;flex-direction:column;position:relative;overflow:hidden;transition:.3s ease;box-shadow:0 0 0 rgba(0,0,0,0)}
 .service-card:before{content:"";position:absolute;inset:auto 0 0 0;height:4px;background:linear-gradient(90deg,var(--acid),transparent);transform:translateX(-72%);transition:.35s ease}
